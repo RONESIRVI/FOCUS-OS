@@ -108,7 +108,7 @@ fun FocusTimerScreen(
     // Emergency exit penalty timer
     LaunchedEffect(showEmergencyConfirm) {
         if (showEmergencyConfirm) {
-            emergencyPenaltyCountdown = 10
+            emergencyPenaltyCountdown = 200
             while (emergencyPenaltyCountdown > 0) {
                 delay(1000)
                 emergencyPenaltyCountdown--
@@ -328,53 +328,6 @@ fun FocusTimerScreen(
                 }
             }
 
-            // Anti-Exit Shield Simulator Button (Simulate home/switch app)
-            Card(
-                colors = CardDefaults.cardColors(containerColor = FocusSurface.copy(alpha = 0.9f)),
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        viewModel.triggerDistractionWarning()
-                    }
-                    .testTag("test_anti_exit_btn")
-            ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = null,
-                            tint = FocusCyan,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "Anti-Exit Shield Active",
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                color = Color.White
-                            )
-                            Text(
-                                text = "Tap to simulate home/app switch block",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = FocusTextSecondary
-                            )
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .background(FocusCyan.copy(alpha = 0.2f), CircleShape)
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text("TEST LOCK", style = MaterialTheme.typography.labelSmall, color = FocusCyan)
-                    }
-                }
-            }
 
             // Allowed Apps Launcher Bar
             Column(horizontalAlignment = Alignment.CenterHorizontally) {

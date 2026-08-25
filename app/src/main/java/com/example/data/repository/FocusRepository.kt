@@ -1,5 +1,9 @@
 package com.example.data.repository
 
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import com.example.data.db.FocusDao
 import com.example.data.model.AllowedApp
 import com.example.data.model.FocusSession
@@ -14,39 +18,37 @@ class FocusRepository(private val focusDao: FocusDao) {
     val whitelistedApps: Flow<List<AllowedApp>> = focusDao.getWhitelistedApps()
     val allSubjects: Flow<List<SubjectTask>> = focusDao.getAllSubjects()
 
-    suspend fun initializeDefaultDataIfEmpty() {
+    suspend fun initializeDefaultDataIfEmpty(context: Context) {
         val existingApps = allowedApps.first()
         if (existingApps.isEmpty()) {
-            val defaultApps = listOf(
-                AllowedApp("com.example.notes", "📚 Notes & Journal", "Notes", isAllowed = true),
-                AllowedApp("com.adobe.reader", "📖 PDF Reader & Books", "Reader", isAllowed = true),
-                AllowedApp("com.google.android.youtube", "🎥 YouTube (Study Channel)", "Video", isAllowed = true),
-                AllowedApp("com.android.chrome", "🌐 Browser / Web Research", "Browser", isAllowed = true),
-                AllowedApp("com.google.android.calculator", "🧮 Calculator", "Tools", isAllowed = true),
-                AllowedApp("com.google.android.apps.docs", "📁 Google Drive & Class Notes", "Notes", isAllowed = true),
-                AllowedApp("com.ichi2.anki", "🎴 Anki Flashcards", "Study", isAllowed = true),
-                AllowedApp("org.wikipedia", "🌐 Wikipedia", "Browser", isAllowed = true),
-                AllowedApp("notion.id", "📝 Notion Workspace", "Notes", isAllowed = false),
-                AllowedApp("org.telegram.messenger", "💬 Telegram Study Group", "Social", isAllowed = false),
-                AllowedApp("com.instagram.android", "📸 Instagram", "Social Blocked", isAllowed = false),
-                AllowedApp("com.whatsapp", "💬 WhatsApp", "Social Blocked", isAllowed = false),
-                AllowedApp("com.facebook.katana", "👥 Facebook", "Social Blocked", isAllowed = false),
-                AllowedApp("com.pubg.imobile", "🎮 Battlegrounds / Games", "Games Blocked", isAllowed = false)
-            )
-            focusDao.insertOrUpdateApps(defaultApps)
+            val packageManager = context.packageManager
+            val intent = Intent(Intent.ACTION_MAIN, null).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+            val resolveInfoList: List<ResolveInfo> = packageManager.queryIntentActivities(intent, 0)
+            val defaultApps = resolveInfoList.mapNotNull { resolveInfo ->
+                val packageName = resolveInfo.activityInfo.packageName
+                val appName = resolveInfo.loadLabel(packageManager).toString()
+                // Prevent duplicate or empty packages
+                if (packageName.isNotEmpty()) {
+                    AllowedApp(
+                        packageName = packageName,
+                        appName = appName,
+                        category = "Installed App",
+                        isAllowed = false
+                    )
+                } else null
+            }.distinctBy { it.packageName }
+            
+            if (defaultApps.isNotEmpty()) {
+                focusDao.insertOrUpdateApps(defaultApps)
+            }
         }
 
         val existingSubjects = allSubjects.first()
         if (existingSubjects.isEmpty()) {
             val defaultSubjects = listOf(
-                SubjectTask(name = "UPSC GS STUDY", categoryColorHex = "#0284C7", targetHours = 10f, completedSeconds = 14400),
-                SubjectTask(name = "Rajasthan का इतिहास", categoryColorHex = "#E11D48", targetHours = 8f, completedSeconds = 18000),
-                SubjectTask(name = "RAS Self", categoryColorHex = "#2563EB", targetHours = 6f, completedSeconds = 12060),
-                SubjectTask(name = "Advance RAS", categoryColorHex = "#38BDF8", targetHours = 6f, completedSeconds = 11760),
-                SubjectTask(name = "PYQS Test", categoryColorHex = "#EA580C", targetHours = 5f, completedSeconds = 11760),
-                SubjectTask(name = "REVISION", categoryColorHex = "#16A34A", targetHours = 6f, completedSeconds = 8340),
-                SubjectTask(name = "Value Addition", categoryColorHex = "#CA8A04", targetHours = 4f, completedSeconds = 3000),
-                SubjectTask(name = "MOCK Test", categoryColorHex = "#9333EA", targetHours = 4f, completedSeconds = 2580)
+                SubjectTask(name = "General Study", categoryColorHex = "#0284C7", targetHours = 8f, completedSeconds = 0)
             )
             defaultSubjects.forEach { focusDao.insertSubject(it) }
         }

@@ -34,11 +34,11 @@ data class UiSessionSetup(
 )
 
 data class StudySummaryStats(
-    val todayFocusSeconds: Int = 23400, // 6h 30m default initial demo stat
-    val currentStreakDays: Int = 7,
-    val totalFocusHours: Float = 42.5f,
-    val focusScore: Int = 94,
-    val totalSessions: Int = 18
+    val todayFocusSeconds: Int = 0,
+    val currentStreakDays: Int = 0,
+    val totalFocusHours: Float = 0f,
+    val focusScore: Int = 0,
+    val totalSessions: Int = 0
 )
 
 class FocusViewModel(application: Application) : AndroidViewModel(application) {
@@ -89,7 +89,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
-            repository.initializeDefaultDataIfEmpty()
+            repository.initializeDefaultDataIfEmpty(application)
         }
         bindTimerService()
     }
