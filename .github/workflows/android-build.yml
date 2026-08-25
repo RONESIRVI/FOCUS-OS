@@ -15,10 +15,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
           cache: 'gradle'
 
@@ -38,12 +38,14 @@ jobs:
 
       - name: Extract Commit Info
         run: |
-          COMMIT_MSG=$(git log -1 --pretty=%B 2>/dev/null || echo "Automated Build Update")
+          set +e
+          COMMIT_MSG=$(git log -1 --pretty=%B 2>/dev/null)
           if [ -z "$COMMIT_MSG" ]; then
             COMMIT_MSG="Automated Build Update - CI/CD Pipeline"
           fi
           COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "HEAD")
           AUTHOR=$(git log -1 --pretty=%an 2>/dev/null || echo "Automated Workflow")
+          set -e
 
           echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
           {
@@ -60,8 +62,13 @@ jobs:
           echo "$COMMIT_MSG" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
-      - name: Grant Execute Permission to Gradle Wrapper
-        run: chmod +x gradlew
+      - name: Ensure Gradle Wrapper Exists and is Executable
+        run: |
+          if [ ! -f gradlew ]; then
+            echo "gradlew not found, generating wrapper..."
+            gradle wrapper
+          fi
+          chmod +x gradlew
 
       - name: Build Debug APK
         env:
