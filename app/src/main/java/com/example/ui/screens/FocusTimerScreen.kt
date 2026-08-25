@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.activity.compose.BackHandler
 import com.example.data.model.LockMode
 import com.example.services.SoundType
 import com.example.ui.theme.FocusAccentOrange
@@ -97,6 +98,12 @@ fun FocusTimerScreen(
 
     var showEmergencyConfirm by remember { mutableStateOf(false) }
     var emergencyPenaltyCountdown by remember { mutableIntStateOf(10) }
+
+    // Intercept hardware Back Button to enforce anti-exit focus lock
+    BackHandler(enabled = timerState.isRunning) {
+        viewModel.triggerDistractionWarning()
+        Toast.makeText(context, "Anti-Exit Shield Active: Finish your session first!", Toast.LENGTH_SHORT).show()
+    }
 
     // Emergency exit penalty timer
     LaunchedEffect(showEmergencyConfirm) {

@@ -55,8 +55,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import com.example.data.model.LockMode
 import com.example.services.SoundType
+import com.example.util.LockPermissionHelper
 import com.example.ui.theme.FocusAccentOrange
 import com.example.ui.theme.FocusCyan
 import com.example.ui.theme.FocusSlateBg
@@ -305,6 +307,88 @@ fun FocusSetupScreen(
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text("EDIT", style = MaterialTheme.typography.labelSmall, color = FocusCyan)
+                    }
+                }
+            }
+        }
+
+        // System Anti-Exit Lock Permissions
+        item {
+            val context = LocalContext.current
+            val hasOverlay = remember { LockPermissionHelper.hasOverlayPermission(context) }
+            val hasUsage = remember { LockPermissionHelper.hasUsageStatsPermission(context) }
+
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (hasOverlay && hasUsage) FocusSurface else FocusAccentOrange.copy(alpha = 0.15f)
+                ),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(
+                        width = 1.dp,
+                        color = if (hasOverlay && hasUsage) Color.Transparent else FocusAccentOrange,
+                        shape = RoundedCornerShape(20.dp)
+                    )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = null,
+                            tint = if (hasOverlay && hasUsage) FocusCyan else FocusAccentOrange,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "System Anti-Exit Protection",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White
+                            )
+                            Text(
+                                text = if (hasOverlay && hasUsage) "All OS permissions granted for real lock" else "Grant OS permissions to block app switching",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = FocusTextSecondary
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { LockPermissionHelper.openOverlaySettings(context) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (hasOverlay) FocusSurfaceVariant else FocusCyan
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = if (hasOverlay) "Overlay: ON ✓" else "Enable Overlay",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (hasOverlay) Color.White else Color.Black
+                            )
+                        }
+
+                        Button(
+                            onClick = { LockPermissionHelper.openUsageStatsSettings(context) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (hasUsage) FocusSurfaceVariant else FocusCyan
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = if (hasUsage) "Usage Access: ON ✓" else "Enable Usage Access",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (hasUsage) Color.White else Color.Black
+                            )
+                        }
                     }
                 }
             }
