@@ -42,6 +42,9 @@ interface FocusDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSubject(subject: SubjectTask)
 
+    @androidx.room.Delete
+    suspend fun deleteSubject(subject: SubjectTask)
+
     @Query("UPDATE subject_tasks SET completedSeconds = completedSeconds + :addSeconds WHERE name = :subjectName")
     suspend fun addSubjectTime(subjectName: String, addSeconds: Int)
 }

@@ -428,7 +428,7 @@ fun HomeScreen(
             }
         }
 
-        // 7-Day Challenge Card
+        // Continuous Streak Card
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -450,7 +450,7 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "7 DAYS FOCUS CHALLENGE",
+                                text = "FOCUS STREAK",
                                 style = MaterialTheme.typography.titleSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.5.sp
@@ -458,39 +458,52 @@ fun HomeScreen(
                                 color = FocusAccentOrange
                             )
                         }
-                        Text("DAY 4 ACTIVE", style = MaterialTheme.typography.labelSmall, color = FocusGreen)
+                        Text("${stats.currentStreakDays} DAYS ACTIVE", style = MaterialTheme.typography.labelSmall, color = FocusGreen)
                     }
-
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        val days = listOf("D1 ✓", "D2 ✓", "D3 ✓", "D4 🔥", "D5 🔒", "D6 🔒", "D7 🔒")
-                        days.forEachIndexed { idx, day ->
+                        val currentDayInWeek = stats.currentStreakDays % 7
+                        for (idx in 0 until 7) {
+                            val isCompleted = idx < currentDayInWeek
+                            val isActive = idx == currentDayInWeek
+                            
+                            val label = when {
+                                isCompleted -> "✓"
+                                isActive -> "🔥"
+                                else -> "🔒"
+                            }
+                            
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(horizontal = 2.dp)
                                     .height(36.dp)
                                     .background(
-                                        if (idx < 3) FocusGreen.copy(alpha = 0.2f)
-                                        else if (idx == 3) FocusAccentOrange.copy(alpha = 0.3f)
+                                        if (isCompleted) FocusGreen.copy(alpha = 0.2f)
+                                        else if (isActive) FocusAccentOrange.copy(alpha = 0.3f)
                                         else FocusSurfaceVariant,
                                         RoundedCornerShape(8.dp)
                                     )
                                     .border(
-                                        width = if (idx == 3) 1.dp else 0.dp,
-                                        color = if (idx == 3) FocusAccentOrange else Color.Transparent,
+                                        width = if (isActive) 1.dp else 0.dp,
+                                        color = if (isActive) FocusAccentOrange else Color.Transparent,
                                         shape = RoundedCornerShape(8.dp)
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = day,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = if (idx <= 3) Color.White else FocusTextSecondary
+                                    text = "D${idx + 1} $label",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 10.sp
+                                    ),
+                                    color = if (isCompleted) FocusGreen
+                                    else if (isActive) FocusAccentOrange
+                                    else FocusTextSecondary
                                 )
                             }
                         }

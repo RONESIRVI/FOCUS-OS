@@ -48,7 +48,18 @@ class FocusRepository(private val focusDao: FocusDao) {
         val existingSubjects = allSubjects.first()
         if (existingSubjects.isEmpty()) {
             val defaultSubjects = listOf(
-                SubjectTask(name = "General Study", categoryColorHex = "#0284C7", targetHours = 8f, completedSeconds = 0)
+                SubjectTask(name = "Advance RAS", categoryColorHex = "#38BDF8", targetHours = 8f, completedSeconds = 0),
+                SubjectTask(name = "Self Study", categoryColorHex = "#2563EB", targetHours = 8f, completedSeconds = 0),
+                SubjectTask(name = "REVISION 01/2/3/4", categoryColorHex = "#16A34A", targetHours = 8f, completedSeconds = 0),
+                SubjectTask(name = "MOCK Test", categoryColorHex = "#9333EA", targetHours = 8f, completedSeconds = 0),
+                SubjectTask(name = "MOCK Test Weekly", categoryColorHex = "#8B5CF6", targetHours = 8f, completedSeconds = 0),
+                SubjectTask(name = "Mock Tests Section Wise", categoryColorHex = "#7C3AED", targetHours = 8f, completedSeconds = 0),
+                SubjectTask(name = "Mock Tests Subject Wise", categoryColorHex = "#6D28D9", targetHours = 8f, completedSeconds = 0),
+                SubjectTask(name = "Mock Tests Topic Wise", categoryColorHex = "#5B21B6", targetHours = 8f, completedSeconds = 0),
+                SubjectTask(name = "Archived Revision", categoryColorHex = "#64748B", targetHours = 8f, completedSeconds = 0),
+                SubjectTask(name = "CURRENT AFFAIRS", categoryColorHex = "#F59E0B", targetHours = 8f, completedSeconds = 0),
+                SubjectTask(name = "ANSWER WRITING", categoryColorHex = "#EF4444", targetHours = 8f, completedSeconds = 0),
+                SubjectTask(name = "Value Addition", categoryColorHex = "#CA8A04", targetHours = 8f, completedSeconds = 0)
             )
             defaultSubjects.forEach { focusDao.insertSubject(it) }
         }
@@ -66,5 +77,9 @@ class FocusRepository(private val focusDao: FocusDao) {
 
     suspend fun addSubject(subjectName: String, colorHex: String) {
         focusDao.insertSubject(SubjectTask(name = subjectName, categoryColorHex = colorHex))
+    }
+
+    suspend fun deleteSubject(subject: SubjectTask) {
+        focusDao.deleteSubject(subject)
     }
 }

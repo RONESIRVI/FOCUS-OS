@@ -206,7 +206,7 @@ fun FocusTimerScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = timerState.subjectName,
+                            text = timerState.subjectName.ifBlank { "Active Session" },
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                             color = Color.White
                         )

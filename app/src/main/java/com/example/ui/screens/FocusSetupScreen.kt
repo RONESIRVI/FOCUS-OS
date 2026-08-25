@@ -24,10 +24,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Lock
@@ -55,10 +57,13 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -107,6 +112,9 @@ fun FocusSetupScreen(
     val subjects by viewModel.allSubjects.collectAsState()
     val whitelistedApps by viewModel.whitelistedApps.collectAsState()
     val context = LocalContext.current
+
+    var showAddSubjectDialog by remember { mutableStateOf(false) }
+    var newSubjectName by remember { mutableStateOf("") }
 
     var customDuration by remember { mutableFloatStateOf(setup.durationMinutes.toFloat()) }
 
@@ -582,31 +590,41 @@ fun FocusSetupScreen(
                                         color = Color.White
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(12.dp))
-                                OutlinedTextField(
-                                    value = setup.sessionName,
-                                    onValueChange = { viewModel.updateSetup(sessionName = it, subjectName = it) },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag("session_name_input"),
-                                    placeholder = { Text("e.g. UPSC GS Study / Coding Sprint", color = FocusTextSecondary) },
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = FocusCyan,
-                                        unfocusedBorderColor = FocusSurfaceVariant,
-                                        focusedContainerColor = FocusSlateBg,
-                                        unfocusedContainerColor = FocusSlateBg,
-                                        focusedTextColor = Color.White,
-                                        unfocusedTextColor = Color.White
-                                    ),
-                                    shape = RoundedCornerShape(14.dp),
-                                    singleLine = true
-                                )
 
                                 Spacer(modifier = Modifier.height(14.dp))
-                                Text("Quick Subjects:", style = MaterialTheme.typography.labelSmall, color = FocusTextSecondary)
+                                Text("Select a Subject:", style = MaterialTheme.typography.labelSmall, color = FocusTextSecondary)
                                 Spacer(modifier = Modifier.height(8.dp))
 
                                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    item {
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    FocusSurfaceVariant,
+                                                    RoundedCornerShape(12.dp)
+                                                )
+                                                .border(1.dp, FocusCyan, RoundedCornerShape(12.dp))
+                                                .clickable {
+                                                    showAddSubjectDialog = true
+                                                }
+                                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Add,
+                                                    contentDescription = "Add Subject",
+                                                    tint = FocusCyan,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = "Add",
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                                    color = FocusCyan
+                                                )
+                                            }
+                                        }
+                                    }
                                     items(subjects) { subject ->
                                         val isSelected = setup.subjectName == subject.name
                                         Box(
@@ -620,13 +638,26 @@ fun FocusSetupScreen(
                                                 }
                                                 .padding(horizontal = 14.dp, vertical = 8.dp)
                                         ) {
-                                            Text(
-                                                text = subject.name,
-                                                style = MaterialTheme.typography.bodySmall.copy(
-                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                                ),
-                                                color = if (isSelected) Color.Black else Color.White
-                                            )
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = subject.name,
+                                                    style = MaterialTheme.typography.bodySmall.copy(
+                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                                    ),
+                                                    color = if (isSelected) Color.Black else Color.White
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "Delete Subject",
+                                                    tint = if (isSelected) Color.Black.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.3f),
+                                                    modifier = Modifier
+                                                        .size(14.dp)
+                                                        .clickable {
+                                                            viewModel.deleteCustomSubject(subject)
+                                                        }
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -713,7 +744,7 @@ fun FocusSetupScreen(
 
                                 Spacer(modifier = Modifier.height(14.dp))
 
-                                LockMode.entries.forEach { mode ->
+                                LockMode.entries.filter { it != LockMode.NORMAL }.forEach { mode ->
                                     val isSelected = setup.lockMode == mode
                                     Card(
                                         colors = CardDefaults.cardColors(
@@ -813,5 +844,43 @@ fun FocusSetupScreen(
                 }
             }
         }
+    }
+    
+    if (showAddSubjectDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddSubjectDialog = false },
+            title = { Text("Add Quick Subject", color = Color.White) },
+            text = {
+                OutlinedTextField(
+                    value = newSubjectName,
+                    onValueChange = { newSubjectName = it },
+                    placeholder = { Text("Subject Name", color = FocusTextSecondary) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent
+                    ),
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (newSubjectName.isNotBlank()) {
+                        viewModel.addCustomSubject(newSubjectName.trim(), "#0284C7")
+                        newSubjectName = ""
+                        showAddSubjectDialog = false
+                    }
+                }) {
+                    Text("Add", color = FocusCyan)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddSubjectDialog = false }) {
+                    Text("Cancel", color = FocusTextSecondary)
+                }
+            },
+            containerColor = FocusSurface
+        )
     }
 }

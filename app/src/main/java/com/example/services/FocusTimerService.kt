@@ -144,14 +144,21 @@ class FocusTimerService : Service() {
         }
     }
 
-    private fun buildNotification() = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setContentTitle("FOCUS OS — ${_timerState.value.subjectName}")
-        .setContentText(formatTimeText(_timerState.value.remainingSeconds) + " Remaining • " + _timerState.value.lockMode.title)
-        .setSmallIcon(R.drawable.ic_launcher_foreground)
-        .setOngoing(true)
-        .setOnlyAlertOnce(true)
-        .setContentIntent(createPendingIntent())
-        .build()
+    private fun buildNotification(): android.app.Notification {
+        val title = if (_timerState.value.subjectName.isNotBlank()) {
+            "FOCUS OS — ${_timerState.value.subjectName}"
+        } else {
+            "FOCUS OS — Active Session"
+        }
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(formatTimeText(_timerState.value.remainingSeconds) + " Remaining • " + _timerState.value.lockMode.title)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setContentIntent(createPendingIntent())
+            .build()
+    }
 
     private fun updateNotification() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

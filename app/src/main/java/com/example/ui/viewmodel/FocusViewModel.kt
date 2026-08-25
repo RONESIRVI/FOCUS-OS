@@ -26,8 +26,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class UiSessionSetup(
-    val sessionName: String = "UPSC GS STUDY",
-    val subjectName: String = "UPSC GS STUDY",
+    val sessionName: String = "",
+    val subjectName: String = "",
     val durationMinutes: Int = 25,
     val lockMode: LockMode = LockMode.STRICT_LOCK,
     val selectedSound: SoundType = SoundType.NONE
@@ -216,6 +216,12 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     fun addCustomSubject(name: String, colorHex: String) {
         viewModelScope.launch {
             repository.addSubject(name, colorHex)
+        }
+    }
+
+    fun deleteCustomSubject(subject: SubjectTask) {
+        viewModelScope.launch {
+            repository.deleteSubject(subject)
         }
     }
 
