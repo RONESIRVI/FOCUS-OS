@@ -1,8 +1,8 @@
 package com.example.ui.screens
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,10 +28,16 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.RadioButtonChecked
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
@@ -58,8 +64,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -78,6 +88,14 @@ import com.example.ui.theme.FocusTextSecondary
 import com.example.ui.viewmodel.FocusViewModel
 import com.example.util.LockPermissionHelper
 
+data class PresetOption(
+    val minutes: Int,
+    val label: String,
+    val sublabel: String,
+    val icon: ImageVector,
+    val color: Color
+)
+
 @Composable
 fun FocusSetupScreen(
     viewModel: FocusViewModel,
@@ -92,22 +110,31 @@ fun FocusSetupScreen(
 
     var customDuration by remember { mutableFloatStateOf(setup.durationMinutes.toFloat()) }
 
+    val hasOverlay = remember { LockPermissionHelper.hasOverlayPermission(context) }
+    val hasUsage = remember { LockPermissionHelper.hasUsageStatsPermission(context) }
+
+    val presetList = listOf(
+        PresetOption(15, "15m", "QUICK", Icons.Default.Timer, FocusCyan),
+        PresetOption(25, "25m", "POMODORO", Icons.Default.LocalFireDepartment, FocusAccentOrange),
+        PresetOption(45, "45m", "STUDY", Icons.Default.MenuBook, FocusGold),
+        PresetOption(60, "60m", "DEEP WORK", Icons.Default.Psychology, Color(0xFF38BDF8)),
+        PresetOption(90, "90m", "SPRINT", Icons.Default.DirectionsRun, FocusGreen)
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(FocusSlateBg)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Glassmorphic Gradient Top Header
+
+            // Top Glassmorphic Navigation Header
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(
-                                FocusSurface,
-                                FocusSlateBg
-                            )
+                            colors = listOf(FocusSurface, FocusSlateBg)
                         )
                     )
                     .padding(horizontal = 16.dp, vertical = 12.dp)
@@ -166,464 +193,625 @@ fun FocusSetupScreen(
                 }
             }
 
-            // Scrollable Configuration Form
+            // Scrollable Content
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                item { Spacer(modifier = Modifier.height(4.dp)) }
-
-                // Section 1: Session Name & Subject Picker
+                // HERO SECTION: Holographic Shield Mesh, Digital Time, Slider, Presets & Glowing Launch Button
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = FocusSurface),
-                        shape = RoundedCornerShape(22.dp),
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0xFF0F172A),
+                                        Color(0xFF1E293B)
+                                    )
+                                )
+                            )
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
                     ) {
-                        Column(modifier = Modifier.padding(18.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = FocusCyan,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Session Name & Subject",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            OutlinedTextField(
-                                value = setup.sessionName,
-                                onValueChange = { viewModel.updateSetup(sessionName = it, subjectName = it) },
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+
+                            // Holographic Mesh / Shield Barrier Canvas Illustration
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .testTag("session_name_input"),
-                                placeholder = { Text("e.g. UPSC GS Study / Coding Sprint", color = FocusTextSecondary) },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = FocusCyan,
-                                    unfocusedBorderColor = FocusSurfaceVariant,
-                                    focusedContainerColor = FocusSlateBg,
-                                    unfocusedContainerColor = FocusSlateBg,
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(14.dp),
-                                singleLine = true
-                            )
+                                    .height(110.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Canvas(modifier = Modifier.fillMaxSize()) {
+                                    val strokeWidth = 1.dp.toPx()
+                                    val pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
 
-                            Spacer(modifier = Modifier.height(14.dp))
-                            Text("Quick Subjects:", style = MaterialTheme.typography.labelSmall, color = FocusTextSecondary)
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(subjects) { subject ->
-                                    val isSelected = setup.subjectName == subject.name
-                                    Box(
-                                        modifier = Modifier
-                                            .background(
-                                                if (isSelected) FocusCyan else FocusSurfaceVariant,
-                                                RoundedCornerShape(12.dp)
-                                            )
-                                            .clickable {
-                                                viewModel.updateSetup(sessionName = subject.name, subjectName = subject.name)
-                                            }
-                                            .padding(horizontal = 14.dp, vertical = 8.dp)
-                                    ) {
-                                        Text(
-                                            text = subject.name,
-                                            style = MaterialTheme.typography.bodySmall.copy(
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                            ),
-                                            color = if (isSelected) Color.Black else Color.White
+                                    // Grid Lines
+                                    for (i in 1..4) {
+                                        val y = size.height * (i / 5f)
+                                        drawLine(
+                                            color = Color(0xFF0284C7).copy(alpha = 0.25f),
+                                            start = Offset(0f, y),
+                                            end = Offset(size.width, y),
+                                            strokeWidth = strokeWidth,
+                                            pathEffect = pathEffect
+                                        )
+                                    }
+                                    for (i in 1..8) {
+                                        val x = size.width * (i / 9f)
+                                        drawLine(
+                                            color = Color(0xFF0284C7).copy(alpha = 0.2f),
+                                            start = Offset(x, 0f),
+                                            end = Offset(x, size.height),
+                                            strokeWidth = strokeWidth,
+                                            pathEffect = pathEffect
                                         )
                                     }
                                 }
-                            }
-                        }
-                    }
-                }
 
-                // Section 2: Duration Selector
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = FocusSurface),
-                        shape = RoundedCornerShape(22.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
-                    ) {
-                        Column(modifier = Modifier.padding(18.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Timer,
-                                        contentDescription = null,
-                                        tint = FocusCyan,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Target Duration",
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White
-                                    )
-                                }
-                                Box(
+                                // Floating app icons bouncing on shield
+                                Row(
                                     modifier = Modifier
-                                        .background(FocusCyan.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
-                                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = "${setup.durationMinutes} Mins",
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                                        color = FocusCyan
-                                    )
+                                    // Left Distraction Apps (Blocked)
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(38.dp)
+                                                .background(Color(0xFF1877F2).copy(alpha = 0.2f), CircleShape)
+                                                .border(1.dp, Color(0xFF1877F2).copy(alpha = 0.6f), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("f", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .size(38.dp)
+                                                .background(Color(0xFFE4405F).copy(alpha = 0.2f), CircleShape)
+                                                .border(1.dp, Color(0xFFE4405F).copy(alpha = 0.6f), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("ig", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        }
+                                    }
+
+                                    // Center Shield Barrier
+                                    Box(
+                                        modifier = Modifier
+                                            .size(54.dp)
+                                            .background(
+                                                Brush.radialGradient(
+                                                    colors = listOf(
+                                                        FocusCyan.copy(alpha = 0.35f),
+                                                        Color.Transparent
+                                                    )
+                                                ),
+                                                CircleShape
+                                            )
+                                            .border(1.5.dp, FocusCyan, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Shield,
+                                            contentDescription = null,
+                                            tint = FocusCyan,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+
+                                    // Right Distraction Apps
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(38.dp)
+                                                .background(Color(0xFF25D366).copy(alpha = 0.2f), CircleShape)
+                                                .border(1.dp, Color(0xFF25D366).copy(alpha = 0.6f), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("wa", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .size(38.dp)
+                                                .background(Color(0xFFFF0000).copy(alpha = 0.2f), CircleShape)
+                                                .border(1.dp, Color(0xFFFF0000).copy(alpha = 0.6f), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("yt", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        }
+                                    }
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(14.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                            // Preset Chips
-                            val presets = listOf(15, 25, 45, 60, 90)
+                            // Large Digital Timer Display e.g. "45:00"
+                            Text(
+                                text = "${setup.durationMinutes}:00",
+                                style = MaterialTheme.typography.displayMedium.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 2.sp
+                                ),
+                                color = Color.White
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Duration Custom Slider with 5 min & 180 min bounds
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Slider(
+                                    value = customDuration,
+                                    onValueChange = {
+                                        customDuration = it
+                                        viewModel.updateSetup(durationMinutes = it.toInt())
+                                    },
+                                    valueRange = 5f..180f,
+                                    steps = 34,
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = Color.White,
+                                        activeTrackColor = FocusCyan,
+                                        inactiveTrackColor = FocusSurfaceVariant
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("5 minutes", style = MaterialTheme.typography.labelSmall, color = FocusTextSecondary)
+                                    Text("180 minutes", style = MaterialTheme.typography.labelSmall, color = FocusTextSecondary)
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Preset Options Row
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                presets.forEach { mins ->
-                                    val isSel = setup.durationMinutes == mins
-                                    val label = when (mins) {
-                                        25 -> "25m Pomo"
-                                        45 -> "45m Study"
-                                        60 -> "60m Deep"
-                                        90 -> "90m Sprint"
-                                        else -> "${mins}m Quick"
-                                    }
+                                presetList.forEach { preset ->
+                                    val isSel = setup.durationMinutes == preset.minutes
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
-                                            .height(42.dp)
+                                            .height(72.dp)
                                             .background(
-                                                if (isSel) FocusCyan else FocusSurfaceVariant,
-                                                RoundedCornerShape(12.dp)
+                                                if (isSel) FocusCyan.copy(alpha = 0.25f) else FocusSurface,
+                                                RoundedCornerShape(16.dp)
+                                            )
+                                            .border(
+                                                width = if (isSel) 1.5.dp else 1.dp,
+                                                color = if (isSel) FocusCyan else FocusSurfaceVariant,
+                                                shape = RoundedCornerShape(16.dp)
                                             )
                                             .clickable {
-                                                customDuration = mins.toFloat()
-                                                viewModel.updateSetup(durationMinutes = mins)
-                                            },
+                                                customDuration = preset.minutes.toFloat()
+                                                viewModel.updateSetup(durationMinutes = preset.minutes)
+                                            }
+                                            .padding(6.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text(
-                                            text = label,
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium
-                                            ),
-                                            color = if (isSel) Color.Black else Color.White
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            Slider(
-                                value = customDuration,
-                                onValueChange = {
-                                    customDuration = it
-                                    viewModel.updateSetup(durationMinutes = it.toInt())
-                                },
-                                valueRange = 5f..180f,
-                                steps = 34,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = FocusCyan,
-                                    activeTrackColor = FocusCyan,
-                                    inactiveTrackColor = FocusSurfaceVariant
-                                )
-                            )
-                        }
-                    }
-                }
-
-                // Section 3: Allowed Apps Quick Access Card
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = FocusSurface),
-                        shape = RoundedCornerShape(22.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
-                            .clickable { onNavigateToAppSelector() }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(18.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Apps,
-                                    contentDescription = null,
-                                    tint = FocusCyan,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = "Allowed Apps During Session",
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        text = "${whitelistedApps.size} apps permitted (Calculator, Notes...)",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = FocusTextSecondary
-                                    )
-                                }
-                            }
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = null,
-                                tint = FocusCyan
-                            )
-                        }
-                    }
-                }
-
-                // Section 4: Lock Mode & Anti-Exit Shield Selector
-                item {
-                    val hasOverlay = remember { LockPermissionHelper.hasOverlayPermission(context) }
-                    val hasUsage = remember { LockPermissionHelper.hasUsageStatsPermission(context) }
-
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = FocusSurface),
-                        shape = RoundedCornerShape(22.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
-                    ) {
-                        Column(modifier = Modifier.padding(18.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Security,
-                                        contentDescription = null,
-                                        tint = FocusAccentOrange,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Lock & Security Mode",
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White
-                                    )
-                                }
-                                if (hasOverlay && hasUsage) {
-                                    Text("SHIELD ACTIVE ✓", style = MaterialTheme.typography.labelSmall, color = FocusGreen)
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            LockMode.entries.forEach { mode ->
-                                val isSelected = setup.lockMode == mode
-                                Card(
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = if (isSelected) FocusCyan.copy(alpha = 0.12f) else FocusSlateBg
-                                    ),
-                                    shape = RoundedCornerShape(14.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
-                                        .clickable { viewModel.updateSetup(lockMode = mode) }
-                                        .border(
-                                            width = if (isSelected) 1.5.dp else 0.dp,
-                                            color = if (isSelected) FocusCyan else Color.Transparent,
-                                            shape = RoundedCornerShape(14.dp)
-                                        )
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        RadioButton(
-                                            selected = isSelected,
-                                            onClick = { viewModel.updateSetup(lockMode = mode) },
-                                            colors = RadioButtonDefaults.colors(selectedColor = FocusCyan)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Column {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = preset.icon,
+                                                contentDescription = null,
+                                                tint = if (isSel) FocusCyan else preset.color,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
                                             Text(
-                                                text = mode.title,
-                                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                                text = preset.label,
+                                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                                 color = Color.White
                                             )
                                             Text(
-                                                text = mode.description,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = FocusTextSecondary
+                                                text = preset.sublabel,
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                                color = if (isSel) FocusCyan else FocusTextSecondary
                                             )
                                         }
                                     }
                                 }
                             }
 
-                            // OS Permissions quick grant if missing
-                            if (!hasOverlay || !hasUsage) {
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            // Futuristic Glowing Launch Button & Permission Floating Card
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                // 3D Glowing Button Box
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(64.dp)
+                                        .background(
+                                            Brush.horizontalGradient(
+                                                colors = listOf(
+                                                    FocusAccentOrange,
+                                                    Color(0xFF0284C7)
+                                                )
+                                            ),
+                                            RoundedCornerShape(20.dp)
+                                        )
+                                        .border(2.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+                                        .clickable {
+                                            viewModel.startFocusSession()
+                                            onStartSession()
+                                        }
+                                        .testTag("start_session_confirm_btn"),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(38.dp)
+                                                .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Shield,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = "LAUNCH FOCUS SHIELD",
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.ExtraBold,
+                                                letterSpacing = 1.sp
+                                            ),
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+
                                 Spacer(modifier = Modifier.height(12.dp))
+
+                                // Floating Permissions & Lock Shield Status Badge
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = FocusSurface),
+                                    shape = RoundedCornerShape(16.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(16.dp))
+                                        .clickable {
+                                            if (!hasOverlay) LockPermissionHelper.openOverlaySettings(context)
+                                            else if (!hasUsage) LockPermissionHelper.openUsageStatsSettings(context)
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(8.dp)
+                                                        .background(if (hasOverlay && hasUsage) FocusGreen else FocusAccentOrange, CircleShape)
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "PERMISSIONS & LOCK SHIELD STATUS",
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        fontWeight = FontWeight.Bold,
+                                                        letterSpacing = 0.5.sp
+                                                    ),
+                                                    color = Color.White
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                                Text(
+                                                    text = "OS OVERLAYS: ${if (hasOverlay) "ENABLED ✓" else "TAP TO GRANT ⚠"}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (hasOverlay) FocusGreen else FocusAccentOrange
+                                                )
+                                                Text(
+                                                    text = "USAGE ACCESS: ${if (hasUsage) "GRANTED ✓" else "TAP TO GRANT ⚠"}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (hasUsage) FocusGreen else FocusAccentOrange
+                                                )
+                                            }
+                                        }
+
+                                        Icon(
+                                            imageVector = Icons.Default.ChevronRight,
+                                            contentDescription = null,
+                                            tint = FocusCyan,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // DETAILED SETUP OPTIONS BELOW HERO SECTION
+                item {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Section 1: Session Name & Subject Picker
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = FocusSurface),
+                            shape = RoundedCornerShape(22.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(18.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.AutoAwesome,
+                                        contentDescription = null,
+                                        tint = FocusCyan,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Session Name & Subject",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                OutlinedTextField(
+                                    value = setup.sessionName,
+                                    onValueChange = { viewModel.updateSetup(sessionName = it, subjectName = it) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("session_name_input"),
+                                    placeholder = { Text("e.g. UPSC GS Study / Coding Sprint", color = FocusTextSecondary) },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = FocusCyan,
+                                        unfocusedBorderColor = FocusSurfaceVariant,
+                                        focusedContainerColor = FocusSlateBg,
+                                        unfocusedContainerColor = FocusSlateBg,
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White
+                                    ),
+                                    shape = RoundedCornerShape(14.dp),
+                                    singleLine = true
+                                )
+
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Text("Quick Subjects:", style = MaterialTheme.typography.labelSmall, color = FocusTextSecondary)
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    items(subjects) { subject ->
+                                        val isSelected = setup.subjectName == subject.name
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    if (isSelected) FocusCyan else FocusSurfaceVariant,
+                                                    RoundedCornerShape(12.dp)
+                                                )
+                                                .clickable {
+                                                    viewModel.updateSetup(sessionName = subject.name, subjectName = subject.name)
+                                                }
+                                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                                        ) {
+                                            Text(
+                                                text = subject.name,
+                                                style = MaterialTheme.typography.bodySmall.copy(
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                                ),
+                                                color = if (isSelected) Color.Black else Color.White
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Section 2: Allowed Apps Whitelist
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = FocusSurface),
+                            shape = RoundedCornerShape(22.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
+                                .clickable { onNavigateToAppSelector() }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(18.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Apps,
+                                        contentDescription = null,
+                                        tint = FocusCyan,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = "Allowed Apps During Session",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = Color.White
+                                        )
+                                        Text(
+                                            text = "${whitelistedApps.size} apps permitted (Calculator, Notes...)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = FocusTextSecondary
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = FocusCyan
+                                )
+                            }
+                        }
+
+                        // Section 3: Lock & Security Mode
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = FocusSurface),
+                            shape = RoundedCornerShape(22.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(18.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Button(
-                                        onClick = { LockPermissionHelper.openOverlaySettings(context) },
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = if (hasOverlay) FocusSurfaceVariant else FocusAccentOrange
-                                        ),
-                                        shape = RoundedCornerShape(10.dp),
-                                        modifier = Modifier.weight(1f)
-                                    ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Security,
+                                            contentDescription = null,
+                                            tint = FocusAccentOrange,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = if (hasOverlay) "Overlay: ON ✓" else "Enable Overlay",
-                                            style = MaterialTheme.typography.labelSmall
+                                            text = "Lock & Security Mode",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = Color.White
                                         )
                                     }
-                                    Button(
-                                        onClick = { LockPermissionHelper.openUsageStatsSettings(context) },
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = if (hasUsage) FocusSurfaceVariant else FocusAccentOrange
-                                        ),
-                                        shape = RoundedCornerShape(10.dp),
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text(
-                                            text = if (hasUsage) "Usage: ON ✓" else "Enable Usage Access",
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
+                                    if (hasOverlay && hasUsage) {
+                                        Text("SHIELD ACTIVE ✓", style = MaterialTheme.typography.labelSmall, color = FocusGreen)
                                     }
                                 }
-                            }
-                        }
-                    }
-                }
 
-                // Section 5: Ambient Sound Generator
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = FocusSurface),
-                        shape = RoundedCornerShape(22.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
-                    ) {
-                        Column(modifier = Modifier.padding(18.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.MusicNote,
-                                    contentDescription = null,
-                                    tint = FocusCyan,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Background Focus Sound",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(14.dp))
 
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(SoundType.entries) { st ->
-                                    val isSel = setup.selectedSound == st
-                                    Box(
+                                LockMode.entries.forEach { mode ->
+                                    val isSelected = setup.lockMode == mode
+                                    Card(
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (isSelected) FocusCyan.copy(alpha = 0.12f) else FocusSlateBg
+                                        ),
+                                        shape = RoundedCornerShape(14.dp),
                                         modifier = Modifier
-                                            .background(
-                                                if (isSel) FocusCyan else FocusSurfaceVariant,
-                                                RoundedCornerShape(12.dp)
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp)
+                                            .clickable { viewModel.updateSetup(lockMode = mode) }
+                                            .border(
+                                                width = if (isSelected) 1.5.dp else 0.dp,
+                                                color = if (isSelected) FocusCyan else Color.Transparent,
+                                                shape = RoundedCornerShape(14.dp)
                                             )
-                                            .clickable { viewModel.updateSetup(soundType = st) }
-                                            .padding(horizontal = 14.dp, vertical = 8.dp)
                                     ) {
-                                        Text(
-                                            text = st.label,
-                                            style = MaterialTheme.typography.bodySmall.copy(
-                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium
-                                            ),
-                                            color = if (isSel) Color.Black else Color.White
-                                        )
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            RadioButton(
+                                                selected = isSelected,
+                                                onClick = { viewModel.updateSetup(lockMode = mode) },
+                                                colors = RadioButtonDefaults.colors(selectedColor = FocusCyan)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Column {
+                                                Text(
+                                                    text = mode.title,
+                                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                                    color = Color.White
+                                                )
+                                                Text(
+                                                    text = mode.description,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = FocusTextSecondary
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                }
 
-                item { Spacer(modifier = Modifier.height(16.dp)) }
-            }
+                        // Section 4: Ambient Focus Sound Generator
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = FocusSurface),
+                            shape = RoundedCornerShape(22.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(18.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.MusicNote,
+                                        contentDescription = null,
+                                        tint = FocusCyan,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Background Focus Sound",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
 
-            // Bottom Fixed Action Bar
-            Surface(
-                color = FocusSurface,
-                shadowElevation = 12.dp,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            viewModel.startFocusSession()
-                            onStartSession()
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .testTag("start_session_confirm_btn"),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = FocusAccentOrange,
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = null,
-                                modifier = Modifier.size(22.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = "LAUNCH FOCUS SHIELD (${setup.durationMinutes} MIN)",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    letterSpacing = 0.5.sp
-                                )
-                            )
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    items(SoundType.entries) { st ->
+                                        val isSel = setup.selectedSound == st
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    if (isSel) FocusCyan else FocusSurfaceVariant,
+                                                    RoundedCornerShape(12.dp)
+                                                )
+                                                .clickable { viewModel.updateSetup(soundType = st) }
+                                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                                        ) {
+                                            Text(
+                                                text = st.label,
+                                                style = MaterialTheme.typography.bodySmall.copy(
+                                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium
+                                                ),
+                                                color = if (isSel) Color.Black else Color.White
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
+
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
             }
         }
     }
 }
-
