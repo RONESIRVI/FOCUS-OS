@@ -52,9 +52,13 @@ jobs:
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Build Debug APK
+        env:
+          GRADLE_OPTS: "-Djava.awt.headless=true"
         run: gradle assembleDebug --stacktrace
 
       - name: Run Unit Tests
+        env:
+          GRADLE_OPTS: "-Djava.awt.headless=true"
         run: gradle test --stacktrace
 
       - name: Upload Debug APK Artifact
