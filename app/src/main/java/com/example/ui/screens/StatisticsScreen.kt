@@ -60,13 +60,6 @@ fun StatisticsScreen(
     val coroutineScope = rememberCoroutineScope()
     val graphicsLayer = rememberGraphicsLayer()
 
-    // Multiplier for demo purposes to show different stats based on tab
-    val timeMultiplier = when(selectedPeriodTab) {
-        "Weekly" -> 1
-        "Monthly" -> 4
-        "All-Time" -> 20
-        else -> 1
-    }
 
     Box(
         modifier = Modifier
@@ -185,7 +178,7 @@ fun StatisticsScreen(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    val displaySeconds = (stats.todayFocusSeconds + (subjects.sumOf { it.completedSeconds })) * timeMultiplier
+                    val displaySeconds = (stats.todayFocusSeconds + (subjects.sumOf { it.completedSeconds }))
                     val hrs = displaySeconds / 3600
                     val mins = (displaySeconds % 3600) / 60
                     val secs = displaySeconds % 60
@@ -236,7 +229,7 @@ fun StatisticsScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    val activeSubjects = subjects.filter { (it.completedSeconds * timeMultiplier) > 0 }.takeIf { it.isNotEmpty() } ?: subjects
+                    val activeSubjects = subjects.filter { (it.completedSeconds) > 0 }.takeIf { it.isNotEmpty() } ?: subjects
 
                     // Donut Chart Canvas Drawing
                     Box(
@@ -246,14 +239,14 @@ fun StatisticsScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Canvas(modifier = Modifier.size(180.dp)) {
-                            val totalSecs = activeSubjects.sumOf { it.completedSeconds * timeMultiplier }.coerceAtLeast(1)
+                            val totalSecs = activeSubjects.sumOf { it.completedSeconds }.coerceAtLeast(1)
                             var startAngle = -90f
                             val strokeWidth = 32.dp.toPx()
                             val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
                             val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
 
                             activeSubjects.forEach { subject ->
-                                val subjectSecs = subject.completedSeconds * timeMultiplier
+                                val subjectSecs = subject.completedSeconds
                                 val sweep = (subjectSecs.toFloat() / totalSecs.toFloat()) * 360f
                                 val color = try {
                                     Color(android.graphics.Color.parseColor(subject.categoryColorHex))
@@ -293,10 +286,10 @@ fun StatisticsScreen(
 
                     // Legend Table Breakdown
                     activeSubjects.forEach { subject ->
-                        val subjectSecs = subject.completedSeconds * timeMultiplier
+                        val subjectSecs = subject.completedSeconds
                         val hrs = subjectSecs / 3600
                         val mins = (subjectSecs % 3600) / 60
-                        val totalSecs = activeSubjects.sumOf { it.completedSeconds * timeMultiplier }.coerceAtLeast(1)
+                        val totalSecs = activeSubjects.sumOf { it.completedSeconds }.coerceAtLeast(1)
                         val pct = if (totalSecs > 0) ((subjectSecs.toFloat() / totalSecs.toFloat()) * 100).toInt() else 0
 
                         Row(
