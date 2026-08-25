@@ -31,6 +31,21 @@ jobs:
             keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
 
+      - name: Extract Commit Info
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          AUTHOR=$(git log -1 --pretty=%an)
+          echo "COMMIT_MSG=$COMMIT_MSG" >> $GITHUB_ENV
+          echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
+          echo "### 🚀 Auto Build Details" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit Hash:** \`$COMMIT_HASH\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Author:** $AUTHOR" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit Message:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "$COMMIT_MSG" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
       - name: Build Debug APK
         run: gradle assembleDebug --stacktrace
 
