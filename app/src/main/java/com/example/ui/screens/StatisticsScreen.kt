@@ -1,60 +1,49 @@
 package com.example.ui.screens
 
+import android.content.ContentValues
+import android.content.Context
+import android.graphics.Bitmap
+import android.provider.MediaStore
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PieChart
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.FocusAccentOrange
-import com.example.ui.theme.FocusCyan
-import com.example.ui.theme.FocusGold
-import com.example.ui.theme.FocusGreen
-import com.example.ui.theme.FocusPurple
-import com.example.ui.theme.FocusSlateBg
-import com.example.ui.theme.FocusSurface
-import com.example.ui.theme.FocusSurfaceVariant
-import com.example.ui.theme.FocusTextSecondary
+import com.example.ui.theme.*
 import com.example.ui.viewmodel.FocusViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun StatisticsScreen(
@@ -64,43 +53,85 @@ fun StatisticsScreen(
     val subjects by viewModel.allSubjects.collectAsState()
     val stats by viewModel.summaryStats.collectAsState()
 
-    var selectedPeriodTab by remember { mutableStateOf("Day") }
-    val periodTabs = listOf("Period", "Day", "Week", "Month", "Trend")
+    var selectedPeriodTab by remember { mutableStateOf("Weekly") }
+    val periodTabs = listOf("Weekly", "Monthly", "All-Time")
 
-    LazyColumn(
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val graphicsLayer = rememberGraphicsLayer()
+
+    // Multiplier for demo purposes to show different stats based on tab
+    val timeMultiplier = when(selectedPeriodTab) {
+        "Weekly" -> 1
+        "Monthly" -> 4
+        "All-Time" -> 20
+        else -> 1
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(FocusSlateBg)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Top Header Navigation Bar
-        item {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawWithContent {
+                    graphicsLayer.record {
+                        this@drawWithContent.drawContent()
+                    }
+                    drawLayer(graphicsLayer)
+                }
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Top Header Navigation Bar
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "STUDY STATISTICS",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 0.5.sp
+                        ),
+                        color = Color.White
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "STUDY STATISTICS",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 0.5.sp
-                    ),
-                    color = Color.White
-                )
-            }
-        }
 
-        // Top Segmented Period Tabs (YPT Style)
-        item {
+                IconButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            try {
+                                val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
+                                saveBitmapToGallery(context, bitmap, selectedPeriodTab)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Error saving image", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = "Download Stats Image",
+                        tint = FocusCyan
+                    )
+                }
+            }
+
+            // Top Segmented Period Tabs
             Card(
                 colors = CardDefaults.cardColors(containerColor = FocusSurface),
                 shape = RoundedCornerShape(16.dp),
@@ -136,10 +167,8 @@ fun StatisticsScreen(
                     }
                 }
             }
-        }
 
-        // Total Study Time Display Box
-        item {
+            // Total Study Time Display Box
             Card(
                 colors = CardDefaults.cardColors(containerColor = FocusSurface),
                 shape = RoundedCornerShape(20.dp),
@@ -156,9 +185,10 @@ fun StatisticsScreen(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    val hrs = stats.todayFocusSeconds / 3600
-                    val mins = (stats.todayFocusSeconds % 3600) / 60
-                    val secs = stats.todayFocusSeconds % 60
+                    val displaySeconds = (stats.todayFocusSeconds + (subjects.sumOf { it.completedSeconds })) * timeMultiplier
+                    val hrs = displaySeconds / 3600
+                    val mins = (displaySeconds % 3600) / 60
+                    val secs = displaySeconds % 60
                     val timeString = String.format("%02d:%02d:%02d", hrs, mins, secs)
 
                     Text(
@@ -169,16 +199,14 @@ fun StatisticsScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Target: 10:00:00 • 65% Completed",
+                        text = "Consistent study routine maintained",
                         style = MaterialTheme.typography.bodySmall,
                         color = FocusGreen
                     )
                 }
             }
-        }
 
-        // Subject Ratio Donut Chart Section (YPT Style)
-        item {
+            // Subject Ratio Donut Chart Section
             Card(
                 colors = CardDefaults.cardColors(containerColor = FocusSurface),
                 shape = RoundedCornerShape(20.dp),
@@ -208,6 +236,8 @@ fun StatisticsScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
+                    val activeSubjects = subjects.filter { (it.completedSeconds * timeMultiplier) > 0 }.takeIf { it.isNotEmpty() } ?: subjects
+
                     // Donut Chart Canvas Drawing
                     Box(
                         modifier = Modifier
@@ -216,14 +246,15 @@ fun StatisticsScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Canvas(modifier = Modifier.size(180.dp)) {
-                            val totalSecs = subjects.sumOf { it.completedSeconds }.coerceAtLeast(1)
+                            val totalSecs = activeSubjects.sumOf { it.completedSeconds * timeMultiplier }.coerceAtLeast(1)
                             var startAngle = -90f
                             val strokeWidth = 32.dp.toPx()
                             val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
                             val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
 
-                            subjects.forEach { subject ->
-                                val sweep = (subject.completedSeconds.toFloat() / totalSecs.toFloat()) * 360f
+                            activeSubjects.forEach { subject ->
+                                val subjectSecs = subject.completedSeconds * timeMultiplier
+                                val sweep = (subjectSecs.toFloat() / totalSecs.toFloat()) * 360f
                                 val color = try {
                                     Color(android.graphics.Color.parseColor(subject.categoryColorHex))
                                 } catch (e: Exception) {
@@ -251,7 +282,7 @@ fun StatisticsScreen(
                                 color = FocusTextSecondary
                             )
                             Text(
-                                text = "${subjects.size} Active",
+                                text = "${activeSubjects.size} Active",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = Color.White
                             )
@@ -261,11 +292,12 @@ fun StatisticsScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Legend Table Breakdown
-                    subjects.forEach { subject ->
-                        val hrs = subject.completedSeconds / 3600
-                        val mins = (subject.completedSeconds % 3600) / 60
-                        val totalSecs = subjects.sumOf { it.completedSeconds }.coerceAtLeast(1)
-                        val pct = ((subject.completedSeconds.toFloat() / totalSecs.toFloat()) * 100).toInt()
+                    activeSubjects.forEach { subject ->
+                        val subjectSecs = subject.completedSeconds * timeMultiplier
+                        val hrs = subjectSecs / 3600
+                        val mins = (subjectSecs % 3600) / 60
+                        val totalSecs = activeSubjects.sumOf { it.completedSeconds * timeMultiplier }.coerceAtLeast(1)
+                        val pct = if (totalSecs > 0) ((subjectSecs.toFloat() / totalSecs.toFloat()) * 100).toInt() else 0
 
                         Row(
                             modifier = Modifier
@@ -312,10 +344,8 @@ fun StatisticsScreen(
                     }
                 }
             }
-        }
 
-        // AI Focus Coach Smart Insights Card
-        item {
+            // AI Focus Coach Smart Insights Card
             Card(
                 colors = CardDefaults.cardColors(containerColor = FocusSurface),
                 shape = RoundedCornerShape(20.dp),
@@ -350,12 +380,39 @@ fun StatisticsScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Your peak study velocity occurs in 50-minute blocks with Strict Lock Level 2. Maintaining your 7-day streak will unlock maximum retention mode!",
+                            text = "Great job! Consistently studying during your $selectedPeriodTab period improves retention.",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White
                         )
                     }
                 }
+            }
+            
+            Spacer(modifier = Modifier.height(40.dp))
+        }
+    }
+}
+
+suspend fun saveBitmapToGallery(context: Context, bitmap: Bitmap, period: String) {
+    withContext(Dispatchers.IO) {
+        val resolver = context.contentResolver
+        val filename = "Focus_Stats_${period}_${System.currentTimeMillis()}.png"
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+            put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "Pictures/FocusOS")
+        }
+        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+        if (uri != null) {
+            resolver.openOutputStream(uri)?.use { stream ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            }
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "$period Statistics Image Saved to Gallery!", Toast.LENGTH_LONG).show()
+            }
+        } else {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Failed to save image.", Toast.LENGTH_SHORT).show()
             }
         }
     }
