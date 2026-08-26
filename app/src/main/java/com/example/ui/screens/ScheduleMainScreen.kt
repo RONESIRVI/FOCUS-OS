@@ -1,21 +1,30 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,380 +32,316 @@ import com.example.data.model.FocusSession
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.FocusViewModel
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleMainScreen(
     viewModel: FocusViewModel,
     onNavigateToCreate: () -> Unit,
-    onStartScheduled: (Long) -> Unit = {}
+    onStartScheduled: (FocusSession) -> Unit
 ) {
-    val scheduledSessions by viewModel.scheduledSessions.collectAsState()
+    val scheduledSessions by viewModel.scheduledSessions.collectAsState(initial = emptyList())
+    val allSessions by viewModel.allSessions.collectAsState(initial = emptyList())
+    val historySessions = allSessions.filter { it.scheduledStartTime != null && it.status == "COMPLETED" }.sortedByDescending { it.timestamp }
+    
+    var selectedTabIndex by remember { mutableStateOf(0) }
 
-    // Group sessions by Date (yyyy-MM-dd)
-    val groupedSessions = remember(scheduledSessions) {
-        val groupDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        scheduledSessions.groupBy { session ->
-            val time = session.scheduledStartTime ?: session.timestamp
-            groupDateFormat.format(Date(time))
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(FocusBackground)
-            .padding(horizontal = 18.dp)
-    ) {
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Top Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "FOCUS TIMETABLE",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 1.sp
-                    ),
-                    color = Color.White
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Timetable",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        ),
+                        color = Color.White
+                    )
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToCreate) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Create Schedule",
+                            tint = Color.White
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = FocusBackground,
+                    titleContentColor = Color.White
                 )
-                Text(
-                    text = "Strict Study Schedules & Alarms",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = FocusTextSecondary
-                )
-            }
-
-            Button(
-                onClick = onNavigateToCreate,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = FocusWarning,
-                    contentColor = Color.Black
-                ),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                modifier = Modifier.testTag("add_schedule_button")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add Schedule",
-                    modifier = Modifier.size(18.dp),
-                    tint = Color.Black
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    "ADD",
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Black)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        if (scheduledSessions.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 80.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = FocusSurface),
-                    shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(1.dp, FocusOutline),
-                    modifier = Modifier.fillMaxWidth()
+            )
+        },
+        floatingActionButton = {
+            if (selectedTabIndex == 0) {
+                FloatingActionButton(
+                    onClick = onNavigateToCreate,
+                    containerColor = FocusPrimary,
+                    contentColor = Color.Black,
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Column(
+                    Icon(Icons.Default.Add, contentDescription = "New Schedule")
+                }
+            }
+        },
+        containerColor = FocusBackground
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            TabRow(
+                selectedTabIndex = selectedTabIndex,
+                containerColor = FocusBackground,
+                contentColor = FocusPrimary,
+                indicator = { tabPositions ->
+                    if (selectedTabIndex < tabPositions.size) {
+                        TabRowDefaults.Indicator(
+                            Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                            color = FocusPrimary
+                        )
+                    }
+                }
+            ) {
+                Tab(
+                    selected = selectedTabIndex == 0,
+                    onClick = { selectedTabIndex = 0 },
+                    text = { Text("UPCOMING", fontWeight = FontWeight.Bold) }
+                )
+                Tab(
+                    selected = selectedTabIndex == 1,
+                    onClick = { selectedTabIndex = 1 },
+                    text = { Text("HISTORY", fontWeight = FontWeight.Bold) }
+                )
+            }
+
+            if (selectedTabIndex == 0) {
+                if (scheduledSessions.isEmpty()) {
+                    EmptyScheduleState(onNavigateToCreate)
+                } else {
+                    LazyColumn(
                         modifier = Modifier
-                            .padding(28.dp)
-                            .fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = FocusSurfaceVariant,
-                            modifier = Modifier.size(72.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.CalendarMonth,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(36.dp),
-                                    tint = FocusPrimary
-                                )
-                            }
+                        items(scheduledSessions, key = { it.id }) { session ->
+                            ScheduleCard(
+                                session = session,
+                                isHistory = false,
+                                onStart = {
+                                    viewModel.loadScheduledSession(session.id)
+                                    onStartScheduled(session)
+                                },
+                                onDelete = { viewModel.deleteScheduledSession(session) }
+                            )
                         }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            text = "No Focus Sessions Scheduled",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Text(
-                            text = "Plan ahead! Add study schedules for today, tomorrow, or any custom date with strict lockdown.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = FocusTextSecondary,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Button(
-                            onClick = onNavigateToCreate,
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = FocusWarning,
-                                contentColor = Color.Black
-                            ),
-                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
-                        ) {
-                            Icon(Icons.Default.AddAlarm, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Black)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "CREATE FIRST SCHEDULE",
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Black)
+                    }
+                }
+            } else {
+                if (historySessions.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No schedule history found", color = FocusTextSecondary)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(historySessions, key = { it.id }) { session ->
+                            ScheduleCard(
+                                session = session,
+                                isHistory = true,
+                                onStart = { },
+                                onDelete = { viewModel.deleteScheduledSession(session) } // Reuse delete logic
                             )
                         }
                     }
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+        }
+    }
+}
+
+@Composable
+fun EmptyScheduleState(onCreateClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Schedule,
+            contentDescription = null,
+            tint = FocusOutline,
+            modifier = Modifier.size(80.dp)
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "No Upcoming Sessions",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = Color.White
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Create a disciplined schedule to enforce focus at specific times.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = FocusTextSecondary,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+        Button(
+            onClick = onCreateClick,
+            colors = ButtonDefaults.buttonColors(containerColor = FocusSurfaceVariant),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("CREATE SCHEDULE", color = Color.White, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun ScheduleCard(
+    session: FocusSession,
+    isHistory: Boolean,
+    onStart: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val formatter = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+    val dateFormatter = remember { SimpleDateFormat("EEE, d MMM", Locale.getDefault()) }
+    
+    val timeString = session.scheduledStartTime?.let { formatter.format(Date(it)) } ?: "N/A"
+    val dateString = session.scheduledStartTime?.let { dateFormatter.format(Date(it)) } ?: ""
+    val durationString = "${session.targetDurationMinutes} min"
+
+    val isPending = session.scheduledStartTime?.let { it < System.currentTimeMillis() } == true
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = FocusSurface),
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, FocusOutline),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Render each Date Group
-                groupedSessions.forEach { (dateKey, sessionsInGroup) ->
-                    val firstSessionTime = sessionsInGroup.firstOrNull()?.scheduledStartTime ?: System.currentTimeMillis()
-                    val groupDate = Date(firstSessionTime)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = if (isHistory) FocusTextSecondary else if (isPending) MaterialTheme.colorScheme.error else FocusPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "$dateString • $timeString",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = if (isHistory) FocusTextSecondary else if (isPending) MaterialTheme.colorScheme.error else FocusPrimary
+                    )
+                }
+                
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (isHistory) FocusSurfaceVariant else if (isPending) MaterialTheme.colorScheme.error.copy(alpha = 0.2f) else FocusPrimary.copy(alpha = 0.2f)
+                ) {
+                    Text(
+                        text = if (isHistory) "COMPLETED" else if (isPending) "PENDING" else "UPCOMING",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Black),
+                        color = if (isHistory) FocusTextSecondary else if (isPending) MaterialTheme.colorScheme.error else FocusPrimary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
 
-                    val todayCal = Calendar.getInstance()
-                    val sessionCal = Calendar.getInstance().apply { time = groupDate }
+            Spacer(modifier = Modifier.height(16.dp))
 
-                    val isToday = todayCal.get(Calendar.YEAR) == sessionCal.get(Calendar.YEAR) &&
-                            todayCal.get(Calendar.DAY_OF_YEAR) == sessionCal.get(Calendar.DAY_OF_YEAR)
+            // Body
+            Text(
+                text = session.subjectName,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "${session.sessionName} • $durationString",
+                style = MaterialTheme.typography.bodyMedium,
+                color = FocusTextSecondary
+            )
 
-                    val tomorrowCal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }
-                    val isTomorrow = tomorrowCal.get(Calendar.YEAR) == sessionCal.get(Calendar.YEAR) &&
-                            tomorrowCal.get(Calendar.DAY_OF_YEAR) == sessionCal.get(Calendar.DAY_OF_YEAR)
+            Spacer(modifier = Modifier.height(16.dp))
 
-                    val headerDateLabel = when {
-                        isToday -> "🌟 TODAY • ${SimpleDateFormat("d MMMM yyyy", Locale.getDefault()).format(groupDate).uppercase()}"
-                        isTomorrow -> "🚀 TOMORROW • ${SimpleDateFormat("d MMMM yyyy", Locale.getDefault()).format(groupDate).uppercase()}"
-                        else -> "📅 ${SimpleDateFormat("EEEE • d MMMM yyyy", Locale.getDefault()).format(groupDate).uppercase()}"
+            // Lock Mode Info
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = FocusWarning,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "${session.lockMode} Mode Enforced",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = FocusWarning
+                )
+                if (session.requiresSelfie) {
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "• Selfie Required",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = FocusWarning
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Actions
+            if (!isHistory) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("CANCEL", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
-
-                    item {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isToday) FocusPrimary.copy(alpha = 0.12f) else FocusSurfaceVariant,
-                            border = BorderStroke(1.dp, if (isToday) FocusPrimary.copy(alpha = 0.4f) else FocusOutline),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = headerDateLabel,
-                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = if (isToday) FocusPrimary else Color.White
-                                )
-
-                                Text(
-                                    text = "${sessionsInGroup.size} ${if (sessionsInGroup.size == 1) "Session" else "Sessions"}",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = FocusTextSecondary
-                                )
-                            }
-                        }
-                    }
-
-                    items(sessionsInGroup) { session ->
-                        val timeFormatter = SimpleDateFormat("h:mm a", Locale.getDefault())
-                        val startTimeStr = session.scheduledStartTime?.let { timeFormatter.format(Date(it)) } ?: ""
-                        val endTimeStr = session.scheduledEndTime?.let { timeFormatter.format(Date(it)) } ?: ""
-
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = FocusSurface),
-                            shape = RoundedCornerShape(18.dp),
-                            border = BorderStroke(1.dp, FocusOutline),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(18.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = "📚 ${session.subjectName.uppercase()}",
-                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = Color.White
-                                        )
-                                    }
-
-                                    IconButton(
-                                        onClick = { viewModel.deleteScheduledSession(session) },
-                                        modifier = Modifier.size(28.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.DeleteOutline,
-                                            contentDescription = "Delete",
-                                            tint = FocusWarning.copy(alpha = 0.8f),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-
-                                if (session.sessionName.isNotBlank() && session.sessionName != session.subjectName) {
-                                    Text(
-                                        text = session.sessionName,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = FocusTextSecondary
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                // Time Range & Duration
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Schedule,
-                                        contentDescription = null,
-                                        tint = FocusPrimary,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "$startTimeStr – $endTimeStr",
-                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = FocusSurfaceVariant
-                                    ) {
-                                        Text(
-                                            text = "${session.targetDurationMinutes} mins",
-                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                            color = FocusPrimary,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(14.dp))
-
-                                // Badges and Start Button Row
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Surface(
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = FocusWarning.copy(alpha = 0.15f)
-                                        ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Lock,
-                                                    contentDescription = null,
-                                                    tint = FocusWarning,
-                                                    modifier = Modifier.size(12.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                Text(
-                                                    text = session.lockMode.split("_").first(),
-                                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                                    color = FocusWarning
-                                                )
-                                            }
-                                        }
-
-                                        if (session.requiresPhoto) {
-                                            Surface(
-                                                shape = RoundedCornerShape(8.dp),
-                                                color = FocusAccent.copy(alpha = 0.15f)
-                                            ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.CameraAlt,
-                                                        contentDescription = null,
-                                                        tint = FocusAccent,
-                                                        modifier = Modifier.size(12.dp)
-                                                    )
-                                                    Spacer(modifier = Modifier.width(4.dp))
-                                                    Text(
-                                                        text = "PHOTO",
-                                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                                        color = FocusAccent
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    FilledTonalButton(
-                                        onClick = {
-                                            viewModel.loadScheduledSession(session.id)
-                                            onStartScheduled(session.id)
-                                        },
-                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                                        shape = RoundedCornerShape(10.dp),
-                                        colors = ButtonDefaults.filledTonalButtonColors(
-                                            containerColor = FocusWarning.copy(alpha = 0.2f),
-                                            contentColor = FocusWarning
-                                        )
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.PlayArrow,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            "START NOW",
-                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Button(
+                        onClick = onStart,
+                        colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = "Start", tint = Color.Black, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("START", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-
-                item { Spacer(modifier = Modifier.height(100.dp)) }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("DELETE HISTORY", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }

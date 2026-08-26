@@ -229,6 +229,7 @@ fun StatisticsScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val view = androidx.compose.ui.platform.LocalView.current
     val allSessions by viewModel.allSessions.collectAsState()
 
     var selectedTab by remember { mutableStateOf("Period") }
@@ -284,7 +285,7 @@ fun StatisticsScreen(
                         Icon(Icons.Default.Tune, contentDescription = "Period Filter & Compare", tint = Color.White)
                     }
                     IconButton(onClick = { 
-                        com.example.util.StatsExporter.exportStatsAsImage(context, primaryPeriod.title, period1TotalSeconds, period1DailyAvg, period1Sessions.size)
+                        com.example.util.StatsExporter.exportViewToImage(context, view)
                     }) {
                         Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White)
                     }

@@ -36,6 +36,7 @@ data class AppNotification(
     val timestamp: String,
     val icon: ImageVector,
     val iconTint: Color,
+    val idString: String = java.util.UUID.randomUUID().toString(),
     val tag: String,
     val actionText: String? = null,
     val onAction: (() -> Unit)? = null
@@ -46,6 +47,8 @@ data class AppNotification(
 fun NotificationCenterDialog(
     scheduledSessions: List<FocusSession>,
     summaryStats: StudySummaryStats,
+    dismissedIds: Set<String>,
+    onDismissNotification: (String) -> Unit,
     onDismiss: () -> Unit,
     onStartScheduledSession: (FocusSession) -> Unit,
     onOpenShield: () -> Unit,
@@ -56,6 +59,7 @@ fun NotificationCenterDialog(
     // Build real dynamic notifications based on live data
     val notifications = remember(scheduledSessions, summaryStats) {
         val list = mutableListOf<AppNotification>()
+        
 
         // 1. Scheduled session alerts
         scheduledSessions.forEach { session ->
@@ -229,16 +233,25 @@ fun NotificationCenterDialog(
                                     )
                                 }
 
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = FocusSurfaceVariant
-                                ) {
-                                    Text(
-                                        text = notif.tag,
-                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
-                                        color = notif.iconTint,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = FocusSurfaceVariant
+                                    ) {
+                                        Text(
+                                            text = notif.tag,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                                            color = notif.iconTint,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    IconButton(
+                                        onClick = { onDismissNotification(notif.id) },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(Icons.Default.Close, contentDescription = "Dismiss", tint = FocusTextSecondary, modifier = Modifier.size(16.dp))
+                                    }
                                 }
                             }
 

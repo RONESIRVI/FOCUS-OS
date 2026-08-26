@@ -1,7 +1,7 @@
 package com.example.ui.screens
 
-
-
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -13,12 +13,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberTimePickerState
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -96,19 +90,6 @@ fun ScheduleCreateScreen(
     }
     var endMinute by remember { mutableStateOf(startMinute) }
 
-    var showDatePicker by remember { mutableStateOf(false) }
-    var showStartTimePicker by remember { mutableStateOf(false) }
-    var showEndTimePicker by remember { mutableStateOf(false) }
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedCalendar.timeInMillis)
-    
-    @OptIn(ExperimentalMaterial3Api::class)
-    val startTimePickerState = rememberTimePickerState(initialHour = startHour, initialMinute = startMinute, is24Hour = false)
-    
-    @OptIn(ExperimentalMaterial3Api::class)
-    val endTimePickerState = rememberTimePickerState(initialHour = endHour, initialMinute = endMinute, is24Hour = false)
-
     // Session & Subject details - clean, user writes according to their preference
     var subjectName by remember {
         mutableStateOf(setup.subjectName)
@@ -137,7 +118,29 @@ fun ScheduleCreateScreen(
 
     // Date Picker Dialog function
     val openDatePicker = {
-        showDatePicker = true
+        val y = selectedCalendar.get(Calendar.YEAR)
+        val m = selectedCalendar.get(Calendar.MONTH)
+        val d = selectedCalendar.get(Calendar.DAY_OF_MONTH)
+
+        val dateDialog = DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val newCal = Calendar.getInstance().apply {
+                    set(Calendar.YEAR, year)
+                    set(Calendar.MONTH, month)
+                    set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                    set(Calendar.HOUR_OF_DAY, startHour)
+                    set(Calendar.MINUTE, startMinute)
+                }
+                selectedCalendar = newCal
+                selectedPreset = DatePresetType.CUSTOM
+            },
+            y,
+            m,
+            d
+        )
+        dateDialog.datePicker.minDate = System.currentTimeMillis() - 1000
+        dateDialog.show()
     }
 
     Scaffold(
@@ -533,7 +536,24 @@ fun ScheduleCreateScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clickable {
-                                        showStartTimePicker = true
+                                        TimePickerDialog(
+                                            context,
+                                            { _, h, m ->
+                                                startHour = h
+                                                startMinute = m
+                                                // Adjust end time to maintain at least 30 mins
+                                                val endCal = Calendar.getInstance().apply {
+                                                    set(Calendar.HOUR_OF_DAY, h)
+                                                    set(Calendar.MINUTE, m)
+                                                    add(Calendar.MINUTE, 60)
+                                                }
+                                                endHour = endCal.get(Calendar.HOUR_OF_DAY)
+                                                endMinute = endCal.get(Calendar.MINUTE)
+                                            },
+                                            startHour,
+                                            startMinute,
+                                            false
+                                        ).show()
                                     }
                             ) {
                                 Column(modifier = Modifier.padding(14.dp)) {
@@ -569,7 +589,16 @@ fun ScheduleCreateScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clickable {
-                                        showEndTimePicker = true
+                                        TimePickerDialog(
+                                            context,
+                                            { _, h, m ->
+                                                endHour = h
+                                                endMinute = m
+                                            },
+                                            endHour,
+                                            endMinute,
+                                            false
+                                        ).show()
                                     }
                             ) {
                                 Column(modifier = Modifier.padding(14.dp)) {
@@ -1182,79 +1211,6 @@ fun ScheduleCreateScreen(
             }
 
             item { Spacer(modifier = Modifier.height(20.dp)) }
-        }
-
-        @OptIn(ExperimentalMaterial3Api::class)
-        if (showDatePicker) {
-            DatePickerDialog(
-                onDismissRequest = { showDatePicker = false },
-                confirmButton = {
-                    TextButton(onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            selectedCalendar.timeInMillis = millis
-                            selectedPreset = DatePresetType.CUSTOM
-                        }
-                        showDatePicker = false
-                    }) {
-                        Text("OK", color = FocusPrimary)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDatePicker = false }) {
-                        Text("Cancel", color = FocusTextSecondary)
-                    }
-                }
-            ) {
-                DatePicker(state = datePickerState)
-            }
-        }
-
-        @OptIn(ExperimentalMaterial3Api::class)
-        if (showStartTimePicker) {
-            AlertDialog(
-                onDismissRequest = { showStartTimePicker = false },
-                title = { Text("Select Start Time") },
-                text = { TimePicker(state = startTimePickerState) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        startHour = startTimePickerState.hour
-                        startMinute = startTimePickerState.minute
-                        selectedCalendar.set(java.util.Calendar.HOUR_OF_DAY, startHour)
-                        selectedCalendar.set(java.util.Calendar.MINUTE, startMinute)
-                        showStartTimePicker = false
-                    }) {
-                        Text("OK", color = FocusPrimary)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showStartTimePicker = false }) {
-                        Text("Cancel", color = FocusTextSecondary)
-                    }
-                }
-            )
-        }
-
-        @OptIn(ExperimentalMaterial3Api::class)
-        if (showEndTimePicker) {
-            AlertDialog(
-                onDismissRequest = { showEndTimePicker = false },
-                title = { Text("Select End Time") },
-                text = { TimePicker(state = endTimePickerState) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        endHour = endTimePickerState.hour
-                        endMinute = endTimePickerState.minute
-                        showEndTimePicker = false
-                    }) {
-                        Text("OK", color = FocusPrimary)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showEndTimePicker = false }) {
-                        Text("Cancel", color = FocusTextSecondary)
-                    }
-                }
-            )
         }
     }
 }

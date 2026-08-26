@@ -124,9 +124,18 @@ fun FocusNavGraph(
                             popUpTo(FocusRoutes.TIMER) { inclusive = true }
                         }
                     } else {
+                        val wasScheduled = viewModel.activeScheduledSessionId.value != null
                         viewModel.completeFocusSession()
-                        navController.navigate(FocusRoutes.SESSION_COMPLETE) {
-                            popUpTo(FocusRoutes.TIMER) { inclusive = true }
+                        if (wasScheduled) {
+                            android.widget.Toast.makeText(navController.context, "SCHEDULE History Save Ho चुकी है", android.widget.Toast.LENGTH_LONG).show()
+                            navController.navigate(FocusRoutes.SCHEDULE_MAIN) {
+                                popUpTo(FocusRoutes.TIMER) { inclusive = true }
+                                popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
+                            }
+                        } else {
+                            navController.navigate(FocusRoutes.SESSION_COMPLETE) {
+                                popUpTo(FocusRoutes.TIMER) { inclusive = true }
+                            }
                         }
                     }
                 }
@@ -137,9 +146,18 @@ fun FocusNavGraph(
                 viewModel = viewModel,
                 isStart = false,
                 onVerificationComplete = {
+                    val wasScheduled = viewModel.activeScheduledSessionId.value != null
                     viewModel.completeFocusSession() // Save end photo
-                    navController.navigate(FocusRoutes.SESSION_COMPLETE) {
-                        popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
+                    if (wasScheduled) {
+                        android.widget.Toast.makeText(navController.context, "SCHEDULE History Save Ho चुकी है", android.widget.Toast.LENGTH_LONG).show()
+                        navController.navigate(FocusRoutes.SCHEDULE_MAIN) {
+                            popUpTo(FocusRoutes.TIMER) { inclusive = true }
+                            popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate(FocusRoutes.SESSION_COMPLETE) {
+                            popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
+                        }
                     }
                 },
                 onCancel = { /* No cancel allowed at end */ }

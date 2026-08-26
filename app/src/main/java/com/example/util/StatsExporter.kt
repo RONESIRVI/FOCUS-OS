@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
+import com.example.data.model.FocusSession
 import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -22,10 +23,20 @@ object StatsExporter {
         periodName: String,
         totalSeconds: Int,
         dailyAvgSeconds: Int,
-        totalSessions: Int
+        sessions: List<FocusSession>
     ) {
+        val totalSessions = sessions.size
+        
+        // Group by subject and sort
+        val subjectMap = sessions.groupBy { it.subjectName }
+            .mapValues { (_, list) -> list.sumOf { it.completedDurationSeconds } }
+            .toList()
+            .sortedByDescending { it.second }
+            
+        val numSubjects = minOf(5, subjectMap.size)
+        
         val width = 1080
-        val height = 1080
+        val height = 1100 + (numSubjects * 120) // dynamic height based on content
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
@@ -44,14 +55,14 @@ object StatsExporter {
 
         val labelPaint = Paint().apply {
             color = Color.parseColor("#A0A0A0")
-            textSize = 45f
+            textSize = 40f
             isAntiAlias = true
             textAlign = Paint.Align.CENTER
         }
 
         val valuePaint = Paint().apply {
             color = Color.parseColor("#4CAF50") // Primary Green / FocusPrimary
-            textSize = 100f
+            textSize = 90f
             isAntiAlias = true
             textAlign = Paint.Align.CENTER
             isFakeBoldText = true
@@ -84,14 +95,56 @@ object StatsExporter {
         canvas.drawText(formatTime(totalSeconds), width / 2f, 470f, valuePaint)
 
         // Draw Daily Avg Card
-        canvas.drawRoundRect(RectF(100f, 550f, 500f, 850f), 40f, 40f, cardPaint)
-        canvas.drawText("Daily Average", 300f, 650f, labelPaint)
-        canvas.drawText(formatTime(dailyAvgSeconds), 300f, 750f, valuePaint.apply { textSize = 70f })
+        canvas.drawRoundRect(RectF(100f, 530f, 500f, 780f), 40f, 40f, cardPaint)
+        canvas.drawText("Daily Average", 300f, 620f, labelPaint)
+        canvas.drawText(formatTime(dailyAvgSeconds), 300f, 720f, valuePaint.apply { textSize = 75f })
 
         // Draw Sessions Card
-        canvas.drawRoundRect(RectF(580f, 550f, width - 100f, 850f), 40f, 40f, cardPaint)
-        canvas.drawText("Total Sessions", 830f, 650f, labelPaint)
-        canvas.drawText("$totalSessions", 830f, 750f, valuePaint.apply { textSize = 70f })
+        canvas.drawRoundRect(RectF(580f, 530f, width - 100f, 780f), 40f, 40f, cardPaint)
+        canvas.drawText("Total Sessions", 830f, 620f, labelPaint)
+        canvas.drawText("$totalSessions", 830f, 720f, valuePaint.apply { textSize = 75f })
+
+        // Subject Breakdown
+        if (subjectMap.isNotEmpty()) {
+            canvas.drawRoundRect(RectF(100f, 810f, width - 100f, 810f + 160f + (numSubjects * 100f)), 40f, 40f, cardPaint)
+            
+            val subjectTitlePaint = Paint().apply {
+                color = Color.WHITE
+                textSize = 50f
+                isAntiAlias = true
+                textAlign = Paint.Align.LEFT
+                isFakeBoldText = true
+            }
+            canvas.drawText("Subject Breakdown", 150f, 890f, subjectTitlePaint)
+            
+            val subjectNamePaint = Paint().apply {
+                color = Color.WHITE
+                textSize = 45f
+                isAntiAlias = true
+                textAlign = Paint.Align.LEFT
+            }
+            val subjectTimePaint = Paint().apply {
+                color = Color.parseColor("#4CAF50")
+                textSize = 45f
+                isAntiAlias = true
+                textAlign = Paint.Align.RIGHT
+                isFakeBoldText = true
+            }
+            
+            val colors = listOf("#38BDF8", "#F59E0B", "#EC4899", "#10B981", "#8B5CF6")
+            
+            for (i in 0 until numSubjects) {
+                val yPos = 990f + (i * 100f)
+                val dotPaint = Paint().apply {
+                    color = Color.parseColor(colors[i % colors.size])
+                    isAntiAlias = true
+                }
+                canvas.drawCircle(170f, yPos - 15f, 20f, dotPaint)
+                canvas.drawText(subjectMap[i].first, 220f, yPos, subjectNamePaint)
+                val percent = if (totalSeconds > 0) ((subjectMap[i].second.toFloat() / totalSeconds) * 100).toInt() else 0
+                canvas.drawText("${formatTime(subjectMap[i].second)} ($percent%)", width - 150f, yPos, subjectTimePaint)
+            }
+        }
 
         // Save Bitmap
         saveBitmapToGallery(context, bitmap)
@@ -128,7 +181,7 @@ object StatsExporter {
             // Show toast on the main thread
             val handler = android.os.Handler(android.os.Looper.getMainLooper())
             handler.post {
-                Toast.makeText(context, "Stats image saved to Gallery!", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Stats fully exported to Gallery!", Toast.LENGTH_LONG).show()
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -137,5 +190,19 @@ object StatsExporter {
                 Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+
+    fun exportViewToImage(context: Context, view: android.view.View) {
+        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val bgDrawable = view.background
+        if (bgDrawable != null) {
+            bgDrawable.draw(canvas)
+        } else {
+            canvas.drawColor(Color.parseColor("#121212")) // Default background
+        }
+        view.draw(canvas)
+        saveBitmapToGallery(context, bitmap)
     }
 }

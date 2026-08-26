@@ -1,0 +1,1 @@
+sed -i 's/exportStatsAsImage(context, primaryPeriod.title, period1TotalSeconds, period1DailyAvg, period1Sessions.size)/exportStatsAsImage(context, primaryPeriod.title, period1TotalSeconds, period1DailyAvg, period1Sessions)/g' app/src/main/java/com/example/ui/screens/StatisticsScreen.kt

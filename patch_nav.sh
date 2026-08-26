@@ -1,0 +1,5 @@
+sed -i 's/viewModel.completeFocusSession()/val wasScheduled = viewModel.activeScheduledSessionId.value != null\n                        viewModel.completeFocusSession()/g' app/src/main/java/com/example/ui/navigation/NavGraph.kt
+
+sed -i 's/navController.navigate(FocusRoutes.SESSION_COMPLETE) {/if (wasScheduled) {\n                            android.widget.Toast.makeText(navController.context, "SCHEDULE History Save Ho चुकी है", android.widget.Toast.LENGTH_LONG).show()\n                            navController.navigate(FocusRoutes.SCHEDULE_MAIN) {\n                                popUpTo(FocusRoutes.TIMER) { inclusive = true }\n                                popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }\n                            }\n                        } else {\n                            navController.navigate(FocusRoutes.SESSION_COMPLETE) {/g' app/src/main/java/com/example/ui/navigation/NavGraph.kt
+
+sed -i 's/}                        }                    }                }            )/}                        }\n                    }\n                }\n            )/g' app/src/main/java/com/example/ui/navigation/NavGraph.kt

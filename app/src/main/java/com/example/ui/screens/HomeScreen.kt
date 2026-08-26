@@ -51,6 +51,7 @@ fun HomeScreen(
     
     var showAppGuide by remember { mutableStateOf(false) }
     var showNotifications by remember { mutableStateOf(false) }
+    var dismissedNotificationIds by remember { mutableStateOf(setOf<String>()) }
 
     LaunchedEffect(Unit) {
         userName = sharedPrefs.getString("USER_NAME", "Focus Student") ?: "Focus Student"
@@ -71,6 +72,8 @@ fun HomeScreen(
         NotificationCenterDialog(
             scheduledSessions = scheduledSessions,
             summaryStats = stats,
+            dismissedIds = dismissedNotificationIds,
+            onDismissNotification = { id -> dismissedNotificationIds = dismissedNotificationIds + id },
             onDismiss = { showNotifications = false },
             onStartScheduledSession = { session ->
                 viewModel.loadScheduledSession(session.id)

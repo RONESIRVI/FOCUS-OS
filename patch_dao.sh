@@ -1,0 +1,1 @@
+sed -i '/fun getScheduledSessions/a \    @Query("SELECT * FROM focus_sessions WHERE scheduledStartTime IS NOT NULL AND status IN (\\'\''COMPLETED\\'\'', \\'\''MISSED\\'\'') ORDER BY timestamp DESC")\n    fun getScheduledHistory(): Flow<List<FocusSession>>' app/src/main/java/com/example/data/db/FocusDao.kt

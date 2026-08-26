@@ -79,6 +79,13 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _setupState = MutableStateFlow(UiSessionSetup())
+    
+    private val _dismissedNotificationIds = MutableStateFlow<Set<String>>(emptySet())
+    val dismissedNotificationIds: StateFlow<Set<String>> = _dismissedNotificationIds
+    
+    fun dismissNotification(id: String) {
+        _dismissedNotificationIds.value = _dismissedNotificationIds.value + id
+    }
     val setupState: StateFlow<UiSessionSetup> = _setupState.asStateFlow()
 
     private val _serviceTimerState = MutableStateFlow(TimerState())
@@ -179,6 +186,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun bindTimerService() {
         val context = getApplication<Application>()
+        val sharedPrefs = context.getSharedPreferences("schedule_prefs", android.content.Context.MODE_PRIVATE)
         val intent = Intent(context, FocusTimerService::class.java)
         context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
@@ -269,9 +277,11 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     fun startFocusSession() {
         val setup = _setupState.value
         val context = getApplication<Application>()
+        val sharedPrefs = context.getSharedPreferences("schedule_prefs", android.content.Context.MODE_PRIVATE)
         val intent = Intent(context, FocusTimerService::class.java)
 
         val scheduledId = _activeScheduledSessionId.value
+        
         if (scheduledId != null) {
             viewModelScope.launch(Dispatchers.IO) {
                 val sessions = repository.allSessions.first()
@@ -283,7 +293,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Immediately update FocusLockManager allowed packages
-        val allowedList = if (setup.lockMode == LockMode.STRICT_LOCK || setup.lockMode == LockMode.MAXIMUM_LOCK) {
+        val allowedList = if (scheduledId != null && sharedPrefs.getString("scheduled_apps_$scheduledId", null) != null) {
+            sharedPrefs.getString("scheduled_apps_$scheduledId", "")!!.split(",").filter { it.isNotBlank() }
+        } else if (setup.lockMode == LockMode.STRICT_LOCK || setup.lockMode == LockMode.MAXIMUM_LOCK) {
             whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
         } else {
             whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
@@ -321,6 +333,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         val setup = _setupState.value
         val context = getApplication<Application>()
+        val sharedPrefs = context.getSharedPreferences("schedule_prefs", android.content.Context.MODE_PRIVATE)
         
         val calendar = java.util.Calendar.getInstance().apply {
             if (targetYear != null && targetMonth != null && targetDayOfMonth != null) {
@@ -359,6 +372,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         
         viewModelScope.launch(Dispatchers.IO) {
             val sessionId = repository.saveSession(session)
+            // Save fixed allowed apps for this schedule
+            val currentAllowed = if (setup.lockMode == LockMode.STRICT_LOCK || setup.lockMode == LockMode.MAXIMUM_LOCK) whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName } else whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
+            context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE).edit().putString("scheduled_apps_$sessionId", currentAllowed.joinToString(",")).apply()
             
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
             
@@ -422,6 +438,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteScheduledSession(session: FocusSession) {
         viewModelScope.launch(Dispatchers.IO) {
             val context = getApplication<Application>()
+        val sharedPrefs = context.getSharedPreferences("schedule_prefs", android.content.Context.MODE_PRIVATE)
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? android.app.AlarmManager
             
             if (alarmManager != null) {
@@ -493,6 +510,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     fun completeFocusSession() {
         val current = _serviceTimerState.value
         val scheduledId = _activeScheduledSessionId.value
+        
         val setup = _setupState.value
         viewModelScope.launch(Dispatchers.IO) {
             if (current.totalSeconds > 0) {
