@@ -23,14 +23,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 
 data class UiSessionSetup(
     val sessionName: String = "",
     val subjectName: String = "",
     val durationMinutes: Int = 25,
     val lockMode: LockMode = LockMode.STRICT_LOCK,
-    val selectedSound: SoundType = SoundType.NONE
+    val selectedSound: SoundType = SoundType.NONE,
+    val scheduledStartTime: Long? = null,
+    val scheduledEndTime: Long? = null,
+    val requiresPhoto: Boolean = true,
+    val requiresSelfie: Boolean = true
 )
 
 data class StudySummaryStats(
@@ -47,6 +53,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = FocusRepository(db.focusDao())
 
     val allSessions: StateFlow<List<FocusSession>> = repository.allSessions
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val scheduledSessions: StateFlow<List<FocusSession>> = repository.scheduledSessions
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allowedApps: StateFlow<List<AllowedApp>> = repository.allowedApps
@@ -110,19 +119,46 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun loadScheduledSession(sessionId: Long) {
+        viewModelScope.launch {
+            val sessions = repository.allSessions.first()
+            val session = sessions.find { it.id == sessionId }
+            if (session != null) {
+                _setupState.value = _setupState.value.copy(
+                    sessionName = session.sessionName,
+                    subjectName = session.subjectName,
+                    durationMinutes = session.targetDurationMinutes,
+                    lockMode = LockMode.valueOf(session.lockMode),
+                    scheduledStartTime = session.scheduledStartTime,
+                    scheduledEndTime = session.scheduledEndTime,
+                    requiresPhoto = session.requiresPhoto,
+                    requiresSelfie = session.requiresSelfie
+                )
+            }
+        }
+    }
+
     fun updateSetup(
         sessionName: String? = null,
         subjectName: String? = null,
         durationMinutes: Int? = null,
         lockMode: LockMode? = null,
-        soundType: SoundType? = null
+        soundType: SoundType? = null,
+        scheduledStartTime: Long? = null,
+        scheduledEndTime: Long? = null,
+        requiresPhoto: Boolean? = null,
+        requiresSelfie: Boolean? = null
     ) {
         _setupState.value = _setupState.value.copy(
             sessionName = sessionName ?: _setupState.value.sessionName,
             subjectName = subjectName ?: _setupState.value.subjectName,
             durationMinutes = durationMinutes ?: _setupState.value.durationMinutes,
             lockMode = lockMode ?: _setupState.value.lockMode,
-            selectedSound = soundType ?: _setupState.value.selectedSound
+            selectedSound = soundType ?: _setupState.value.selectedSound,
+            scheduledStartTime = scheduledStartTime ?: _setupState.value.scheduledStartTime,
+            scheduledEndTime = scheduledEndTime ?: _setupState.value.scheduledEndTime,
+            requiresPhoto = requiresPhoto ?: _setupState.value.requiresPhoto,
+            requiresSelfie = requiresSelfie ?: _setupState.value.requiresSelfie
         )
     }
 
@@ -144,6 +180,69 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             lockMode = setup.lockMode,
             soundType = setup.selectedSound
         )
+    }
+
+    fun scheduleFocusSession(hour: Int, minute: Int) {
+        val setup = _setupState.value
+        val context = getApplication<Application>()
+        
+        val calendar = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, hour)
+            set(java.util.Calendar.MINUTE, minute)
+            set(java.util.Calendar.SECOND, 0)
+        }
+        
+        if (calendar.timeInMillis < System.currentTimeMillis()) {
+            calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
+        }
+        
+        val scheduledStartTime = calendar.timeInMillis
+        val scheduledEndTime = scheduledStartTime + (setup.durationMinutes * 60 * 1000L)
+        
+        val session = com.example.data.model.FocusSession(
+            sessionName = setup.sessionName,
+            subjectName = setup.subjectName,
+            targetDurationMinutes = setup.durationMinutes,
+            completedDurationSeconds = 0,
+            lockMode = setup.lockMode.name,
+            status = "SCHEDULED",
+            scheduledStartTime = scheduledStartTime,
+            scheduledEndTime = scheduledEndTime,
+            requiresPhoto = true,
+            requiresSelfie = true,
+            timestamp = System.currentTimeMillis()
+        )
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            val sessionId = repository.saveSession(session)
+            
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+            val intent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
+                putExtra("SESSION_ID", sessionId)
+            }
+            val pendingIntent = android.app.PendingIntent.getBroadcast(
+                context,
+                sessionId.toInt(),
+                intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                if (alarmManager.canScheduleExactAlarms()) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        android.app.AlarmManager.RTC_WAKEUP,
+                        scheduledStartTime,
+                        pendingIntent
+                    )
+                }
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(
+                    android.app.AlarmManager.RTC_WAKEUP,
+                    scheduledStartTime,
+                    pendingIntent
+                )
+            }
+        }
     }
 
     fun pauseSession() {

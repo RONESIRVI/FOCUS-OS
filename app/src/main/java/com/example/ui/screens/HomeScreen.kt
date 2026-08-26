@@ -52,6 +52,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Date
+import java.text.SimpleDateFormat
+import java.util.Locale
 import com.example.ui.theme.FocusAccentOrange
 import com.example.ui.theme.FocusCyan
 import com.example.ui.theme.FocusGold
@@ -71,6 +74,7 @@ fun HomeScreen(
     onNavigateToTimer: () -> Unit
 ) {
     val stats by viewModel.summaryStats.collectAsState()
+    val scheduledSessions by viewModel.scheduledSessions.collectAsState()
     val timerState by viewModel.timerState.collectAsState()
     val sessions by viewModel.allSessions.collectAsState()
     val subjects by viewModel.allSubjects.collectAsState()
@@ -511,5 +515,57 @@ fun HomeScreen(
                 }
             }
         }
+        
+        // Today's Schedule
+        if (scheduledSessions.isNotEmpty()) {
+            item {
+                Text(
+                    text = "TODAY'S SCHEDULE",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = FocusTextSecondary,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+                )
+            }
+            
+            items(scheduledSessions.take(3)) { session ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = FocusSurface),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            val formatter = SimpleDateFormat("h:mm a", Locale.getDefault())
+                            val timeStr = session.scheduledStartTime?.let { formatter.format(Date(it)) } ?: "Upcoming"
+                            Text(
+                                text = timeStr,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = FocusAccentOrange
+                            )
+                            Text(
+                                text = "${session.sessionName} • ${session.targetDurationMinutes} min",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White
+                            )
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .background(FocusSurfaceVariant, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text("SCHEDULED", style = MaterialTheme.typography.labelSmall, color = FocusCyan)
+                        }
+                    }
+                }
+            }
+        }
+        
     }
 }

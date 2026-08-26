@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 class FocusRepository(private val focusDao: FocusDao) {
 
     val allSessions: Flow<List<FocusSession>> = focusDao.getAllSessions()
+    val scheduledSessions: Flow<List<FocusSession>> = focusDao.getScheduledSessions()
     val allowedApps: Flow<List<AllowedApp>> = focusDao.getAllowedApps()
     val whitelistedApps: Flow<List<AllowedApp>> = focusDao.getWhitelistedApps()
     val allSubjects: Flow<List<SubjectTask>> = focusDao.getAllSubjects()
@@ -73,6 +74,10 @@ class FocusRepository(private val focusDao: FocusDao) {
         val id = focusDao.insertSession(session)
         focusDao.addSubjectTime(session.subjectName, session.completedDurationSeconds)
         return id
+    }
+
+    suspend fun updateSession(session: FocusSession) {
+        focusDao.updateSession(session)
     }
 
     suspend fun addSubject(subjectName: String, colorHex: String) {

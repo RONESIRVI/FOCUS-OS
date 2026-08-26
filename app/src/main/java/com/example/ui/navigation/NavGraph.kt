@@ -10,13 +10,16 @@ import com.example.ui.screens.FocusTimerScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.SessionCompleteScreen
 import com.example.ui.screens.StatisticsScreen
+import com.example.ui.screens.CameraVerificationScreen
 import com.example.ui.viewmodel.FocusViewModel
 
 object FocusRoutes {
     const val HOME = "home"
     const val SETUP = "setup"
     const val APP_SELECTOR = "app_selector"
+    const val CAMERA_START = "camera_start"
     const val TIMER = "timer"
+    const val CAMERA_END = "camera_end"
     const val SESSION_COMPLETE = "session_complete"
     const val STATS = "stats"
 }
@@ -24,11 +27,12 @@ object FocusRoutes {
 @Composable
 fun FocusNavGraph(
     navController: NavHostController,
-    viewModel: FocusViewModel
+    viewModel: FocusViewModel,
+    startDestination: String = FocusRoutes.HOME
 ) {
     NavHost(
         navController = navController,
-        startDestination = FocusRoutes.HOME
+        startDestination = startDestination
     ) {
         composable(FocusRoutes.HOME) {
             HomeScreen(
@@ -39,30 +43,54 @@ fun FocusNavGraph(
                 onNavigateToTimer = { navController.navigate(FocusRoutes.TIMER) }
             )
         }
-
         composable(FocusRoutes.SETUP) {
             FocusSetupScreen(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
                 onNavigateToAppSelector = { navController.navigate(FocusRoutes.APP_SELECTOR) },
-                onStartSession = { navController.navigate(FocusRoutes.TIMER) }
+                onStartSession = { navController.navigate(FocusRoutes.CAMERA_START) }
             )
         }
-
         composable(FocusRoutes.APP_SELECTOR) {
             AppSelectorScreen(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() }
             )
         }
-
+        composable(FocusRoutes.CAMERA_START) {
+            CameraVerificationScreen(
+                viewModel = viewModel,
+                isStart = true,
+                onVerificationComplete = {
+                    viewModel.startFocusSession() // Actually start the service here
+                    navController.navigate(FocusRoutes.TIMER) {
+                        popUpTo(FocusRoutes.CAMERA_START) { inclusive = true }
+                    }
+                },
+                onCancel = { navController.popBackStack() }
+            )
+        }
         composable(FocusRoutes.TIMER) {
             FocusTimerScreen(
                 viewModel = viewModel,
-                onSessionComplete = { navController.navigate(FocusRoutes.SESSION_COMPLETE) }
+                onSessionComplete = { navController.navigate(FocusRoutes.CAMERA_END) {
+                    popUpTo(FocusRoutes.TIMER) { inclusive = true }
+                } }
             )
         }
-
+        composable(FocusRoutes.CAMERA_END) {
+            CameraVerificationScreen(
+                viewModel = viewModel,
+                isStart = false,
+                onVerificationComplete = {
+                    viewModel.completeFocusSession() // Save end photo
+                    navController.navigate(FocusRoutes.SESSION_COMPLETE) {
+                        popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
+                    }
+                },
+                onCancel = { /* No cancel allowed at end */ }
+            )
+        }
         composable(FocusRoutes.SESSION_COMPLETE) {
             SessionCompleteScreen(
                 viewModel = viewModel,
@@ -74,7 +102,6 @@ fun FocusNavGraph(
                 onNavigateStats = { navController.navigate(FocusRoutes.STATS) }
             )
         }
-
         composable(FocusRoutes.STATS) {
             StatisticsScreen(
                 viewModel = viewModel,

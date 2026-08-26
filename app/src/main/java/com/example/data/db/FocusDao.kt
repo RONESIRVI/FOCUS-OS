@@ -19,8 +19,14 @@ interface FocusDao {
     @Query("SELECT * FROM focus_sessions WHERE timestamp >= :startTimeMs ORDER BY timestamp DESC")
     fun getSessionsSince(startTimeMs: Long): Flow<List<FocusSession>>
 
+    @Query("SELECT * FROM focus_sessions WHERE status = 'SCHEDULED' ORDER BY scheduledStartTime ASC")
+    fun getScheduledSessions(): Flow<List<FocusSession>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSession(session: FocusSession): Long
+
+    @Update
+    suspend fun updateSession(session: FocusSession)
 
     // Allowed Apps
     @Query("SELECT * FROM allowed_apps ORDER BY appName ASC")

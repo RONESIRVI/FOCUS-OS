@@ -21,7 +21,16 @@ data class FocusSession(
     val timestamp: Long = System.currentTimeMillis(),
     val isCompleted: Boolean = true,
     val distractionAttempts: Int = 0,
-    val allowedAppsCount: Int = 0
+    val allowedAppsCount: Int = 0,
+    
+    // Scheduled & Verification Fields
+    val scheduledStartTime: Long? = null,
+    val scheduledEndTime: Long? = null,
+    val requiresPhoto: Boolean = false,
+    val requiresSelfie: Boolean = false,
+    val startPhotoUri: String? = null,
+    val endSelfieUri: String? = null,
+    val status: String = "COMPLETED" // "SCHEDULED", "ACTIVE", "COMPLETED", "MISSED"
 )
 
 @Entity(tableName = "allowed_apps")
