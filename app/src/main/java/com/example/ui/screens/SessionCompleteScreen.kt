@@ -38,11 +38,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.FocusAccentOrange
-import com.example.ui.theme.FocusCyan
-import com.example.ui.theme.FocusGold
-import com.example.ui.theme.FocusGreen
-import com.example.ui.theme.FocusSlateBg
+import com.example.ui.theme.FocusWarning
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusBackground
 import com.example.ui.theme.FocusSurface
 import com.example.ui.theme.FocusTextSecondary
 import com.example.ui.viewmodel.FocusViewModel
@@ -58,7 +58,7 @@ fun SessionCompleteScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(FocusSlateBg)
+            .background(FocusBackground)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
@@ -70,14 +70,14 @@ fun SessionCompleteScreen(
             Box(
                 modifier = Modifier
                     .size(90.dp)
-                    .background(FocusGreen.copy(alpha = 0.2f), CircleShape)
-                    .border(3.dp, FocusGreen, CircleShape),
+                    .background(FocusPrimary.copy(alpha = 0.2f), CircleShape)
+                    .border(3.dp, FocusPrimary, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = "Success",
-                    tint = FocusGreen,
+                    tint = FocusPrimary,
                     modifier = Modifier.size(54.dp)
                 )
             }
@@ -118,7 +118,7 @@ fun SessionCompleteScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Timer, contentDescription = null, tint = FocusCyan)
+                        Icon(imageVector = Icons.Default.Timer, contentDescription = null, tint = FocusPrimary)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Today's Total Focus", style = MaterialTheme.typography.bodyMedium, color = FocusTextSecondary)
                     }
@@ -137,14 +137,14 @@ fun SessionCompleteScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.LocalFireDepartment, contentDescription = null, tint = FocusAccentOrange)
+                        Icon(imageVector = Icons.Default.LocalFireDepartment, contentDescription = null, tint = FocusWarning)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Focus Streak", style = MaterialTheme.typography.bodyMedium, color = FocusTextSecondary)
                     }
                     Text(
                         text = "${stats.currentStreakDays} Days 🔥",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = FocusAccentOrange
+                        color = FocusWarning
                     )
                 }
 
@@ -154,14 +154,14 @@ fun SessionCompleteScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = FocusGold)
+                        Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = FocusPrimary)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Session Score", style = MaterialTheme.typography.bodyMedium, color = FocusTextSecondary)
                     }
                     Text(
                         text = "${stats.focusScore} / 100",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = FocusGold
+                        color = FocusPrimary
                     )
                 }
             }
@@ -179,7 +179,7 @@ fun SessionCompleteScreen(
                     .height(52.dp)
                     .testTag("start_another_session_btn"),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = FocusCyan, contentColor = Color.Black)
+                colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black)
             ) {
                 Text("START ANOTHER SESSION", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
             }

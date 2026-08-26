@@ -55,11 +55,11 @@ import androidx.compose.ui.unit.sp
 import java.util.Date
 import java.text.SimpleDateFormat
 import java.util.Locale
-import com.example.ui.theme.FocusAccentOrange
-import com.example.ui.theme.FocusCyan
-import com.example.ui.theme.FocusGold
-import com.example.ui.theme.FocusGreen
-import com.example.ui.theme.FocusSlateBg
+import com.example.ui.theme.FocusWarning
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusBackground
 import com.example.ui.theme.FocusSurface
 import com.example.ui.theme.FocusSurfaceVariant
 import com.example.ui.theme.FocusTextSecondary
@@ -79,12 +79,12 @@ fun HomeScreen(
     val timerState by viewModel.timerState.collectAsState()
     val sessions by viewModel.allSessions.collectAsState()
     val subjects by viewModel.allSubjects.collectAsState()
-    val whitelistedApps by viewModel.whitelistedApps.collectAsState()
+    val whitelistedApps by viewModel.whitelistedAppsManual.collectAsState()
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(FocusSlateBg)
+            .background(FocusBackground)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -119,14 +119,14 @@ fun HomeScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(42.dp)
-                                        .background(FocusCyan.copy(alpha = 0.2f), CircleShape)
-                                        .border(1.dp, FocusCyan, CircleShape),
+                                        .background(FocusPrimary.copy(alpha = 0.2f), CircleShape)
+                                        .border(1.dp, FocusPrimary, CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Shield,
                                         contentDescription = "Focus Shield",
-                                        tint = FocusCyan,
+                                        tint = FocusPrimary,
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
@@ -152,7 +152,7 @@ fun HomeScreen(
                             if (timerState.isRunning) {
                                 Button(
                                     onClick = onNavigateToTimer,
-                                    colors = ButtonDefaults.buttonColors(containerColor = FocusAccentOrange),
+                                    colors = ButtonDefaults.buttonColors(containerColor = FocusWarning),
                                     shape = CircleShape,
                                     modifier = Modifier.testTag("resume_active_session_btn")
                                 ) {
@@ -180,7 +180,7 @@ fun HomeScreen(
                                 .testTag("start_focus_btn"),
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = FocusCyan,
+                                containerColor = FocusPrimary,
                                 contentColor = Color.Black
                             )
                         ) {
@@ -228,7 +228,7 @@ fun HomeScreen(
                             Icon(
                                 imageVector = Icons.Default.LocalFireDepartment,
                                 contentDescription = "Streak",
-                                tint = FocusAccentOrange,
+                                tint = FocusWarning,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -257,7 +257,7 @@ fun HomeScreen(
                             Icon(
                                 imageVector = Icons.Default.Schedule,
                                 contentDescription = "Total Focus",
-                                tint = FocusCyan,
+                                tint = FocusPrimary,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -286,7 +286,7 @@ fun HomeScreen(
                             Icon(
                                 imageVector = Icons.Default.Star,
                                 contentDescription = "Score",
-                                tint = FocusGold,
+                                tint = FocusPrimary,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -322,7 +322,7 @@ fun HomeScreen(
                             Icon(
                                 imageVector = Icons.Default.Apps,
                                 contentDescription = null,
-                                tint = FocusCyan,
+                                tint = FocusPrimary,
                                 modifier = Modifier.size(22.dp)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
@@ -335,7 +335,7 @@ fun HomeScreen(
                         Text(
                             text = "${whitelistedApps.size} Allowed",
                             style = MaterialTheme.typography.labelMedium,
-                            color = FocusCyan
+                            color = FocusPrimary
                         )
                     }
 
@@ -352,7 +352,7 @@ fun HomeScreen(
                                     Icon(
                                         imageVector = Icons.Default.CheckCircle,
                                         contentDescription = null,
-                                        tint = FocusGreen,
+                                        tint = FocusPrimary,
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
@@ -385,7 +385,7 @@ fun HomeScreen(
                     Text(
                         text = "View Analytics",
                         style = MaterialTheme.typography.labelMedium,
-                        color = FocusCyan,
+                        color = FocusPrimary,
                         modifier = Modifier.clickable { onNavigateToStats() }
                     )
                 }
@@ -415,7 +415,7 @@ fun HomeScreen(
                                             try {
                                                 Color(android.graphics.Color.parseColor(subject.categoryColorHex))
                                             } catch (e: Exception) {
-                                                FocusCyan
+                                                FocusPrimary
                                             },
                                             CircleShape
                                         )
@@ -450,7 +450,7 @@ fun HomeScreen(
                             Icon(
                                 imageVector = Icons.Default.LocalFireDepartment,
                                 contentDescription = null,
-                                tint = FocusAccentOrange,
+                                tint = FocusWarning,
                                 modifier = Modifier.size(22.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -460,10 +460,10 @@ fun HomeScreen(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.5.sp
                                 ),
-                                color = FocusAccentOrange
+                                color = FocusWarning
                             )
                         }
-                        Text("${stats.currentStreakDays} DAYS ACTIVE", style = MaterialTheme.typography.labelSmall, color = FocusGreen)
+                        Text("${stats.currentStreakDays} DAYS ACTIVE", style = MaterialTheme.typography.labelSmall, color = FocusPrimary)
                     }
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -488,14 +488,14 @@ fun HomeScreen(
                                     .padding(horizontal = 2.dp)
                                     .height(36.dp)
                                     .background(
-                                        if (isCompleted) FocusGreen.copy(alpha = 0.2f)
-                                        else if (isActive) FocusAccentOrange.copy(alpha = 0.3f)
+                                        if (isCompleted) FocusPrimary.copy(alpha = 0.2f)
+                                        else if (isActive) FocusWarning.copy(alpha = 0.3f)
                                         else FocusSurfaceVariant,
                                         RoundedCornerShape(8.dp)
                                     )
                                     .border(
                                         width = if (isActive) 1.dp else 0.dp,
-                                        color = if (isActive) FocusAccentOrange else Color.Transparent,
+                                        color = if (isActive) FocusWarning else Color.Transparent,
                                         shape = RoundedCornerShape(8.dp)
                                     ),
                                 contentAlignment = Alignment.Center
@@ -506,8 +506,8 @@ fun HomeScreen(
                                         fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
                                         fontSize = 10.sp
                                     ),
-                                    color = if (isCompleted) FocusGreen
-                                    else if (isActive) FocusAccentOrange
+                                    color = if (isCompleted) FocusPrimary
+                                    else if (isActive) FocusWarning
                                     else FocusTextSecondary
                                 )
                             }
@@ -554,7 +554,7 @@ fun HomeScreen(
                                     .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Box(modifier = Modifier.size(8.dp).background(FocusAccentOrange, CircleShape))
+                                Box(modifier = Modifier.size(8.dp).background(FocusWarning, CircleShape))
                                 Spacer(modifier = Modifier.width(12.dp))
                                 
                                 val formatter = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())

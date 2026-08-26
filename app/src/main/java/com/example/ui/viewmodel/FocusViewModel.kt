@@ -58,10 +58,16 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     val scheduledSessions: StateFlow<List<FocusSession>> = repository.scheduledSessions
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allowedApps: StateFlow<List<AllowedApp>> = repository.allowedApps
+    val allowedAppsManual: StateFlow<List<AllowedApp>> = repository.allowedApps("MANUAL")
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val whitelistedApps: StateFlow<List<AllowedApp>> = repository.whitelistedApps
+    val allowedAppsStrict: StateFlow<List<AllowedApp>> = repository.allowedApps("STRICT")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val whitelistedAppsManual: StateFlow<List<AllowedApp>> = repository.whitelistedApps("MANUAL")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val whitelistedAppsStrict: StateFlow<List<AllowedApp>> = repository.whitelistedApps("STRICT")
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allSubjects: StateFlow<List<SubjectTask>> = repository.allSubjects
@@ -75,6 +81,13 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _showLockOverlay = MutableStateFlow(false)
     val showLockOverlay: StateFlow<Boolean> = _showLockOverlay.asStateFlow()
+
+    private val _currentAppSelectorProfile = MutableStateFlow("MANUAL")
+    val currentAppSelectorProfile: StateFlow<String> = _currentAppSelectorProfile.asStateFlow()
+
+    fun setAppSelectorProfile(profile: String) {
+        _currentAppSelectorProfile.value = profile
+    }
 
     private val _summaryStats = MutableStateFlow(StudySummaryStats())
     val summaryStats: StateFlow<StudySummaryStats> = _summaryStats.asStateFlow()
@@ -284,7 +297,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                     completedDurationSeconds = completedSecs,
                     lockMode = current.lockMode.name,
                     distractionAttempts = current.distractionAttempts,
-                    allowedAppsCount = whitelistedApps.value.size
+                    allowedAppsCount = whitelistedAppsManual.value.size
                 )
                 repository.saveSession(session)
 
@@ -307,9 +320,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         _showLockOverlay.value = false
     }
 
-    fun toggleAppAllowed(packageName: String, isAllowed: Boolean) {
+    fun toggleAppAllowed(packageName: String, isAllowed: Boolean, profile: String = "MANUAL") {
         viewModelScope.launch {
-            repository.toggleAppWhitelist(packageName, isAllowed)
+            repository.toggleAppWhitelist(packageName, isAllowed, profile)
         }
     }
 

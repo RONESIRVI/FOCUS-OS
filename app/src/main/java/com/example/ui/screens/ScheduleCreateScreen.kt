@@ -37,7 +37,7 @@ fun ScheduleCreateScreen(
     onScheduleCreated: () -> Unit
 ) {
     val setup by viewModel.setupState.collectAsState()
-    val whitelistedApps by viewModel.whitelistedApps.collectAsState()
+    val whitelistedApps by viewModel.whitelistedAppsManual.collectAsState()
     val context = LocalContext.current
 
     var sessionName by remember { mutableStateOf(setup.sessionName) }
@@ -58,13 +58,13 @@ fun ScheduleCreateScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = FocusSlateBg,
+                    containerColor = FocusBackground,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
             )
         },
-        containerColor = FocusSlateBg
+        containerColor = FocusBackground
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -83,7 +83,7 @@ fun ScheduleCreateScreen(
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("e.g. GS Polity", color = FocusTextSecondary.copy(alpha = 0.5f)) },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = FocusAccentOrange,
+                    focusedBorderColor = FocusWarning,
                     unfocusedBorderColor = FocusSurfaceVariant,
                     focusedContainerColor = FocusSurface,
                     unfocusedContainerColor = FocusSurface,
@@ -130,7 +130,7 @@ fun ScheduleCreateScreen(
                         val h = if (startHour % 12 == 0) 12 else startHour % 12
                         val m = String.format("%02d", startMinute)
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Schedule, contentDescription = null, tint = FocusCyan, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Schedule, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("$h:$m $amPm", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = Color.White)
                         }
@@ -164,7 +164,7 @@ fun ScheduleCreateScreen(
                         val h = if (endHour % 12 == 0) 12 else endHour % 12
                         val m = String.format("%02d", endMinute)
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Schedule, contentDescription = null, tint = FocusAccentOrange, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Schedule, contentDescription = null, tint = FocusWarning, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("$h:$m $amPm", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = Color.White)
                         }
@@ -225,7 +225,7 @@ fun ScheduleCreateScreen(
                     .fillMaxWidth()
                     .height(56.dp)
                     .padding(bottom = 16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = FocusAccentOrange),
+                colors = ButtonDefaults.buttonColors(containerColor = FocusWarning),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Text(

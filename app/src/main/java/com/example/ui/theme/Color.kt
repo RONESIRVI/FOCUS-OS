@@ -2,20 +2,23 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Sophisticated Dark Design Theme Colors
-val FocusCyan = Color(0xFFD0BCFF)           // Soft Lavender Primary Accent
-val FocusCyanDark = Color(0xFF4F378B)       // Deep Violet Container
-val FocusSlateBg = Color(0xFF1A1C1E)        // Sophisticated Dark Canvas Background
-val FocusSurface = Color(0xFF2B2930)        // Sophisticated Dark Card Surface
-val FocusSurfaceVariant = Color(0xFF36343B) // Elevated Surface Container
-val FocusOutline = Color(0xFF49454F)        // Outline & Border Accent
-val FocusAccentOrange = Color(0xFFD0BCFF)   // Secondary Soft Lavender Accent
-val FocusCoralRed = Color(0xFFF2B8B5)       // Destructive Soft Coral Red
-val FocusCoralRedDark = Color(0xFF601410)   // Deep Burgundy Red Text/Container
-val FocusGold = Color(0xFFEADDFF)           // Soft Light Purple / Accent Highlight
-val FocusGreen = Color(0xFFA6E3A1)          // Soft Pastel Mint / Allowed App Indicator
-val FocusPurple = Color(0xFF381E72)         // Deep Purple Icon Box
-val FocusTextPrimary = Color(0xFFE6E1E5)    // Off-White Primary Text
-val FocusTextSecondary = Color(0xFF938F99)  // Neutral Muted Secondary Text
+// Premium Dark + Security Focused Theme Colors
+val FocusBackground = Color(0xFF090B10)      // Deep Navy / Near Black
+val FocusSurface = Color(0xFF141824)         // Dark Glass Card
+val FocusSurfaceVariant = Color(0xFF1E2436)  // Elevated Surface
+val FocusOutline = Color(0xFF2A3249)         // Subtle Border
+
+val FocusPrimary = Color(0xFF00FFA3)         // Electric Green (Active, Verified, Progress)
+val FocusPrimaryDark = Color(0xFF004D31)     // Electric Green Dimmed (Backgrounds)
+val FocusOnPrimary = Color(0xFF000000)       // Text on Primary
+
+val FocusWarning = Color(0xFFFF9500)         // Amber / Orange (Upcoming, Warning)
+val FocusDanger = Color(0xFFFF2A2A)          // Red Accent (Security Alert, Blocked)
+val FocusDangerDark = Color(0xFF4A0C0C)      // Deep Red Container
+
+val FocusTextPrimary = Color(0xFFF0F2F5)     // Crisp White Text
+val FocusTextSecondary = Color(0xFF9BA1B0)   // Muted Text
+val FocusTextDisabled = Color(0xFF5A6175)    // Disabled Text
+
 
 

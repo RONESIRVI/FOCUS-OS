@@ -49,9 +49,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.FocusCyan
-import com.example.ui.theme.FocusGreen
-import com.example.ui.theme.FocusSlateBg
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusBackground
 import com.example.ui.theme.FocusSurface
 import com.example.ui.theme.FocusSurfaceVariant
 import com.example.ui.theme.FocusTextSecondary
@@ -62,7 +62,11 @@ fun AppSelectorScreen(
     viewModel: FocusViewModel,
     onBack: () -> Unit
 ) {
-    val apps by viewModel.allowedApps.collectAsState()
+    val currentProfile by viewModel.currentAppSelectorProfile.collectAsState()
+    val appsManual by viewModel.allowedAppsManual.collectAsState()
+    val appsStrict by viewModel.allowedAppsStrict.collectAsState()
+    val apps = if (currentProfile == "STRICT") appsStrict else appsManual
+
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredApps = apps.filter {
@@ -73,7 +77,7 @@ fun AppSelectorScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(FocusSlateBg)
+            .background(FocusBackground)
             .padding(16.dp)
     ) {
         // Top Bar
@@ -120,11 +124,11 @@ fun AppSelectorScreen(
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
-                    tint = FocusCyan
+                    tint = FocusPrimary
                 )
             },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = FocusCyan,
+                focusedBorderColor = FocusPrimary,
                 unfocusedBorderColor = FocusSurfaceVariant,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White
@@ -160,7 +164,7 @@ fun AppSelectorScreen(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .background(
-                                        if (app.isAllowed) FocusGreen.copy(alpha = 0.2f) else Color.Red.copy(alpha = 0.15f),
+                                        if (app.isAllowed) FocusPrimary.copy(alpha = 0.2f) else Color.Red.copy(alpha = 0.15f),
                                         CircleShape
                                     ),
                                 contentAlignment = Alignment.Center
@@ -168,7 +172,7 @@ fun AppSelectorScreen(
                                 Icon(
                                     imageVector = if (app.isAllowed) Icons.Default.Check else Icons.Default.Lock,
                                     contentDescription = null,
-                                    tint = if (app.isAllowed) FocusGreen else Color.Red,
+                                    tint = if (app.isAllowed) FocusPrimary else Color.Red,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -190,11 +194,11 @@ fun AppSelectorScreen(
                         Switch(
                             checked = app.isAllowed,
                             onCheckedChange = { isChecked ->
-                                viewModel.toggleAppAllowed(app.packageName, isChecked)
+                                viewModel.toggleAppAllowed(app.packageName, isChecked, currentProfile)
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.Black,
-                                checkedTrackColor = FocusCyan,
+                                checkedTrackColor = FocusPrimary,
                                 uncheckedThumbColor = Color.Gray,
                                 uncheckedTrackColor = FocusSurfaceVariant
                             )
@@ -214,7 +218,7 @@ fun AppSelectorScreen(
                 .height(52.dp)
                 .testTag("save_app_whitelist_btn"),
             shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = FocusCyan, contentColor = Color.Black)
+            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black)
         ) {
             Text("SAVE WHITELIST PERMISSIONS", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
         }

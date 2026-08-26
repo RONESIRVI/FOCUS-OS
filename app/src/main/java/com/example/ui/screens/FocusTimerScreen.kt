@@ -71,13 +71,13 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.activity.compose.BackHandler
 import com.example.data.model.LockMode
 import com.example.services.SoundType
-import com.example.ui.theme.FocusAccentOrange
-import com.example.ui.theme.FocusCoralRed
-import com.example.ui.theme.FocusCyan
-import com.example.ui.theme.FocusCyanDark
-import com.example.ui.theme.FocusGold
-import com.example.ui.theme.FocusGreen
-import com.example.ui.theme.FocusSlateBg
+import com.example.ui.theme.FocusWarning
+import com.example.ui.theme.FocusDanger
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusPrimaryDark
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusBackground
 import com.example.ui.theme.FocusSurface
 import com.example.ui.theme.FocusTextSecondary
 import com.example.ui.viewmodel.FocusViewModel
@@ -93,7 +93,7 @@ fun FocusTimerScreen(
 ) {
     val timerState by viewModel.timerState.collectAsState()
     val showLockOverlay by viewModel.showLockOverlay.collectAsState()
-    val whitelistedApps by viewModel.whitelistedApps.collectAsState()
+    val whitelistedApps by viewModel.whitelistedAppsManual.collectAsState()
     val context = LocalContext.current
 
     var showEmergencyConfirm by remember { mutableStateOf(false) }
@@ -126,7 +126,7 @@ fun FocusTimerScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(FocusSlateBg)
+            .background(FocusBackground)
     ) {
         // Starry Night Ambient Canvas Drawing
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -195,14 +195,14 @@ fun FocusTimerScreen(
                 Box(
                     modifier = Modifier
                         .background(FocusSurface.copy(alpha = 0.85f), CircleShape)
-                        .border(1.dp, FocusCyan.copy(alpha = 0.5f), CircleShape)
+                        .border(1.dp, FocusPrimary.copy(alpha = 0.5f), CircleShape)
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
                                 .size(8.dp)
-                                .background(FocusCyan, CircleShape)
+                                .background(FocusPrimary, CircleShape)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
@@ -216,22 +216,22 @@ fun FocusTimerScreen(
                 // Lock Mode Badge
                 Box(
                     modifier = Modifier
-                        .background(FocusAccentOrange.copy(alpha = 0.2f), CircleShape)
-                        .border(1.dp, FocusAccentOrange, CircleShape)
+                        .background(FocusWarning.copy(alpha = 0.2f), CircleShape)
+                        .border(1.dp, FocusWarning, CircleShape)
                         .padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.Lock,
                             contentDescription = null,
-                            tint = FocusAccentOrange,
+                            tint = FocusWarning,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = timerState.lockMode.title.uppercase(),
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = FocusAccentOrange
+                            color = FocusWarning
                         )
                     }
                 }
@@ -288,7 +288,7 @@ fun FocusTimerScreen(
                     // Progress Ring arc
                     drawArc(
                         brush = Brush.sweepGradient(
-                            colors = listOf(FocusCyan, FocusCyanDark, FocusAccentOrange, FocusCyan)
+                            colors = listOf(FocusPrimary, FocusPrimaryDark, FocusWarning, FocusPrimary)
                         ),
                         startAngle = -90f,
                         sweepAngle = 360f * progress,
@@ -323,7 +323,7 @@ fun FocusTimerScreen(
                     Text(
                         text = if (timerState.isPaused) "PAUSED" else "FOCUS SESSION ACTIVE",
                         style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
-                        color = if (timerState.isPaused) FocusGold else FocusGreen
+                        color = if (timerState.isPaused) FocusPrimary else FocusPrimary
                     )
                 }
             }
@@ -343,7 +343,7 @@ fun FocusTimerScreen(
                         Box(
                             modifier = Modifier
                                 .background(FocusSurface.copy(alpha = 0.9f), RoundedCornerShape(14.dp))
-                                .border(1.dp, FocusCyan.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                                .border(1.dp, FocusPrimary.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
                                 .clickable {
                                     Toast
                                         .makeText(
@@ -359,7 +359,7 @@ fun FocusTimerScreen(
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
                                     contentDescription = null,
-                                    tint = FocusGreen,
+                                    tint = FocusPrimary,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
@@ -391,7 +391,7 @@ fun FocusTimerScreen(
                         .height(52.dp)
                         .testTag("pause_resume_btn"),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (timerState.isPaused) FocusGreen else FocusSurface,
+                        containerColor = if (timerState.isPaused) FocusPrimary else FocusSurface,
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(16.dp)
@@ -417,7 +417,7 @@ fun FocusTimerScreen(
                         .height(52.dp)
                         .testTag("finish_session_btn"),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = FocusAccentOrange,
+                        containerColor = FocusWarning,
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(16.dp)
@@ -533,7 +533,7 @@ fun FocusTimerScreen(
                         Text(
                             text = "⏱ $timeStr Remaining",
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                            color = FocusCyan
+                            color = FocusPrimary
                         )
                         
                         Spacer(modifier = Modifier.height(32.dp))
@@ -580,7 +580,7 @@ fun FocusTimerScreen(
             ) {
                 Surface(
                     shape = RoundedCornerShape(20.dp),
-                    color = FocusSlateBg,
+                    color = FocusBackground,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -605,7 +605,7 @@ fun FocusTimerScreen(
                         Text(
                             text = if (emergencyPenaltyCountdown > 0) "Wait $emergencyPenaltyCountdown Seconds..." else "Exit Unlocked",
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                            color = if (emergencyPenaltyCountdown > 0) FocusGold else FocusGreen
+                            color = if (emergencyPenaltyCountdown > 0) FocusPrimary else FocusPrimary
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -623,7 +623,7 @@ fun FocusTimerScreen(
                                 .fillMaxWidth()
                                 .height(48.dp)
                                 .testTag("confirm_emergency_exit_btn"),
-                            colors = ButtonDefaults.buttonColors(containerColor = FocusCoralRed)
+                            colors = ButtonDefaults.buttonColors(containerColor = FocusDanger)
                         ) {
                             Text("CONFIRM EARLY EXIT")
                         }

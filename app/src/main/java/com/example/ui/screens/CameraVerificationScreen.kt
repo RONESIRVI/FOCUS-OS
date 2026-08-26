@@ -27,10 +27,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import coil.compose.rememberAsyncImagePainter
-import com.example.ui.theme.FocusAccentOrange
-import com.example.ui.theme.FocusCyan
-import com.example.ui.theme.FocusGreen
-import com.example.ui.theme.FocusSlateBg
+import com.example.ui.theme.FocusWarning
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusBackground
 import com.example.ui.theme.FocusSurface
 import com.example.ui.theme.FocusSurfaceVariant
 import com.example.ui.theme.FocusTextSecondary
@@ -64,7 +64,7 @@ fun CameraVerificationScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(FocusSlateBg)
+            .background(FocusBackground)
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -75,7 +75,7 @@ fun CameraVerificationScreen(
             Text(
                 text = if (isStart) "START PHOTO VERIFICATION" else "FINAL SELFIE CAMERA",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                color = FocusAccentOrange
+                color = FocusWarning
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -93,7 +93,7 @@ fun CameraVerificationScreen(
                     modifier = Modifier
                         .size(300.dp)
                         .clip(RoundedCornerShape(32.dp))
-                        .border(2.dp, FocusCyan, RoundedCornerShape(32.dp))
+                        .border(2.dp, FocusPrimary, RoundedCornerShape(32.dp))
                 ) {
                     Image(
                         painter = rememberAsyncImagePainter(photoUri),
@@ -129,11 +129,11 @@ fun CameraVerificationScreen(
                         Icon(
                             imageVector = Icons.Default.CameraAlt,
                             contentDescription = "Take Photo",
-                            tint = FocusCyan,
+                            tint = FocusPrimary,
                             modifier = Modifier.size(64.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("TAP TO CAPTURE", color = FocusCyan, fontWeight = FontWeight.Bold)
+                        Text("TAP TO CAPTURE", color = FocusPrimary, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -147,7 +147,7 @@ fun CameraVerificationScreen(
                 },
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (photoUri != null) FocusGreen else FocusSurfaceVariant
+                    containerColor = if (photoUri != null) FocusPrimary else FocusSurfaceVariant
                 ),
                 enabled = photoUri != null
             ) {

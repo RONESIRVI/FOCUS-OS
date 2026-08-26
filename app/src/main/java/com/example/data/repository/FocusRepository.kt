@@ -15,34 +15,40 @@ class FocusRepository(private val focusDao: FocusDao) {
 
     val allSessions: Flow<List<FocusSession>> = focusDao.getAllSessions()
     val scheduledSessions: Flow<List<FocusSession>> = focusDao.getScheduledSessions()
-    val allowedApps: Flow<List<AllowedApp>> = focusDao.getAllowedApps()
-    val whitelistedApps: Flow<List<AllowedApp>> = focusDao.getWhitelistedApps()
+    fun allowedApps(profile: String = "MANUAL"): Flow<List<AllowedApp>> = focusDao.getAllowedApps(profile)
+    fun whitelistedApps(profile: String = "MANUAL"): Flow<List<AllowedApp>> = focusDao.getWhitelistedApps(profile)
     val allSubjects: Flow<List<SubjectTask>> = focusDao.getAllSubjects()
 
     suspend fun initializeDefaultDataIfEmpty(context: Context) {
-        val existingApps = allowedApps.first()
-        if (existingApps.isEmpty()) {
+        val existingAppsManual = allowedApps("MANUAL").first()
+        val existingAppsStrict = allowedApps("STRICT").first()
+        
+        if (existingAppsManual.isEmpty() || existingAppsStrict.isEmpty()) {
             val packageManager = context.packageManager
             val intent = Intent(Intent.ACTION_MAIN, null).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
             }
             val resolveInfoList: List<ResolveInfo> = packageManager.queryIntentActivities(intent, 0)
-            val defaultApps = resolveInfoList.mapNotNull { resolveInfo ->
+            
+            val appsToInsert = mutableListOf<AllowedApp>()
+            
+            val uniquePackages = resolveInfoList.mapNotNull { resolveInfo ->
                 val packageName = resolveInfo.activityInfo.packageName
                 val appName = resolveInfo.loadLabel(packageManager).toString()
-                // Prevent duplicate or empty packages
-                if (packageName.isNotEmpty()) {
-                    AllowedApp(
-                        packageName = packageName,
-                        appName = appName,
-                        category = "Installed App",
-                        isAllowed = false
-                    )
-                } else null
-            }.distinctBy { it.packageName }
+                if (packageName.isNotEmpty()) Pair(packageName, appName) else null
+            }.distinctBy { it.first }
             
-            if (defaultApps.isNotEmpty()) {
-                focusDao.insertOrUpdateApps(defaultApps)
+            uniquePackages.forEach { (packageName, appName) ->
+                if (existingAppsManual.isEmpty()) {
+                    appsToInsert.add(AllowedApp(packageName, "MANUAL", appName, "Installed App", false))
+                }
+                if (existingAppsStrict.isEmpty()) {
+                    appsToInsert.add(AllowedApp(packageName, "STRICT", appName, "Installed App", false))
+                }
+            }
+            
+            if (appsToInsert.isNotEmpty()) {
+                focusDao.insertOrUpdateApps(appsToInsert)
             }
         }
 
@@ -66,8 +72,8 @@ class FocusRepository(private val focusDao: FocusDao) {
         }
     }
 
-    suspend fun toggleAppWhitelist(packageName: String, isAllowed: Boolean) {
-        focusDao.setAppAllowed(packageName, isAllowed)
+    suspend fun toggleAppWhitelist(packageName: String, isAllowed: Boolean, profile: String = "MANUAL") {
+        focusDao.setAppAllowed(packageName, isAllowed, profile)
     }
 
     suspend fun saveSession(session: FocusSession): Long {

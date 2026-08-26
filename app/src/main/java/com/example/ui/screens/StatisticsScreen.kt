@@ -64,7 +64,7 @@ fun StatisticsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(FocusSlateBg)
+            .background(FocusBackground)
     ) {
         Column(
             modifier = Modifier
@@ -119,7 +119,7 @@ fun StatisticsScreen(
                     Icon(
                         imageVector = Icons.Default.Download,
                         contentDescription = "Download Stats Image",
-                        tint = FocusCyan
+                        tint = FocusPrimary
                     )
                 }
             }
@@ -143,7 +143,7 @@ fun StatisticsScreen(
                                 .weight(1f)
                                 .height(38.dp)
                                 .background(
-                                    if (isSel) FocusCyan else Color.Transparent,
+                                    if (isSel) FocusPrimary else Color.Transparent,
                                     RoundedCornerShape(12.dp)
                                 )
                                 .clickable { selectedPeriodTab = tab },
@@ -187,14 +187,14 @@ fun StatisticsScreen(
                     Text(
                         text = timeString,
                         style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold),
-                        color = FocusCyan
+                        color = FocusPrimary
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Consistent study routine maintained",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FocusGreen
+                        color = FocusPrimary
                     )
                 }
             }
@@ -215,7 +215,7 @@ fun StatisticsScreen(
                             Icon(
                                 imageVector = Icons.Default.PieChart,
                                 contentDescription = null,
-                                tint = FocusCyan,
+                                tint = FocusPrimary,
                                 modifier = Modifier.size(22.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -251,7 +251,7 @@ fun StatisticsScreen(
                                 val color = try {
                                     Color(android.graphics.Color.parseColor(subject.categoryColorHex))
                                 } catch (e: Exception) {
-                                    FocusCyan
+                                    FocusPrimary
                                 }
 
                                 drawArc(
@@ -307,7 +307,7 @@ fun StatisticsScreen(
                                             try {
                                                 Color(android.graphics.Color.parseColor(subject.categoryColorHex))
                                             } catch (e: Exception) {
-                                                FocusCyan
+                                                FocusPrimary
                                             },
                                             CircleShape
                                         )
@@ -330,7 +330,7 @@ fun StatisticsScreen(
                                 Text(
                                     text = "$pct%",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = FocusCyan
+                                    color = FocusPrimary
                                 )
                             }
                         }
@@ -351,13 +351,13 @@ fun StatisticsScreen(
                     Box(
                         modifier = Modifier
                             .size(38.dp)
-                            .background(FocusPurple.copy(alpha = 0.2f), CircleShape),
+                            .background(FocusSurfaceVariant.copy(alpha = 0.2f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
                             contentDescription = "AI Coach",
-                            tint = FocusPurple,
+                            tint = FocusSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -369,7 +369,7 @@ fun StatisticsScreen(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.5.sp
                             ),
-                            color = FocusPurple
+                            color = FocusSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(

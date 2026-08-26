@@ -33,9 +33,13 @@ data class FocusSession(
     val status: String = "COMPLETED" // "SCHEDULED", "ACTIVE", "COMPLETED", "MISSED"
 )
 
-@Entity(tableName = "allowed_apps")
+@Entity(
+    tableName = "allowed_apps",
+    primaryKeys = ["packageName", "profile"]
+)
 data class AllowedApp(
-    @PrimaryKey val packageName: String,
+    val packageName: String,
+    val profile: String = "MANUAL", // "MANUAL" or "STRICT"
     val appName: String,
     val category: String, // e.g., "Notes", "Reader", "Video", "Browser", "Tools"
     val isAllowed: Boolean = true,

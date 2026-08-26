@@ -85,11 +85,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.LockMode
 import com.example.services.SoundType
-import com.example.ui.theme.FocusAccentOrange
-import com.example.ui.theme.FocusCyan
-import com.example.ui.theme.FocusGold
-import com.example.ui.theme.FocusGreen
-import com.example.ui.theme.FocusSlateBg
+import com.example.ui.theme.FocusWarning
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusPrimary
+import com.example.ui.theme.FocusBackground
 import com.example.ui.theme.FocusSurface
 import com.example.ui.theme.FocusSurfaceVariant
 import com.example.ui.theme.FocusTextSecondary
@@ -113,7 +113,7 @@ fun FocusSetupScreen(
 ) {
     val setup by viewModel.setupState.collectAsState()
     val subjects by viewModel.allSubjects.collectAsState()
-    val whitelistedApps by viewModel.whitelistedApps.collectAsState()
+    val whitelistedApps by viewModel.whitelistedAppsManual.collectAsState()
     val context = LocalContext.current
 
     var showAddSubjectDialog by remember { mutableStateOf(false) }
@@ -129,17 +129,17 @@ fun FocusSetupScreen(
     val hasUsage = remember { LockPermissionHelper.hasUsageStatsPermission(context) }
 
     val presetList = listOf(
-        PresetOption(15, "15m", "QUICK", Icons.Default.Timer, FocusCyan),
-        PresetOption(25, "25m", "POMODORO", Icons.Default.LocalFireDepartment, FocusAccentOrange),
-        PresetOption(45, "45m", "STUDY", Icons.Default.MenuBook, FocusGold),
+        PresetOption(15, "15m", "QUICK", Icons.Default.Timer, FocusPrimary),
+        PresetOption(25, "25m", "POMODORO", Icons.Default.LocalFireDepartment, FocusWarning),
+        PresetOption(45, "45m", "STUDY", Icons.Default.MenuBook, FocusPrimary),
         PresetOption(60, "60m", "DEEP WORK", Icons.Default.Psychology, Color(0xFF38BDF8)),
-        PresetOption(90, "90m", "SPRINT", Icons.Default.DirectionsRun, FocusGreen)
+        PresetOption(90, "90m", "SPRINT", Icons.Default.DirectionsRun, FocusPrimary)
     )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(FocusSlateBg)
+            .background(FocusBackground)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -149,7 +149,7 @@ fun FocusSetupScreen(
                     .fillMaxWidth()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(FocusSurface, FocusSlateBg)
+                            colors = listOf(FocusSurface, FocusBackground)
                         )
                     )
                     .padding(horizontal = 16.dp, vertical = 12.dp)
@@ -190,19 +190,19 @@ fun FocusSetupScreen(
                     }
                     Box(
                         modifier = Modifier
-                            .background(FocusCyan.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
-                            .border(1.dp, FocusCyan.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
+                            .background(FocusPrimary.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
+                            .border(1.dp, FocusPrimary.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = FocusCyan,
+                                tint = FocusPrimary,
                                 modifier = Modifier.size(12.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("PRO MODE", style = MaterialTheme.typography.labelSmall, color = FocusCyan)
+                            Text("PRO MODE", style = MaterialTheme.typography.labelSmall, color = FocusPrimary)
                         }
                     }
                 }
@@ -306,19 +306,19 @@ fun FocusSetupScreen(
                                             .background(
                                                 Brush.radialGradient(
                                                     colors = listOf(
-                                                        FocusCyan.copy(alpha = 0.35f),
+                                                        FocusPrimary.copy(alpha = 0.35f),
                                                         Color.Transparent
                                                     )
                                                 ),
                                                 CircleShape
                                             )
-                                            .border(1.5.dp, FocusCyan, CircleShape),
+                                            .border(1.5.dp, FocusPrimary, CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Shield,
                                             contentDescription = null,
-                                            tint = FocusCyan,
+                                            tint = FocusPrimary,
                                             modifier = Modifier.size(28.dp)
                                         )
                                     }
@@ -373,7 +373,7 @@ fun FocusSetupScreen(
                                     steps = 34,
                                     colors = SliderDefaults.colors(
                                         thumbColor = Color.White,
-                                        activeTrackColor = FocusCyan,
+                                        activeTrackColor = FocusPrimary,
                                         inactiveTrackColor = FocusSurfaceVariant
                                     ),
                                     modifier = Modifier.fillMaxWidth()
@@ -403,12 +403,12 @@ fun FocusSetupScreen(
                                             .weight(1f)
                                             .height(72.dp)
                                             .background(
-                                                if (isSel) FocusCyan.copy(alpha = 0.25f) else FocusSurface,
+                                                if (isSel) FocusPrimary.copy(alpha = 0.25f) else FocusSurface,
                                                 RoundedCornerShape(16.dp)
                                             )
                                             .border(
                                                 width = if (isSel) 1.5.dp else 1.dp,
-                                                color = if (isSel) FocusCyan else FocusSurfaceVariant,
+                                                color = if (isSel) FocusPrimary else FocusSurfaceVariant,
                                                 shape = RoundedCornerShape(16.dp)
                                             )
                                             .clickable {
@@ -425,7 +425,7 @@ fun FocusSetupScreen(
                                             Icon(
                                                 imageVector = preset.icon,
                                                 contentDescription = null,
-                                                tint = if (isSel) FocusCyan else preset.color,
+                                                tint = if (isSel) FocusPrimary else preset.color,
                                                 modifier = Modifier.size(20.dp)
                                             )
                                             Spacer(modifier = Modifier.height(4.dp))
@@ -437,7 +437,7 @@ fun FocusSetupScreen(
                                             Text(
                                                 text = preset.sublabel,
                                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
-                                                color = if (isSel) FocusCyan else FocusTextSecondary
+                                                color = if (isSel) FocusPrimary else FocusTextSecondary
                                             )
                                         }
                                     }
@@ -459,7 +459,7 @@ fun FocusSetupScreen(
                                         .background(
                                             Brush.horizontalGradient(
                                                 colors = listOf(
-                                                    FocusAccentOrange,
+                                                    FocusWarning,
                                                     Color(0xFF0284C7)
                                                 )
                                             ),
@@ -528,7 +528,7 @@ fun FocusSetupScreen(
                                                 Box(
                                                     modifier = Modifier
                                                         .size(8.dp)
-                                                        .background(if (hasOverlay && hasUsage) FocusGreen else FocusAccentOrange, CircleShape)
+                                                        .background(if (hasOverlay && hasUsage) FocusPrimary else FocusWarning, CircleShape)
                                                 )
                                                 Spacer(modifier = Modifier.width(6.dp))
                                                 Text(
@@ -545,12 +545,12 @@ fun FocusSetupScreen(
                                                 Text(
                                                     text = "OS OVERLAYS: ${if (hasOverlay) "ENABLED ✓" else "TAP TO GRANT ⚠"}",
                                                     style = MaterialTheme.typography.labelSmall,
-                                                    color = if (hasOverlay) FocusGreen else FocusAccentOrange
+                                                    color = if (hasOverlay) FocusPrimary else FocusWarning
                                                 )
                                                 Text(
                                                     text = "USAGE ACCESS: ${if (hasUsage) "GRANTED ✓" else "TAP TO GRANT ⚠"}",
                                                     style = MaterialTheme.typography.labelSmall,
-                                                    color = if (hasUsage) FocusGreen else FocusAccentOrange
+                                                    color = if (hasUsage) FocusPrimary else FocusWarning
                                                 )
                                             }
                                         }
@@ -558,7 +558,7 @@ fun FocusSetupScreen(
                                         Icon(
                                             imageVector = Icons.Default.ChevronRight,
                                             contentDescription = null,
-                                            tint = FocusCyan,
+                                            tint = FocusPrimary,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -587,7 +587,7 @@ fun FocusSetupScreen(
                                     Icon(
                                         imageVector = Icons.Default.AutoAwesome,
                                         contentDescription = null,
-                                        tint = FocusCyan,
+                                        tint = FocusPrimary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
@@ -610,7 +610,7 @@ fun FocusSetupScreen(
                                                     FocusSurfaceVariant,
                                                     RoundedCornerShape(12.dp)
                                                 )
-                                                .border(1.dp, FocusCyan, RoundedCornerShape(12.dp))
+                                                .border(1.dp, FocusPrimary, RoundedCornerShape(12.dp))
                                                 .clickable {
                                                     showAddSubjectDialog = true
                                                 }
@@ -620,14 +620,14 @@ fun FocusSetupScreen(
                                                 Icon(
                                                     imageVector = Icons.Default.Add,
                                                     contentDescription = "Add Subject",
-                                                    tint = FocusCyan,
+                                                    tint = FocusPrimary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
                                                 Spacer(modifier = Modifier.width(4.dp))
                                                 Text(
                                                     text = "Add",
                                                     style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                                    color = FocusCyan
+                                                    color = FocusPrimary
                                                 )
                                             }
                                         }
@@ -637,7 +637,7 @@ fun FocusSetupScreen(
                                         Box(
                                             modifier = Modifier
                                                 .background(
-                                                    if (isSelected) FocusCyan else FocusSurfaceVariant,
+                                                    if (isSelected) FocusPrimary else FocusSurfaceVariant,
                                                     RoundedCornerShape(12.dp)
                                                 )
                                                 .clickable {
@@ -689,7 +689,7 @@ fun FocusSetupScreen(
                                     Icon(
                                         imageVector = Icons.Default.Apps,
                                         contentDescription = null,
-                                        tint = FocusCyan,
+                                        tint = FocusPrimary,
                                         modifier = Modifier.size(24.dp)
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
@@ -709,7 +709,7 @@ fun FocusSetupScreen(
                                 Icon(
                                     imageVector = Icons.Default.ChevronRight,
                                     contentDescription = null,
-                                    tint = FocusCyan
+                                    tint = FocusPrimary
                                 )
                             }
                         }
@@ -732,7 +732,7 @@ fun FocusSetupScreen(
                                         Icon(
                                             imageVector = Icons.Default.Security,
                                             contentDescription = null,
-                                            tint = FocusAccentOrange,
+                                            tint = FocusWarning,
                                             modifier = Modifier.size(22.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
@@ -743,7 +743,7 @@ fun FocusSetupScreen(
                                         )
                                     }
                                     if (hasOverlay && hasUsage) {
-                                        Text("SHIELD ACTIVE ✓", style = MaterialTheme.typography.labelSmall, color = FocusGreen)
+                                        Text("SHIELD ACTIVE ✓", style = MaterialTheme.typography.labelSmall, color = FocusPrimary)
                                     }
                                 }
 
@@ -753,7 +753,7 @@ fun FocusSetupScreen(
                                     val isSelected = setup.lockMode == mode
                                     Card(
                                         colors = CardDefaults.cardColors(
-                                            containerColor = if (isSelected) FocusCyan.copy(alpha = 0.12f) else FocusSlateBg
+                                            containerColor = if (isSelected) FocusPrimary.copy(alpha = 0.12f) else FocusBackground
                                         ),
                                         shape = RoundedCornerShape(14.dp),
                                         modifier = Modifier
@@ -762,7 +762,7 @@ fun FocusSetupScreen(
                                             .clickable { viewModel.updateSetup(lockMode = mode) }
                                             .border(
                                                 width = if (isSelected) 1.5.dp else 0.dp,
-                                                color = if (isSelected) FocusCyan else Color.Transparent,
+                                                color = if (isSelected) FocusPrimary else Color.Transparent,
                                                 shape = RoundedCornerShape(14.dp)
                                             )
                                     ) {
@@ -773,7 +773,7 @@ fun FocusSetupScreen(
                                             RadioButton(
                                                 selected = isSelected,
                                                 onClick = { viewModel.updateSetup(lockMode = mode) },
-                                                colors = RadioButtonDefaults.colors(selectedColor = FocusCyan)
+                                                colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary)
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Column {
@@ -807,7 +807,7 @@ fun FocusSetupScreen(
                                     Icon(
                                         imageVector = Icons.Default.MusicNote,
                                         contentDescription = null,
-                                        tint = FocusCyan,
+                                        tint = FocusPrimary,
                                         modifier = Modifier.size(22.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
@@ -825,7 +825,7 @@ fun FocusSetupScreen(
                                         Box(
                                             modifier = Modifier
                                                 .background(
-                                                    if (isSel) FocusCyan else FocusSurfaceVariant,
+                                                    if (isSel) FocusPrimary else FocusSurfaceVariant,
                                                     RoundedCornerShape(12.dp)
                                                 )
                                                 .clickable { viewModel.updateSetup(soundType = st) }
@@ -877,7 +877,7 @@ fun FocusSetupScreen(
                         showAddSubjectDialog = false
                     }
                 }) {
-                    Text("Add", color = FocusCyan)
+                    Text("Add", color = FocusPrimary)
                 }
             },
             dismissButton = {

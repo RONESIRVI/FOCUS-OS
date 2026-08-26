@@ -29,17 +29,17 @@ interface FocusDao {
     suspend fun updateSession(session: FocusSession)
 
     // Allowed Apps
-    @Query("SELECT * FROM allowed_apps ORDER BY appName ASC")
-    fun getAllowedApps(): Flow<List<AllowedApp>>
+    @Query("SELECT * FROM allowed_apps WHERE profile = :profile ORDER BY appName ASC")
+    fun getAllowedApps(profile: String = "MANUAL"): Flow<List<AllowedApp>>
 
-    @Query("SELECT * FROM allowed_apps WHERE isAllowed = 1")
-    fun getWhitelistedApps(): Flow<List<AllowedApp>>
+    @Query("SELECT * FROM allowed_apps WHERE profile = :profile AND isAllowed = 1")
+    fun getWhitelistedApps(profile: String = "MANUAL"): Flow<List<AllowedApp>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateApps(apps: List<AllowedApp>)
 
-    @Query("UPDATE allowed_apps SET isAllowed = :isAllowed WHERE packageName = :packageName")
-    suspend fun setAppAllowed(packageName: String, isAllowed: Boolean)
+    @Query("UPDATE allowed_apps SET isAllowed = :isAllowed WHERE packageName = :packageName AND profile = :profile")
+    suspend fun setAppAllowed(packageName: String, isAllowed: Boolean, profile: String = "MANUAL")
 
     // Subject Tasks
     @Query("SELECT * FROM subject_tasks ORDER BY name ASC")
