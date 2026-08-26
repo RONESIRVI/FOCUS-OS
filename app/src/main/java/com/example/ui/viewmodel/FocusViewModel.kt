@@ -281,24 +281,32 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                 android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
             )
             
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                if (alarmManager.canScheduleExactAlarms()) {
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+                    // Fallback to inexact alarms
+                    if (earlyTime > System.currentTimeMillis()) {
+                        alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, earlyTime, earlyPendingIntent)
+                    }
+                    alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, scheduledStartTime, exactPendingIntent)
+                } else {
                     if (earlyTime > System.currentTimeMillis()) {
                         alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, earlyTime, earlyPendingIntent)
                     }
                     alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, scheduledStartTime, exactPendingIntent)
                 }
-            } else {
+            } catch (e: Exception) {
+                // Fallback to inexact alarms in case of SecurityException
                 if (earlyTime > System.currentTimeMillis()) {
-                    alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, earlyTime, earlyPendingIntent)
+                    alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, earlyTime, earlyPendingIntent)
                 }
-                alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, scheduledStartTime, exactPendingIntent)
+                alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, scheduledStartTime, exactPendingIntent)
             }
             
             launch(Dispatchers.Main) {
                 val formatter = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
                 val timeStr = formatter.format(java.util.Date(scheduledStartTime))
-                android.widget.Toast.makeText(context, "✅ Strict Focus scheduled for $timeStr", android.widget.Toast.LENGTH_LONG).show()
+                val diffMins = (scheduledStartTime - System.currentTimeMillis()) / 60000
+                android.widget.Toast.makeText(context, "✅ Strict Focus scheduled for $timeStr (in $diffMins mins)", android.widget.Toast.LENGTH_LONG).show()
             }
         }
     }

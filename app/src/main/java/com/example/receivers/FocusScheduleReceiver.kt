@@ -30,7 +30,7 @@ class FocusScheduleReceiver : BroadcastReceiver() {
         
         if (action == "ACTION_PRE_SCHEDULE") {
             val notification = NotificationCompat.Builder(context, channelId)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Upcoming Focus Session")
                 .setContentText("Your scheduled session '$sessionName' starts in 2 minutes. Get ready!")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -39,7 +39,7 @@ class FocusScheduleReceiver : BroadcastReceiver() {
             notificationManager.notify((sessionId * 10).toInt() + 1, notification)
         } else if (action == "ACTION_EXACT_SCHEDULE") {
             val launchIntent = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 putExtra("START_SESSION_ID", sessionId)
             }
             val pendingIntent = PendingIntent.getActivity(
@@ -50,13 +50,13 @@ class FocusScheduleReceiver : BroadcastReceiver() {
             )
             
             val notification = NotificationCompat.Builder(context, channelId)
-                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Time to Focus!")
                 .setContentText("Your strict session '$sessionName' is starting now. Tap here to verify.")
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setAutoCancel(true)
-                .setFullScreenIntent(pendingIntent, true)
+                
                 .setContentIntent(pendingIntent)
                 .build()
             notificationManager.notify((sessionId * 10).toInt() + 2, notification)
