@@ -55,7 +55,7 @@ class FocusAppSystemTest {
             subjectName = "Mathematics",
             targetDurationMinutes = 25,
             completedDurationSeconds = 1500,
-            lockMode = "STRICT_LOCK",
+            lockMode = "MAXIMUM_LOCK",
             distractionAttempts = 0,
             status = "COMPLETED",
             timestamp = System.currentTimeMillis()
@@ -79,7 +79,7 @@ class FocusAppSystemTest {
             subjectName = "Physics",
             targetDurationMinutes = 45,
             completedDurationSeconds = 0,
-            lockMode = "STRICT_LOCK",
+            lockMode = "MAXIMUM_LOCK",
             status = "SCHEDULED",
             scheduledStartTime = now + 600000,
             scheduledEndTime = now + 3300000,
@@ -188,7 +188,7 @@ class FocusAppSystemTest {
             subjectName = "Mathematics",
             targetDurationMinutes = 25,
             completedDurationSeconds = 1500,
-            lockMode = "STRICT_LOCK",
+            lockMode = "MAXIMUM_LOCK",
             timestamp = now
         )
         // Session 2: 10 days ago (40m = 2400s)
@@ -197,7 +197,7 @@ class FocusAppSystemTest {
             subjectName = "Physics",
             targetDurationMinutes = 40,
             completedDurationSeconds = 2400,
-            lockMode = "STRICT_LOCK",
+            lockMode = "MAXIMUM_LOCK",
             timestamp = now - (10 * oneDayMillis)
         )
         // Session 3: 40 days ago (60m = 3600s)
@@ -206,7 +206,7 @@ class FocusAppSystemTest {
             subjectName = "Chemistry",
             targetDurationMinutes = 60,
             completedDurationSeconds = 3600,
-            lockMode = "STRICT_LOCK",
+            lockMode = "MAXIMUM_LOCK",
             timestamp = now - (40 * oneDayMillis)
         )
 
@@ -250,10 +250,10 @@ class FocusAppSystemTest {
         )
         assertTrue(com.example.util.FocusLockManager.isPackageAllowed(blockedApp, ownPkg))
 
-        // 2. When STRICT_LOCK is active with Docs allowed
+        // 2. When MAXIMUM_LOCK is active with Docs allowed
         com.example.util.FocusLockManager.updateFocusState(
             isActive = true,
-            lockMode = LockMode.STRICT_LOCK,
+            lockMode = LockMode.MAXIMUM_LOCK,
             allowedPackageNames = listOf(allowedApp)
         )
         // Own package is allowed
@@ -274,7 +274,7 @@ class FocusAppSystemTest {
             subjectName = "Polity",
             targetDurationMinutes = 60,
             completedDurationSeconds = 0,
-            lockMode = "STRICT_LOCK",
+            lockMode = "MAXIMUM_LOCK",
             status = "SCHEDULED",
             scheduledStartTime = now + (3600 * 1000L),
             timestamp = now
@@ -284,7 +284,7 @@ class FocusAppSystemTest {
             subjectName = "History",
             targetDurationMinutes = 30,
             completedDurationSeconds = 0,
-            lockMode = "STRICT_LOCK",
+            lockMode = "MAXIMUM_LOCK",
             status = "SCHEDULED",
             scheduledStartTime = now - (3600 * 1000L),
             timestamp = now - (7200 * 1000L)
