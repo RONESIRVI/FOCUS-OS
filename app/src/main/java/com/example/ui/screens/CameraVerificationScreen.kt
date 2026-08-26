@@ -148,9 +148,9 @@ fun CameraVerificationScreen(
                 },
                 modifier = Modifier.fillMaxWidth().height(64.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (photoUri != null) FocusPrimary else FocusSurfaceVariant
+                    containerColor = FocusPrimary
                 ),
-                enabled = photoUri != null
+                enabled = true
             ) {
                 Icon(Icons.Default.Check, contentDescription = null, tint = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))

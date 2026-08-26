@@ -15,6 +15,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import android.content.Context
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +45,13 @@ fun HomeScreen(
     val stats by viewModel.summaryStats.collectAsState()
     val scheduledSessions by viewModel.scheduledSessions.collectAsState()
     val allSessions by viewModel.allSessions.collectAsState()
+
+    val context = LocalContext.current
+    val sharedPrefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+    var userName by remember { mutableStateOf("Focus Student") }
+    LaunchedEffect(Unit) {
+        userName = sharedPrefs.getString("USER_NAME", "Focus Student") ?: "Focus Student"
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -72,7 +86,7 @@ fun HomeScreen(
         item {
             Column(modifier = Modifier.padding(top = 8.dp)) {
                 Text(
-                    text = "Good Morning 👋",
+                    text = "Hi, $userName 👋",
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                     color = FocusTextPrimary
                 )

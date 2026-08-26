@@ -75,7 +75,7 @@ fun FocusNavGraph(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },
                 onNavigateToAppSelector = { navController.navigate(FocusRoutes.APP_SELECTOR) },
-                onStartSession = { navController.navigate(FocusRoutes.CAMERA_START) }
+                onStartSession = { navController.navigate(FocusRoutes.TIMER) }
             )
         }
         composable(FocusRoutes.APP_SELECTOR) {

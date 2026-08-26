@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -89,8 +90,30 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         _currentAppSelectorProfile.value = profile
     }
 
-    private val _summaryStats = MutableStateFlow(StudySummaryStats())
-    val summaryStats: StateFlow<StudySummaryStats> = _summaryStats.asStateFlow()
+    val summaryStats: StateFlow<StudySummaryStats> = repository.allSessions.map { sessions ->
+        val calendar = java.util.Calendar.getInstance()
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        calendar.set(java.util.Calendar.MINUTE, 0)
+        calendar.set(java.util.Calendar.SECOND, 0)
+        calendar.set(java.util.Calendar.MILLISECOND, 0)
+        val todayStart = calendar.timeInMillis
+        
+        var todaySec = 0
+        var totalDistractions = 0
+        
+        sessions.forEach {
+            if (it.timestamp >= todayStart) {
+                todaySec += it.completedDurationSeconds
+                totalDistractions += it.distractionAttempts
+            }
+        }
+        
+        StudySummaryStats(
+            todayFocusSeconds = todaySec,
+            totalSessions = sessions.size,
+            focusScore = maxOf(60, 100 - (totalDistractions * 5))
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StudySummaryStats())
 
     private var timerService: FocusTimerService? = null
     private var isBound = false
@@ -230,30 +253,46 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             val sessionId = repository.saveSession(session)
             
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-            val intent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
+            
+            // Alarm 1: 2 minutes early
+            val earlyIntent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
+                action = "ACTION_PRE_SCHEDULE"
                 putExtra("SESSION_ID", sessionId)
+                putExtra("SESSION_NAME", setup.sessionName)
             }
-            val pendingIntent = android.app.PendingIntent.getBroadcast(
+            val earlyPendingIntent = android.app.PendingIntent.getBroadcast(
                 context,
-                sessionId.toInt(),
-                intent,
+                (sessionId * 10).toInt() + 1,
+                earlyIntent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            val earlyTime = scheduledStartTime - (2 * 60 * 1000)
+            
+            // Alarm 2: Exact time
+            val exactIntent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
+                action = "ACTION_EXACT_SCHEDULE"
+                putExtra("SESSION_ID", sessionId)
+                putExtra("SESSION_NAME", setup.sessionName)
+            }
+            val exactPendingIntent = android.app.PendingIntent.getBroadcast(
+                context,
+                (sessionId * 10).toInt() + 2,
+                exactIntent,
                 android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
             )
             
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 if (alarmManager.canScheduleExactAlarms()) {
-                    alarmManager.setExactAndAllowWhileIdle(
-                        android.app.AlarmManager.RTC_WAKEUP,
-                        scheduledStartTime,
-                        pendingIntent
-                    )
+                    if (earlyTime > System.currentTimeMillis()) {
+                        alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, earlyTime, earlyPendingIntent)
+                    }
+                    alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, scheduledStartTime, exactPendingIntent)
                 }
             } else {
-                alarmManager.setExactAndAllowWhileIdle(
-                    android.app.AlarmManager.RTC_WAKEUP,
-                    scheduledStartTime,
-                    pendingIntent
-                )
+                if (earlyTime > System.currentTimeMillis()) {
+                    alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, earlyTime, earlyPendingIntent)
+                }
+                alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, scheduledStartTime, exactPendingIntent)
             }
             
             launch(Dispatchers.Main) {
@@ -301,14 +340,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                 )
                 repository.saveSession(session)
 
-                // Update summary statistics
-                val updatedToday = _summaryStats.value.todayFocusSeconds + completedSecs
-                val newScore = maxOf(60, 100 - (current.distractionAttempts * 5))
-                _summaryStats.value = _summaryStats.value.copy(
-                    todayFocusSeconds = updatedToday,
-                    totalSessions = _summaryStats.value.totalSessions + 1,
-                    focusScore = newScore
-                )
+// summaryStats will automatically update via flow
             }
             timerService?.stopTimer()
             _showLockOverlay.value = false

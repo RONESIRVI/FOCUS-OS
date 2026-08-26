@@ -95,7 +95,7 @@ fun AppSelectorScreen(
             Spacer(modifier = Modifier.width(8.dp))
             Column {
                 Text(
-                    text = if (currentProfile == "STRICT") "STRICT SCHEDULE APPS" else "FOCUS SESSION APPS",
+                    text = if (currentProfile == "STRICT") "STRICT FOCUS APPS" else "FOCUS SESSION APPS",
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 0.5.sp
@@ -147,7 +147,7 @@ fun AppSelectorScreen(
             items(filteredApps, key = { it.packageName }) { app ->
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = if (app.isAllowed) FocusSurface else FocusSurfaceVariant.copy(alpha = 0.5f)
+                        containerColor = if (!app.isAllowed) FocusSurface else FocusSurfaceVariant.copy(alpha = 0.5f)
                     ),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -164,15 +164,15 @@ fun AppSelectorScreen(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .background(
-                                        if (app.isAllowed) FocusPrimary.copy(alpha = 0.2f) else Color.Red.copy(alpha = 0.15f),
+                                        if (!app.isAllowed) Color.Red.copy(alpha = 0.15f) else FocusPrimary.copy(alpha = 0.2f),
                                         CircleShape
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = if (app.isAllowed) Icons.Default.Check else Icons.Default.Lock,
+                                    imageVector = if (!app.isAllowed) Icons.Default.Lock else Icons.Default.Check,
                                     contentDescription = null,
-                                    tint = if (app.isAllowed) FocusPrimary else Color.Red,
+                                    tint = if (!app.isAllowed) Color.Red else FocusPrimary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -192,9 +192,9 @@ fun AppSelectorScreen(
                         }
 
                         Switch(
-                            checked = app.isAllowed,
-                            onCheckedChange = { isChecked ->
-                                viewModel.toggleAppAllowed(app.packageName, isChecked, currentProfile)
+                            checked = !app.isAllowed,
+                            onCheckedChange = { isBlocked ->
+                                viewModel.toggleAppAllowed(app.packageName, !isBlocked, currentProfile)
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.Black,
@@ -220,7 +220,7 @@ fun AppSelectorScreen(
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black)
         ) {
-            Text("SAVE WHITELIST PERMISSIONS", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+            Text("SAVE BLOCKLIST", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
         }
     }
 }

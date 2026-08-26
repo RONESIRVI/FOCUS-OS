@@ -13,6 +13,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import android.content.Context
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -28,6 +30,16 @@ fun SettingsScreen(
     viewModel: FocusViewModel,
     onNavigateToAppSelector: (String) -> Unit
 ) {
+    var showEditProfileDialog by remember { mutableStateOf(false) }
+    var userName by remember { mutableStateOf("Focus Student") }
+    
+    val context = LocalContext.current
+    val sharedPrefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+    
+    LaunchedEffect(Unit) {
+        userName = sharedPrefs.getString("USER_NAME", "Focus Student") ?: "Focus Student"
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -83,10 +95,10 @@ fun SettingsScreen(
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Focus Student", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = FocusTextPrimary)
+                        Text(userName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = FocusTextPrimary)
                         Text("Free Plan", style = MaterialTheme.typography.bodyMedium, color = FocusPrimary)
                     }
-                    IconButton(onClick = { /* TODO: Edit Profile */ }) {
+                    IconButton(onClick = { showEditProfileDialog = true }) {
                         Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit Profile", tint = FocusTextSecondary)
                     }
                 }
@@ -100,14 +112,14 @@ fun SettingsScreen(
                 SettingsClickableItem(
                     icon = Icons.Default.Apps, 
                     title = "Manual Focus Apps", 
-                    subtitle = "Allowed apps during Quick Focus",
+                    subtitle = "Apps to block during Quick Focus",
                     onClick = { onNavigateToAppSelector("MANUAL") }
                 )
                 Divider(color = FocusSurfaceVariant)
                 SettingsClickableItem(
                     icon = Icons.Default.AppRegistration, 
                     title = "Strict Schedule Apps", 
-                    subtitle = "Allowed apps during Strict Focus",
+                    subtitle = "Apps to block during Strict Focus",
                     onClick = { onNavigateToAppSelector("STRICT") }
                 )
             }
@@ -209,6 +221,40 @@ fun SettingsScreen(
         }
         
         item { Spacer(modifier = Modifier.height(100.dp)) }
+    }
+
+    if (showEditProfileDialog) {
+        var tempName by remember { mutableStateOf(userName) }
+        AlertDialog(
+            onDismissRequest = { showEditProfileDialog = false },
+            title = { Text("Edit Profile", color = Color.White) },
+            text = {
+                OutlinedTextField(
+                    value = tempName,
+                    onValueChange = { tempName = it },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    ),
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    userName = tempName
+                    sharedPrefs.edit().putString("USER_NAME", tempName).apply()
+                    showEditProfileDialog = false
+                }) {
+                    Text("Save", color = FocusPrimary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditProfileDialog = false }) {
+                    Text("Cancel", color = FocusTextSecondary)
+                }
+            },
+            containerColor = FocusSurface
+        )
     }
 }
 
