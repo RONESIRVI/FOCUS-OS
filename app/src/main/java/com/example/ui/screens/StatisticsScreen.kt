@@ -284,7 +284,7 @@ fun StatisticsScreen(
                         Icon(Icons.Default.Tune, contentDescription = "Period Filter & Compare", tint = Color.White)
                     }
                     IconButton(onClick = { 
-                        Toast.makeText(context, "Statistics exported successfully.", Toast.LENGTH_SHORT).show()
+                        com.example.util.StatsExporter.exportStatsAsImage(context, primaryPeriod.title, period1TotalSeconds, period1DailyAvg, period1Sessions.size)
                     }) {
                         Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White)
                     }

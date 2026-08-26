@@ -1,0 +1,1 @@
+sed -i 's/Toast.makeText(context, "Statistics exported successfully.", Toast.LENGTH_SHORT).show()/com.example.util.StatsExporter.exportStatsAsImage(context, primaryPeriod.name, period1TotalSeconds, period1DailyAvg, period1Sessions.size)/g' app/src/main/java/com/example/ui/screens/StatisticsScreen.kt
