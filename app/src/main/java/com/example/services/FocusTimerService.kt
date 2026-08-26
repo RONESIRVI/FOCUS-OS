@@ -15,6 +15,7 @@ import com.example.MainActivity
 import com.example.R
 import com.example.data.model.LockMode
 import com.example.util.FocusLockManager
+import com.example.util.FocusLockOverlayManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,7 +31,7 @@ data class TimerState(
     val remainingSeconds: Int = 0,
     val totalSeconds: Int = 0,
     val sessionName: String = "Study Session",
-    val subjectName: String = "UPSC GS",
+    val subjectName: String = "Deep Focus",
     val lockMode: LockMode = LockMode.STRICT_LOCK,
     val distractionAttempts: Int = 0,
     val selectedSound: SoundType = SoundType.NONE
@@ -112,7 +113,7 @@ class FocusTimerService : Service() {
                 try {
                     if (FocusLockManager.isFocusActive && !_timerState.value.isPaused) {
                         val endTime = System.currentTimeMillis()
-                        val startTime = endTime - 10000
+                        val startTime = endTime - 8000
                         var lastEventPackage: String? = null
                         
                         val events = usageStatsManager?.queryEvents(startTime, endTime)
@@ -132,12 +133,12 @@ class FocusTimerService : Service() {
                         if (lastEventPackage == null) {
                             val stats = usageStatsManager?.queryUsageStats(
                                 android.app.usage.UsageStatsManager.INTERVAL_DAILY,
-                                endTime - 10000,
+                                endTime - 8000,
                                 endTime
                             )
                             if (!stats.isNullOrEmpty()) {
                                 val mostRecent = stats.maxByOrNull { it.lastTimeUsed }
-                                if (mostRecent != null && (endTime - mostRecent.lastTimeUsed) < 5000) {
+                                if (mostRecent != null && (endTime - mostRecent.lastTimeUsed) < 4000) {
                                     lastEventPackage = mostRecent.packageName
                                 }
                             }
@@ -145,13 +146,21 @@ class FocusTimerService : Service() {
 
                         if (lastEventPackage != null && !FocusLockManager.isPackageAllowed(lastEventPackage, packageName)) {
                             recordDistractionAttempt()
-                            FocusLockManager.handleBlockedAppOpened(this@FocusTimerService, lastEventPackage)
+                            FocusLockManager.handleBlockedAppOpened(
+                                context = this@FocusTimerService,
+                                blockedPackageName = lastEventPackage,
+                                remainingSeconds = _timerState.value.remainingSeconds,
+                                subjectName = _timerState.value.subjectName
+                            )
+                        } else if (lastEventPackage == packageName) {
+                            // Returned to our app -> dismiss overlay
+                            FocusLockOverlayManager.dismissOverlay()
                         }
                     }
                 } catch (e: Exception) {
                     // Ignore query failures
                 }
-                delay(400)
+                delay(300)
             }
         }
     }
@@ -174,6 +183,7 @@ class FocusTimerService : Service() {
                 _timerState.value = _timerState.value.copy(isRunning = false)
                 audioEngine.stopSound()
                 appMonitorJob?.cancel()
+                FocusLockOverlayManager.dismissOverlay()
                 stopForeground(STOP_FOREGROUND_REMOVE)
             }
         }
@@ -209,6 +219,7 @@ class FocusTimerService : Service() {
         timerJob?.cancel()
         appMonitorJob?.cancel()
         audioEngine.stopSound()
+        FocusLockOverlayManager.dismissOverlay()
         _timerState.value = TimerState(isRunning = false)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -375,4 +386,3 @@ class FocusTimerService : Service() {
         const val EXTRA_ADD_SECONDS = "extra_add_seconds"
     }
 }
-

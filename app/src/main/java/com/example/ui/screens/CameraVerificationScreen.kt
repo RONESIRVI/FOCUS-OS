@@ -1,9 +1,7 @@
 package com.example.ui.screens
 
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -20,6 +18,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shield
@@ -37,15 +36,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
+import androidx.core.content.ContextCompat
 import coil.compose.rememberAsyncImagePainter
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.FocusViewModel
+import com.example.util.PhotoStorageHelper
 import java.io.File
-import java.io.FileOutputStream
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun CameraVerificationScreen(
@@ -56,65 +52,65 @@ fun CameraVerificationScreen(
 ) {
     val context = LocalContext.current
     var photoUri by remember { mutableStateOf<Uri?>(null) }
-    var currentUriToSave by remember { mutableStateOf<Uri?>(null) }
+    var tempCaptureUri by remember { mutableStateOf<Uri?>(null) }
+    var tempPhotoFile by remember { mutableStateOf<File?>(null) }
+    var isSavingToGallery by remember { mutableStateOf(false) }
 
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-        if (success && currentUriToSave != null) {
-            photoUri = currentUriToSave
+        val uri = tempCaptureUri
+        if (success && uri != null && PhotoStorageHelper.isPhotoFileValid(context, uri)) {
+            isSavingToGallery = true
+            // Save to device gallery in background thread
+            val savedGalleryUri = PhotoStorageHelper.savePhotoToDeviceGallery(context, uri) ?: uri
+            photoUri = savedGalleryUri
+            isSavingToGallery = false
+
             if (isStart) {
-                viewModel.setStartPhotoUri(currentUriToSave.toString())
+                viewModel.setStartPhotoUri(savedGalleryUri.toString())
             } else {
-                viewModel.setEndSelfieUri(currentUriToSave.toString())
+                viewModel.setEndSelfieUri(savedGalleryUri.toString())
+            }
+            Toast.makeText(context, "📸 Photo saved to Gallery (Pictures/FocusOS)", Toast.LENGTH_LONG).show()
+        } else {
+            // Photo capture was cancelled or failed
+            if (photoUri == null) {
+                Toast.makeText(context, "Camera capture cancelled. Photo is required to proceed.", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
-            try {
-                val file = File(context.cacheDir, "focus_photo_${System.currentTimeMillis()}.jpg")
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                currentUriToSave = uri
-                cameraLauncher.launch(uri)
-            } catch (e: Exception) {
-                e.printStackTrace()
+            val capturePair = PhotoStorageHelper.createCaptureUri(context)
+            if (capturePair != null) {
+                tempCaptureUri = capturePair.first
+                tempPhotoFile = capturePair.second
+                cameraLauncher.launch(capturePair.first)
+            } else {
+                Toast.makeText(context, "Failed to initialize camera storage", Toast.LENGTH_SHORT).show()
             }
         } else {
-            Toast.makeText(context, "Camera permission needed for photo proof", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Camera permission is required to capture photo proof", Toast.LENGTH_LONG).show()
         }
     }
 
-    fun takePhoto() {
-        val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+    fun launchCamera() {
+        val hasPermission = ContextCompat.checkSelfPermission(
             context,
-            android.Manifest.permission.CAMERA
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
 
         if (hasPermission) {
-            try {
-                val file = File(context.cacheDir, "focus_photo_${System.currentTimeMillis()}.jpg")
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                currentUriToSave = uri
-                cameraLauncher.launch(uri)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                // Fallback snapshot generator
-                generateSnapshotProof(context, isStart) { generatedUri ->
-                    photoUri = generatedUri
-                    if (isStart) viewModel.setStartPhotoUri(generatedUri.toString())
-                    else viewModel.setEndSelfieUri(generatedUri.toString())
-                }
+            val capturePair = PhotoStorageHelper.createCaptureUri(context)
+            if (capturePair != null) {
+                tempCaptureUri = capturePair.first
+                tempPhotoFile = capturePair.second
+                cameraLauncher.launch(capturePair.first)
+            } else {
+                Toast.makeText(context, "Unable to create storage for photo", Toast.LENGTH_SHORT).show()
             }
         } else {
-            permissionLauncher.launch(android.Manifest.permission.CAMERA)
-        }
-    }
-
-    fun generateQuickSnapshot() {
-        generateSnapshotProof(context, isStart) { generatedUri ->
-            photoUri = generatedUri
-            if (isStart) viewModel.setStartPhotoUri(generatedUri.toString())
-            else viewModel.setEndSelfieUri(generatedUri.toString())
+            permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
@@ -130,7 +126,7 @@ fun CameraVerificationScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header Section
+            // Top Header
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
@@ -149,7 +145,7 @@ fun CameraVerificationScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (isStart) "ANTI-CHEAT VERIFICATION" else "SESSION COMPLETION PROOF",
+                        text = if (isStart) "ANTI-CHEAT PHOTO VERIFICATION" else "SESSION COMPLETION VERIFICATION",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = Color.White
                     )
@@ -158,21 +154,22 @@ fun CameraVerificationScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = if (isStart) "STUDY DESK PHOTO" else "COMPLETION SELFIE",
-                    style = MaterialTheme.typography.headlineMedium.copy(
+                    text = if (isStart) "CAPTURE STUDY DESK PHOTO" else "CAPTURE COMPLETION SELFIE",
+                    style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 1.sp
                     ),
-                    color = Color.White
+                    color = Color.White,
+                    textAlign = TextAlign.Center
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     text = if (isStart)
-                        "Take a real photo of your study space or books to unlock and begin the focus session."
+                        "Take a real photo of your study space or book with your phone camera. The photo is saved directly to your phone's Gallery (Pictures/FocusOS)."
                     else
-                        "Take a selfie to verify genuine completion and unlock your device.",
+                        "Take a selfie with your camera to confirm genuine session completion and save it to your phone Gallery.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = FocusTextSecondary,
                     textAlign = TextAlign.Center,
@@ -184,7 +181,7 @@ fun CameraVerificationScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(320.dp)
+                    .height(340.dp)
                     .clip(RoundedCornerShape(28.dp))
                     .background(FocusSurface)
                     .border(
@@ -198,11 +195,11 @@ fun CameraVerificationScreen(
                 contentAlignment = Alignment.Center
             ) {
                 if (photoUri != null) {
-                    // Show taken photo preview
+                    // Display real captured photo
                     Box(modifier = Modifier.fillMaxSize()) {
                         Image(
                             painter = rememberAsyncImagePainter(photoUri),
-                            contentDescription = "Captured Photo Proof",
+                            contentDescription = "Real Camera Photo Proof",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -210,7 +207,7 @@ fun CameraVerificationScreen(
                         // Top status badge
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color.Black.copy(alpha = 0.75f),
+                            color = Color.Black.copy(alpha = 0.8f),
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .padding(12.dp)
@@ -227,7 +224,7 @@ fun CameraVerificationScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "PHOTO PROOF VERIFIED",
+                                    text = "SAVED TO GALLERY ✓",
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                     color = Color.White
                                 )
@@ -236,90 +233,92 @@ fun CameraVerificationScreen(
 
                         // Retake button
                         IconButton(
-                            onClick = { takePhoto() },
+                            onClick = { launchCamera() },
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .padding(12.dp)
-                                .size(40.dp)
-                                .background(Color.Black.copy(alpha = 0.75f), CircleShape)
+                                .size(44.dp)
+                                .background(Color.Black.copy(alpha = 0.8f), CircleShape)
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = "Retake", tint = Color.White)
                         }
                     }
                 } else {
-                    // Placeholder when no photo is taken yet
+                    // Placeholder when no photo taken yet
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                         modifier = Modifier
                             .fillMaxSize()
-                            .clickable { takePhoto() }
+                            .clickable { launchCamera() }
                             .padding(24.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(80.dp)
+                                .size(88.dp)
                                 .background(FocusPrimary.copy(alpha = 0.15f), CircleShape)
-                                .border(2.dp, FocusPrimary.copy(alpha = 0.4f), CircleShape),
+                                .border(2.dp, FocusPrimary.copy(alpha = 0.5f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.CameraAlt,
-                                contentDescription = "Take Photo",
+                                contentDescription = "Open Camera",
                                 tint = FocusPrimary,
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(40.dp)
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(18.dp))
 
                         Text(
-                            text = "TAP TO OPEN CAMERA",
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold),
+                            text = "TAP TO OPEN PHONE CAMERA",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
                             color = Color.White
                         )
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
-                            text = "Photo required • Cannot bypass",
-                            style = MaterialTheme.typography.labelSmall,
+                            text = "Opens real camera • Saves to Gallery",
+                            style = MaterialTheme.typography.labelMedium,
                             color = FocusWarning
                         )
                     }
                 }
             }
 
-            // Bottom Actions & Strict Verification Button
+            // Bottom Actions & Verification Button (Strictly requires captured photo)
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (photoUri == null) {
-                    // Fallback snapshot button for rapid verification & testing
-                    OutlinedButton(
-                        onClick = { generateQuickSnapshot() },
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = FocusPrimary),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.6f))
+                    // Open Camera Primary Button
+                    Button(
+                        onClick = { launchCamera() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .testTag("open_camera_button"),
+                        colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "CAPTURE INSTANT PROOF SNAPSHOT",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                            text = "OPEN CAMERA & TAKE PHOTO",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White
                         )
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                // Main Verification Button (STRICTLY DISABLED IF photoUri == null)
-                val isVerified = photoUri != null
+                val hasCapturedPhoto = photoUri != null
                 Button(
                     onClick = {
-                        if (photoUri != null) {
+                        if (hasCapturedPhoto) {
                             if (isStart) {
                                 viewModel.setStartPhotoUri(photoUri.toString())
                             } else {
@@ -327,7 +326,7 @@ fun CameraVerificationScreen(
                             }
                             onVerificationComplete()
                         } else {
-                            Toast.makeText(context, "⚠️ Please take a photo first to verify!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "⚠️ Please take a photo with your camera first!", Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier
@@ -335,14 +334,14 @@ fun CameraVerificationScreen(
                         .height(56.dp)
                         .testTag("verify_photo_button"),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isVerified) FocusPrimary else FocusSurfaceVariant,
+                        containerColor = if (hasCapturedPhoto) FocusPrimary else FocusSurfaceVariant,
                         disabledContainerColor = FocusSurfaceVariant,
                         disabledContentColor = FocusTextSecondary
                     ),
                     shape = RoundedCornerShape(16.dp),
-                    enabled = isVerified
+                    enabled = hasCapturedPhoto
                 ) {
-                    if (isVerified) {
+                    if (hasCapturedPhoto) {
                         Icon(Icons.Default.Check, contentDescription = null, tint = Color.White)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
@@ -354,7 +353,7 @@ fun CameraVerificationScreen(
                         Icon(Icons.Default.Lock, contentDescription = null, tint = FocusTextSecondary)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "📸 CAPTURE PHOTO TO UNLOCK",
+                            text = "📸 TAKE PHOTO TO UNLOCK",
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                             color = FocusTextSecondary
                         )
@@ -362,13 +361,13 @@ fun CameraVerificationScreen(
                 }
 
                 if (isStart) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     TextButton(
                         onClick = onCancel,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "Cancel & Return Home",
+                            text = "Cancel & Return",
                             style = MaterialTheme.typography.bodyMedium,
                             color = FocusTextSecondary
                         )
@@ -380,73 +379,3 @@ fun CameraVerificationScreen(
         }
     }
 }
-
-/**
- * Generates a timestamped verification proof image in app cache
- */
-private fun generateSnapshotProof(context: Context, isStart: Boolean, onGenerated: (Uri) -> Unit) {
-    try {
-        val width = 720
-        val height = 960
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-
-        // Draw background
-        val bgPaint = Paint().apply {
-            color = android.graphics.Color.rgb(15, 23, 42) // Dark Slate
-        }
-        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
-
-        // Draw decorative grid / viewfinder corners
-        val borderPaint = Paint().apply {
-            color = android.graphics.Color.rgb(14, 165, 233)
-            strokeWidth = 6f
-            style = Paint.Style.STROKE
-        }
-        canvas.drawRoundRect(40f, 40f, width - 40f, height - 40f, 40f, 40f, borderPaint)
-
-        // Draw text
-        val titlePaint = Paint().apply {
-            color = android.graphics.Color.WHITE
-            textSize = 42f
-            isFakeBoldText = true
-            textAlign = Paint.Align.CENTER
-        }
-        val subPaint = Paint().apply {
-            color = android.graphics.Color.rgb(148, 163, 184)
-            textSize = 28f
-            textAlign = Paint.Align.CENTER
-        }
-        val stampPaint = Paint().apply {
-            color = android.graphics.Color.rgb(245, 158, 11)
-            textSize = 32f
-            isFakeBoldText = true
-            textAlign = Paint.Align.CENTER
-        }
-
-        val sdf = SimpleDateFormat("EEEE, MMMM dd, yyyy • hh:mm:ss a", Locale.getDefault())
-        val timeStr = sdf.format(Date())
-
-        canvas.drawText("🛡️ FOCUS OS SECURITY PROOF", width / 2f, 300f, titlePaint)
-        canvas.drawText(
-            if (isStart) "STUDY DESK SNAPSHOT VERIFIED" else "COMPLETION SELFIE PROOF VERIFIED",
-            width / 2f,
-            380f,
-            stampPaint
-        )
-        canvas.drawText("Timestamp: $timeStr", width / 2f, 460f, subPaint)
-        canvas.drawText("Status: STRICT ANTI-CHEAT PASS ✅", width / 2f, 540f, titlePaint)
-
-        val file = File(context.cacheDir, "proof_snapshot_${System.currentTimeMillis()}.jpg")
-        val out = FileOutputStream(file)
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
-        out.flush()
-        out.close()
-
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        onGenerated(uri)
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-}
-

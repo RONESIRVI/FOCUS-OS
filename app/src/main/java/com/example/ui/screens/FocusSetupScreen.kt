@@ -485,7 +485,6 @@ fun FocusSetupScreen(
                                                 subjectName = finalSubject,
                                                 durationMinutes = customDuration.toInt()
                                             )
-                                            viewModel.startFocusSession()
                                             onStartSession()
                                         }
                                         .testTag("start_session_confirm_btn"),

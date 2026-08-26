@@ -22,7 +22,7 @@ object FocusLockManager {
 
     var onDistractionListener: ((packageName: String) -> Unit)? = null
 
-    // Essential system components allowed for phone dialer, keyboard and emergency
+    // Essential system components allowed ONLY for phone dialer, emergency and keyboard
     private val SYSTEM_WHITELIST = setOf(
         "com.android.systemui",
         "android",
@@ -31,10 +31,7 @@ object FocusLockManager {
         "com.android.dialer",
         "com.google.android.dialer",
         "com.android.phone",
-        "com.android.server.telecom",
-        "com.google.android.apps.nexuslauncher",
-        "com.android.launcher3",
-        "com.google.android.googlequicksearchbox"
+        "com.android.server.telecom"
     )
 
     fun updateFocusState(
@@ -47,6 +44,10 @@ object FocusLockManager {
         whitelistedPackages.clear()
         whitelistedPackages.addAll(allowedPackageNames)
         Log.d(TAG, "FocusLockState updated: isActive=$isActive, mode=$lockMode, allowedCount=${whitelistedPackages.size}")
+        
+        if (!isActive) {
+            FocusLockOverlayManager.dismissOverlay()
+        }
     }
 
     fun getAllowedPackages(): Set<String> {
@@ -74,12 +75,25 @@ object FocusLockManager {
         return whitelistedPackages.contains(packageName)
     }
 
-    fun handleBlockedAppOpened(context: Context, blockedPackageName: String) {
+    fun handleBlockedAppOpened(
+        context: Context,
+        blockedPackageName: String,
+        remainingSeconds: Int = 0,
+        subjectName: String = "Deep Focus"
+    ) {
         Log.w(TAG, "BLOCKED APP DETECTED: $blockedPackageName. Initiating lock enforcement...")
         
         onDistractionListener?.invoke(blockedPackageName)
 
-        // Launch MainActivity with high-priority flags over the blocked app
+        // Show window overlay immediately
+        FocusLockOverlayManager.showBlockedOverlay(
+            context = context,
+            blockedPackage = blockedPackageName,
+            remainingSeconds = remainingSeconds,
+            subjectName = subjectName
+        )
+
+        // Also launch MainActivity with high-priority flags over the blocked app
         val redirectIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or

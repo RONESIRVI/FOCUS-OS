@@ -1,36 +1,35 @@
 package com.example
 
 import android.Manifest
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.background
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.data.model.LockMode
+import com.example.ui.navigation.FocusBottomNavigation
 import com.example.ui.navigation.FocusNavGraph
 import com.example.ui.navigation.FocusRoutes
+import com.example.ui.theme.FocusBackground
 import com.example.ui.theme.FocusOSTheme
 import com.example.ui.viewmodel.FocusViewModel
-
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.compose.runtime.getValue
-import com.example.ui.navigation.FocusBottomNavigation
-import android.app.usage.UsageStatsManager
-import android.content.Context
-import android.util.Log
 import com.example.util.FocusLockManager
-
+import com.example.util.FocusLockOverlayManager
 
 class MainActivity : ComponentActivity() {
 
@@ -82,7 +81,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 ) { innerPadding ->
-                    Box(modifier = Modifier.fillMaxSize().padding(innerPadding).background(com.example.ui.theme.FocusBackground)) {
+                    Box(modifier = Modifier.fillMaxSize().padding(innerPadding).background(FocusBackground)) {
                         FocusNavGraph(
                             navController = navController,
                             viewModel = viewModel,
@@ -107,6 +106,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        FocusLockOverlayManager.dismissOverlay()
+    }
+
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         enforceFocusLock()
@@ -114,7 +118,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (!hasFocus) {
+        if (hasFocus) {
+            FocusLockOverlayManager.dismissOverlay()
+        } else {
             enforceFocusLock()
         }
     }
@@ -122,15 +128,12 @@ class MainActivity : ComponentActivity() {
     private fun enforceFocusLock() {
         val timerState = viewModel.timerState.value
         if (timerState.isRunning && timerState.lockMode != LockMode.NORMAL) {
-            
-            // Check if current foreground app is allowed or should be blocked
-            var shouldBlock = false
             try {
-                val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+                val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
                 val time = System.currentTimeMillis()
-                val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, time - 1000 * 10, time)
+                val stats = usageStatsManager?.queryUsageStats(android.app.usage.UsageStatsManager.INTERVAL_DAILY, time - 1000 * 6, time)
                 
-                if (stats != null && stats.isNotEmpty()) {
+                if (!stats.isNullOrEmpty()) {
                     var recentApp = ""
                     var lastTime = 0L
                     for (usageStats in stats) {
@@ -140,38 +143,18 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     
-                    if (recentApp.isNotEmpty() &&
-                        recentApp != packageName &&
-                        !recentApp.contains("launcher") &&
-                        !recentApp.contains("systemui")
-                    ) {
-                        // Check if recentApp is in the whitelisted (allowed) set
-                        val allowedList = if (timerState.lockMode == LockMode.STRICT_LOCK || timerState.lockMode == LockMode.MAXIMUM_LOCK) {
-                            viewModel.whitelistedAppsStrict.value
-                        } else {
-                            viewModel.whitelistedAppsManual.value
-                        }
-                        val isWhitelisted = allowedList.any { it.packageName == recentApp && it.isAllowed }
-                        shouldBlock = !isWhitelisted
+                    if (recentApp.isNotEmpty() && !FocusLockManager.isPackageAllowed(recentApp, packageName)) {
+                        FocusLockManager.handleBlockedAppOpened(
+                            context = this,
+                            blockedPackageName = recentApp,
+                            remainingSeconds = timerState.remainingSeconds,
+                            subjectName = timerState.subjectName
+                        )
                     }
                 }
             } catch (e: Exception) {
                 Log.e("MainActivity", "Error checking usage stats", e)
             }
-            
-            if (shouldBlock) {
-                viewModel.triggerDistractionWarning()
-
-                if (timerState.lockMode == LockMode.STRICT_LOCK || timerState.lockMode == LockMode.MAXIMUM_LOCK) {
-                    val intent = Intent(this, MainActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                                Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    }
-                    startActivity(intent)
-                }
-            }
         }
     }
 }
-
