@@ -1,12 +1,23 @@
+import re
+
 with open("app/src/main/java/com/example/MainActivity.kt", "r") as f:
     content = f.read()
 
-imports_to_add = "import androidx.compose.foundation.layout.imePadding\nimport androidx.compose.foundation.layout.consumeWindowInsets\n"
-content = content.replace("import androidx.compose.foundation.layout.padding", imports_to_add + "import androidx.compose.foundation.layout.padding")
+old_code = """        val blockedPkg = intent.getStringExtra("BLOCKED_PACKAGE_EVENT")
+        if (blockedPkg != null) {
+            viewModel.triggerDistractionWarning(blockedPkg)
+        }"""
 
-old_box = "Box(modifier = Modifier.fillMaxSize().padding(innerPadding).background(FocusBackground)) {"
-new_box = "Box(modifier = Modifier.fillMaxSize().padding(innerPadding).consumeWindowInsets(innerPadding).imePadding().background(FocusBackground)) {"
-content = content.replace(old_box, new_box)
+new_code = """        val blockedPkg = intent.getStringExtra("BLOCKED_PACKAGE_EVENT")
+        if (blockedPkg != null) {
+            viewModel.triggerDistractionWarning(blockedPkg, showRedModal = true)
+        }"""
+
+content = content.replace(old_code, new_code)
+
+# There is also one in onCreate? Let's check.
+content = content.replace('viewModel.triggerDistractionWarning(blockedPkg)', 'viewModel.triggerDistractionWarning(blockedPkg, showRedModal = true)')
 
 with open("app/src/main/java/com/example/MainActivity.kt", "w") as f:
     f.write(content)
+

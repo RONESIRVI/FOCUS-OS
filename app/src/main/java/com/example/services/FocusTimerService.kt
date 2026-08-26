@@ -32,7 +32,7 @@ data class TimerState(
     val totalSeconds: Int = 0,
     val sessionName: String = "Study Session",
     val subjectName: String = "Deep Focus",
-    val lockMode: LockMode = LockMode.STRICT_LOCK,
+    val lockMode: LockMode = LockMode.MAXIMUM_LOCK,
     val distractionAttempts: Int = 0,
     val selectedSound: SoundType = SoundType.NONE
 )

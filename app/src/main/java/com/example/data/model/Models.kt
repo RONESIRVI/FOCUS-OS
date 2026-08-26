@@ -5,9 +5,8 @@ import androidx.room.PrimaryKey
 
 enum class LockMode(val title: String, val description: String) {
     NORMAL("Normal", "Standard Pomodoro countdown. Switch apps freely."),
-    SOFT_LOCK("Soft Lock (Level 1)", "Warning overlay alerts you when attempting to switch apps."),
-    STRICT_LOCK("Strict Lock (Level 2)", "Locks phone to Focus App & Whitelisted Apps only. Anti-Exit protection."),
-    MAXIMUM_LOCK("Maximum Lock (Level 3)", "Kiosk lockdown mode. Emergency exit requires 200s delay penalty.")
+    SOFT_LOCK("Mindful Mode", "Warning toast alerts you when attempting to switch apps."),
+    MAXIMUM_LOCK("Deep Work Mode", "Kiosk lockdown mode. Emergency exit requires 300s delay penalty.")
 }
 
 @Entity(tableName = "focus_sessions")

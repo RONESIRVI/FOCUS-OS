@@ -3,19 +3,19 @@ import re
 with open("app/src/main/java/com/example/ui/viewmodel/FocusViewModel.kt", "r") as f:
     content = f.read()
 
-# Update stats filter
 content = content.replace(
     'val completedSessions = sessions.filter { it.completedDurationSeconds > 0 || it.status == "COMPLETED" }',
     'val completedSessions = sessions.filter { it.completedDurationSeconds > 0 || it.status == "COMPLETED" || it.status == "ARCHIVED" }'
 )
 
-# Update delete logic
-old_delete_repo = "repository.deleteSession(session)"
+old_delete_repo = "            repository.deleteSession(session)"
 new_delete_repo = """            if (session.status == "COMPLETED" || session.completedDurationSeconds > 0) {
                 repository.updateSession(session.copy(status = "ARCHIVED"))
             } else {
                 repository.deleteSession(session)
             }"""
 
-# Wait, `repository.deleteSession(session)` is called in `deleteScheduledSession`.
-# Are there any other places where `deleteSession` is called?
+content = content.replace(old_delete_repo, new_delete_repo)
+
+with open("app/src/main/java/com/example/ui/viewmodel/FocusViewModel.kt", "w") as f:
+    f.write(content)

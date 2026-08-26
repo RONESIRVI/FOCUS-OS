@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -113,66 +116,108 @@ fun HomeScreen(
     ) {
         item { Spacer(modifier = Modifier.height(16.dp)) }
 
-        // Top Header
+        // Premium Top Header
         item {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Hamburger Menu Icon (3 horizontal lines) -> Opens Full App Guide
-                IconButton(
-                    onClick = { showAppGuide = true },
-                    modifier = Modifier.testTag("hamburger_menu_btn")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "App Complete Guide",
-                        tint = FocusTextPrimary,
-                        modifier = Modifier.size(28.dp)
-                    )
+                // Premium Styled App Brand
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(
+                                color = FocusSurfaceVariant, // neutral background since icon has its own colors
+                                shape = RoundedCornerShape(12.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                            contentDescription = "App Icon",
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column {
+                        Text(
+                            text = "FOCUS OS",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 1.5.sp
+                            ),
+                            color = Color.White
+                        )
+                        Text(
+                            text = "PRODUCTIVITY ENGINE",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.5.sp,
+                                fontSize = 8.sp
+                            ),
+                            color = FocusPrimary
+                        )
+                    }
                 }
 
-                Text(
-                    text = "FOCUS OS",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 2.sp
-                    ),
-                    color = FocusPrimary
-                )
-
-                // Notification Bell with dynamic badge
-                Box(
-                    modifier = Modifier.clickable { showNotifications = true }.testTag("header_notifications_btn"),
-                    contentAlignment = Alignment.TopEnd
-                ) {
-                    IconButton(onClick = { showNotifications = true }) {
+                // Action Icons (Guide & Notifications)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // App Guide (MenuBook Icon)
+                    Surface(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .clickable { showAppGuide = true }
+                            .testTag("hamburger_menu_btn"),
+                        shape = CircleShape,
+                        color = FocusSurfaceVariant.copy(alpha = 0.4f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, FocusSurfaceVariant)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.MenuBook,
+                                contentDescription = "App Complete Guide",
+                                tint = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.width(12.dp))
+                    
+                    // Notification Bell
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(FocusSurfaceVariant.copy(alpha = 0.4f))
+                            .border(1.dp, FocusSurfaceVariant, CircleShape)
+                            .clickable { showNotifications = true }
+                            .testTag("header_notifications_btn"),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Notifications,
                             contentDescription = "Notifications & Alerts",
-                            tint = FocusTextPrimary,
-                            modifier = Modifier.size(28.dp)
+                            tint = Color.White.copy(alpha = 0.9f),
+                            modifier = Modifier.size(24.dp)
                         )
-                    }
-                    // Notification Badge
-                    val alertCount = (if (scheduledSessions.isNotEmpty()) 1 else 0) + 2 // dynamic alerts
-                    Surface(
-                        shape = CircleShape,
-                        color = FocusWarning,
-                        modifier = Modifier
-                            .padding(top = 6.dp, end = 6.dp)
-                            .size(16.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = "$alertCount",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Black
-                                ),
-                                color = Color.Black
-                            )
+                        
+                        // Notification Badge (Minimalist Dot)
+                        val alertCount = (if (scheduledSessions.isNotEmpty()) 1 else 0) + 2
+                        if (alertCount > 0) {
+                            Surface(
+                                shape = CircleShape,
+                                color = FocusWarning,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 10.dp, end = 10.dp)
+                                    .size(12.dp)
+                            ) {}
                         }
                     }
                 }
@@ -531,46 +576,6 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onNavigateToScheduleMain() }
             )
         }
-
-        // Quick Focus Session Card
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = FocusSurface),
-                shape = RoundedCornerShape(20.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, FocusOutline),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 32.dp)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Bolt, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(24.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("QUICK FOCUS MODE", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = FocusTextPrimary)
-                    }
-                    
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "Instant Pomodoro or custom timers with binaural beats and 10-permission distraction lockdown.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = FocusTextSecondary,
-                        lineHeight = 20.sp
-                    )
-                    
-                    Spacer(modifier = Modifier.height(18.dp))
-                    
-                    Button(
-                        onClick = onNavigateToSetup,
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = FocusOnPrimary)
-                    ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("START FOCUS SESSION", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
-                    }
-                }
-            }
-        }
-        
         item { Spacer(modifier = Modifier.height(60.dp)) }
     }
 }

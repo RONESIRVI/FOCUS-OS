@@ -884,9 +884,8 @@ fun ScheduleCreateScreen(
 
                         // Mode Selector Cards
                         listOf(
-                            LockMode.STRICT_LOCK to ("Strict Lock (Recommended)" to "Locks device to Focus App & Whitelisted study apps."),
-                            LockMode.MAXIMUM_LOCK to ("Maximum Lock" to "Kiosk lockdown mode with penalty timer on emergency quit."),
-                            LockMode.SOFT_LOCK to ("Soft Lock" to "Gentle alert banner when opening distracted apps.")
+                                                        LockMode.MAXIMUM_LOCK to ("Deep Work Mode" to "Kiosk lockdown mode with penalty timer on emergency quit."),
+                            LockMode.SOFT_LOCK to ("Mindful Mode" to "Gentle alert banner when opening distracted apps.")
                         ).forEach { (mode, details) ->
                             val isSelected = selectedLockMode == mode
                             Surface(

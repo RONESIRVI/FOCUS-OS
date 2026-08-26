@@ -20,7 +20,7 @@ object FocusLockManager {
 
     private val whitelistedPackages = CopyOnWriteArraySet<String>()
 
-    var onDistractionListener: ((packageName: String) -> Unit)? = null
+    var onDistractionListener: ((packageName: String, showRedModal: Boolean) -> Unit)? = null
 
     // Essential system components allowed ONLY for phone dialer, emergency and keyboard
     private val SYSTEM_WHITELIST = setOf(
@@ -83,28 +83,45 @@ object FocusLockManager {
     ) {
         Log.w(TAG, "BLOCKED APP DETECTED: $blockedPackageName. Initiating lock enforcement...")
         
-        onDistractionListener?.invoke(blockedPackageName)
-
-        // Show window overlay immediately
-        FocusLockOverlayManager.showBlockedOverlay(
-            context = context,
-            blockedPackage = blockedPackageName,
-            remainingSeconds = remainingSeconds,
-            subjectName = subjectName
-        )
-
-        // Also launch MainActivity with high-priority flags over the blocked app
-        val redirectIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("BLOCKED_PACKAGE_EVENT", blockedPackageName)
-        }
-        try {
-            context.startActivity(redirectIntent)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to redirect from blocked app: $blockedPackageName", e)
+        val hasOverlayPerm = android.provider.Settings.canDrawOverlays(context)
+        
+        when (currentLockMode) {
+            LockMode.SOFT_LOCK -> {
+                onDistractionListener?.invoke(blockedPackageName, false)
+                if (hasOverlayPerm) {
+                    FocusLockOverlayManager.showBlockedOverlay(
+                        context = context,
+                        blockedPackage = blockedPackageName,
+                        remainingSeconds = remainingSeconds,
+                        subjectName = subjectName,
+                        isSoftLock = true
+                    )
+                } else {
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        android.widget.Toast.makeText(
+                            context, 
+                            "⚠️ Focus Reminder: You are leaving your study session!", 
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
+            
+            LockMode.MAXIMUM_LOCK -> {
+                // Instantly yank back to app with RED warning modal
+                onDistractionListener?.invoke(blockedPackageName, true)
+                val redirectIntent = Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra("BLOCKED_PACKAGE_EVENT", blockedPackageName)
+                }
+                try {
+                    context.startActivity(redirectIntent)
+                } catch (e: Exception) {}
+            }
+            else -> {}
         }
     }
 

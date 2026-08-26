@@ -112,7 +112,7 @@ fun FocusTimerScreen(
 
     val whitelistedAppsManual by viewModel.whitelistedAppsManual.collectAsState()
     val whitelistedAppsStrict by viewModel.whitelistedAppsStrict.collectAsState()
-    val currentProfile = if (timerState.lockMode == LockMode.STRICT_LOCK || timerState.lockMode == LockMode.MAXIMUM_LOCK) "STRICT" else "MANUAL"
+    val currentProfile = if (timerState.lockMode == LockMode.MAXIMUM_LOCK) "STRICT" else "MANUAL"
     val whitelistedApps = if (currentProfile == "STRICT") whitelistedAppsStrict else whitelistedAppsManual
 
     val allAppsManual by viewModel.allowedAppsManual.collectAsState()
@@ -133,7 +133,7 @@ fun FocusTimerScreen(
     // Emergency exit penalty timer
     LaunchedEffect(showEmergencyConfirm) {
         if (showEmergencyConfirm) {
-            emergencyPenaltyCountdown = 10
+            emergencyPenaltyCountdown = if (timerState.lockMode == LockMode.MAXIMUM_LOCK) 300 else 0
             while (emergencyPenaltyCountdown > 0) {
                 delay(1000)
                 emergencyPenaltyCountdown--
@@ -567,8 +567,15 @@ fun FocusTimerScreen(
                 // Finish Session Button
                 Button(
                     onClick = {
-                        viewModel.completeFocusSession()
-                        onSessionComplete()
+                        if (timerState.lockMode == LockMode.MAXIMUM_LOCK && timerState.remainingSeconds > 0) {
+                            // Penalty for trying to cheat and finish early in Deep Work Mode
+                            viewModel.addPenaltyTime(420) // 7 minutes
+                            showExitAttemptDialog = false
+                            showEmergencyConfirm = true
+                        } else {
+                            viewModel.completeFocusSession()
+                            onSessionComplete()
+                        }
                     },
                     modifier = Modifier
                         .weight(1f)
@@ -774,6 +781,9 @@ fun FocusTimerScreen(
 
                             OutlinedButton(
                                 onClick = {
+                                    if (timerState.lockMode == LockMode.MAXIMUM_LOCK && timerState.remainingSeconds > 0) {
+                                        viewModel.addPenaltyTime(420)
+                                    }
                                     showExitAttemptDialog = false
                                     showEmergencyConfirm = true
                                 },
@@ -1107,7 +1117,16 @@ fun FocusTimerScreen(
         // ==========================================
         if (showEmergencyConfirm) {
             Dialog(
-                onDismissRequest = { showEmergencyConfirm = false }
+                onDismissRequest = {
+                    // Cannot dismiss in Maximum Lock until penalty is over
+                    if (timerState.lockMode != LockMode.MAXIMUM_LOCK) {
+                        showEmergencyConfirm = false
+                    }
+                },
+                properties = androidx.compose.ui.window.DialogProperties(
+                    dismissOnBackPress = timerState.lockMode != LockMode.MAXIMUM_LOCK,
+                    dismissOnClickOutside = timerState.lockMode != LockMode.MAXIMUM_LOCK
+                )
             ) {
                 Surface(
                     shape = RoundedCornerShape(20.dp),
@@ -1158,6 +1177,21 @@ fun FocusTimerScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = FocusDanger)
                         ) {
                             Text("CONFIRM EARLY EXIT", fontWeight = FontWeight.Bold)
+                        }
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        OutlinedButton(
+                            onClick = {
+                                showEmergencyConfirm = false
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = FocusPrimary),
+                            border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.5f))
+                        ) {
+                            Text("RESUME STUDYING", fontWeight = FontWeight.Bold)
                         }
                     }
                 }

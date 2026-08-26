@@ -33,7 +33,8 @@ object FocusLockOverlayManager {
         blockedPackage: String,
         remainingSeconds: Int,
         subjectName: String,
-        allowedPackages: List<Pair<String, String>> = emptyList() // Pair(packageName, appName)
+        allowedPackages: List<Pair<String, String>> = emptyList(), // Pair(packageName, appName)
+        isSoftLock: Boolean = false
     ) {
         if (!Settings.canDrawOverlays(context)) {
             Log.w(TAG, "Cannot draw overlays: permission not granted.")
@@ -45,6 +46,7 @@ object FocusLockOverlayManager {
             try {
                 if (isShowing.get() && overlayView != null) {
                     updateOverlayContent(context, blockedPackage, remainingSeconds, subjectName, allowedPackages)
+                    if (isSoftLock) scheduleSoftLockDismiss()
                     return@post
                 }
 
@@ -70,7 +72,8 @@ object FocusLockOverlayManager {
                     gravity = Gravity.CENTER
                 }
 
-                val view = createOverlayView(context, blockedPackage, remainingSeconds, subjectName, allowedPackages)
+                val view = createOverlayView(context, blockedPackage, remainingSeconds, subjectName, allowedPackages, isSoftLock)
+                if (isSoftLock) scheduleSoftLockDismiss()
                 windowManager?.addView(view, params)
                 overlayView = view
                 isShowing.set(true)
@@ -83,6 +86,8 @@ object FocusLockOverlayManager {
     }
 
     fun dismissOverlay() {
+        softLockRunnable?.let { mainHandler.removeCallbacks(it) }
+        softLockRunnable = null
         mainHandler.post {
             try {
                 if (isShowing.get() && overlayView != null && windowManager != null) {
@@ -104,7 +109,7 @@ object FocusLockOverlayManager {
                         Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
                         Intent.FLAG_ACTIVITY_SINGLE_TOP or
                         Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra("BLOCKED_PACKAGE_EVENT", blockedPackage)
+                // Intentionally NOT sending BLOCKED_PACKAGE_EVENT so the Red in-app warning doesn't show over the timer
             }
             context.startActivity(intent)
         } catch (e: Exception) {
@@ -117,7 +122,8 @@ object FocusLockOverlayManager {
         blockedPackage: String,
         remainingSeconds: Int,
         subjectName: String,
-        allowedPackages: List<Pair<String, String>>
+        allowedPackages: List<Pair<String, String>>,
+        isSoftLock: Boolean
     ): View {
         val rootLayout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -178,16 +184,22 @@ object FocusLockOverlayManager {
 
         // Primary Action: Return to Focus Timer
         val returnBtn = Button(context).apply {
-            text = "RETURN TO FOCUS TIMER"
+            if (isSoftLock) {
+                text = "WAITING 30 SECONDS..."
+                isEnabled = false
+                setBackgroundColor(android.graphics.Color.parseColor("#475569")) // Slate 600
+            } else {
+                text = "RETURN TO FOCUS TIMER"
+                setBackgroundColor(android.graphics.Color.parseColor("#0284C7")) // Primary blue
+                setOnClickListener {
+                    dismissOverlay()
+                    bringAppToFront(context, blockedPackage)
+                }
+            }
             textSize = 15f
             setTypeface(null, android.graphics.Typeface.BOLD)
             setTextColor(android.graphics.Color.WHITE)
-            setBackgroundColor(android.graphics.Color.parseColor("#0284C7")) // Primary blue
             setPadding(32, 24, 32, 24)
-            setOnClickListener {
-                dismissOverlay()
-                bringAppToFront(context, blockedPackage)
-            }
         }
         rootLayout.addView(returnBtn)
 
@@ -225,6 +237,18 @@ object FocusLockOverlayManager {
         }
 
         return rootLayout
+    }
+
+    
+    private var softLockRunnable: Runnable? = null
+    
+    private fun scheduleSoftLockDismiss() {
+        softLockRunnable?.let { mainHandler.removeCallbacks(it) }
+        val r = Runnable { 
+            dismissOverlay()
+        }
+        softLockRunnable = r
+        mainHandler.postDelayed(r, 30000L) // 30 seconds
     }
 
     private fun updateOverlayContent(

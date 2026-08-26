@@ -62,12 +62,16 @@ fun ScheduleMainScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = onNavigateToCreate) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Create Schedule",
-                            tint = Color.White
-                        )
+                    Button(
+                        onClick = onNavigateToCreate,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)), // Bright Blue
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.padding(end = 8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("NEW SCHEDULE", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -76,18 +80,7 @@ fun ScheduleMainScreen(
                 )
             )
         },
-        floatingActionButton = {
-            if (selectedTabIndex == 0) {
-                FloatingActionButton(
-                    onClick = onNavigateToCreate,
-                    containerColor = FocusPrimary,
-                    contentColor = Color.Black,
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "New Schedule")
-                }
-            }
-        },
+
         containerColor = FocusBackground
     ) { paddingValues ->
         Column(

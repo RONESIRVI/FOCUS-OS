@@ -290,6 +290,42 @@ fun SettingsScreen(
             }
         }
 
+        // Lock & Security Status Mode Selector
+        item {
+            val setup by viewModel.setupState.collectAsState()
+            SettingsSectionTitle("LOCK MODE SHIELD")
+            SettingsCard {
+                val selectableModes = LockMode.entries.filter { it != LockMode.NORMAL }
+                selectableModes.forEachIndexed { index, mode ->
+                    val isSelected = setup.lockMode == mode
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.updateSetup(lockMode = mode) }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = { viewModel.updateSetup(lockMode = mode) },
+                                colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(text = mode.title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = if (isSelected) FocusPrimary else FocusTextPrimary)
+                                Text(text = mode.description, style = MaterialTheme.typography.bodySmall, color = FocusTextSecondary)
+                            }
+                        }
+                    }
+                    if (index < selectableModes.size - 1) {
+                        Divider(color = FocusSurfaceVariant)
+                    }
+                }
+            }
+        }
+
         // Section 1: 🔴 Most Important (Core App-Blocking)
         item {
             SettingsSectionTitle("🔴 CORE APP-BLOCKING ENGINE (MOST IMPORTANT)")
@@ -476,40 +512,6 @@ fun SettingsScreen(
             }
         }
 
-        // Lock & Security Status Mode Selector
-        item {
-            val setup by viewModel.setupState.collectAsState()
-            SettingsSectionTitle("LOCK MODE SHIELD")
-            SettingsCard {
-                LockMode.entries.filter { it != LockMode.NORMAL }.forEachIndexed { index, mode ->
-                    val isSelected = setup.lockMode == mode
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.updateSetup(lockMode = mode) }
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = { viewModel.updateSetup(lockMode = mode) },
-                                colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column {
-                                Text(text = mode.title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = if (isSelected) FocusPrimary else FocusTextPrimary)
-                                Text(text = mode.description, style = MaterialTheme.typography.bodySmall, color = FocusTextSecondary)
-                            }
-                        }
-                    }
-                    if (index < LockMode.entries.size - 2) {
-                        Divider(color = FocusSurfaceVariant)
-                    }
-                }
-            }
-        }
 
         // Appearance
         item {

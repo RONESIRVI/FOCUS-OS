@@ -33,7 +33,7 @@ data class UiSessionSetup(
     val sessionName: String = "",
     val subjectName: String = "",
     val durationMinutes: Int = 25,
-    val lockMode: LockMode = LockMode.STRICT_LOCK,
+    val lockMode: LockMode = LockMode.MAXIMUM_LOCK,
     val selectedSound: SoundType = SoundType.NONE,
     val scheduledStartTime: Long? = null,
     val scheduledEndTime: Long? = null,
@@ -115,7 +115,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         var todaySec = 0
         var totalSec = 0
         var totalDistractions = 0
-        val completedSessions = sessions.filter { it.completedDurationSeconds > 0 || it.status == "COMPLETED" }
+        val completedSessions = sessions.filter { it.completedDurationSeconds > 0 || it.status == "COMPLETED" || it.status == "ARCHIVED" }
         
         completedSessions.forEach {
             totalSec += it.completedDurationSeconds
@@ -203,7 +203,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun syncFocusLockState(state: TimerState) {
-        val allowedPackages = if (state.lockMode == LockMode.STRICT_LOCK || state.lockMode == LockMode.MAXIMUM_LOCK) {
+        val allowedPackages = if (state.lockMode == LockMode.MAXIMUM_LOCK) {
             whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
         } else {
             whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
@@ -228,7 +228,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                     sessionName = session.sessionName,
                     subjectName = session.subjectName,
                     durationMinutes = session.targetDurationMinutes,
-                    lockMode = try { LockMode.valueOf(session.lockMode) } catch (e: Exception) { LockMode.STRICT_LOCK },
+                    lockMode = try { LockMode.valueOf(session.lockMode) } catch (e: Exception) { LockMode.MAXIMUM_LOCK },
                     scheduledStartTime = session.scheduledStartTime,
                     scheduledEndTime = session.scheduledEndTime,
                     requiresPhoto = session.requiresPhoto,
@@ -295,7 +295,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         // Immediately update FocusLockManager allowed packages
         val allowedList = if (scheduledId != null && sharedPrefs.getString("scheduled_apps_$scheduledId", null) != null) {
             sharedPrefs.getString("scheduled_apps_$scheduledId", "")!!.split(",").filter { it.isNotBlank() }
-        } else if (setup.lockMode == LockMode.STRICT_LOCK || setup.lockMode == LockMode.MAXIMUM_LOCK) {
+        } else if (setup.lockMode == LockMode.MAXIMUM_LOCK) {
             whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
         } else {
             whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
@@ -373,7 +373,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             val sessionId = repository.saveSession(session)
             // Save fixed allowed apps for this schedule
-            val currentAllowed = if (setup.lockMode == LockMode.STRICT_LOCK || setup.lockMode == LockMode.MAXIMUM_LOCK) whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName } else whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
+            val currentAllowed = if (setup.lockMode == LockMode.MAXIMUM_LOCK) whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName } else whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
             context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE).edit().putString("scheduled_apps_$sessionId", currentAllowed.joinToString(",")).apply()
             
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
@@ -469,7 +469,11 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
 
-            repository.deleteSession(session)
+            if (session.status == "COMPLETED" || session.completedDurationSeconds > 0) {
+                repository.updateSession(session.copy(status = "ARCHIVED"))
+            } else {
+                repository.deleteSession(session)
+            }
         }
     }
 
@@ -481,13 +485,12 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         timerService?.resumeTimer()
     }
 
-    fun triggerDistractionWarning(blockedPackage: String = "") {
+    fun triggerDistractionWarning(blockedPackage: String = "", showRedModal: Boolean = false) {
         if (_serviceTimerState.value.isRunning) {
-            timerService?.recordDistractionAttempt()
             if (blockedPackage.isNotBlank()) {
                 _lastBlockedPackage.value = blockedPackage
             }
-            if (_serviceTimerState.value.lockMode != LockMode.NORMAL) {
+            if (showRedModal) {
                 _showLockOverlay.value = true
             }
         }
@@ -505,6 +508,10 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissLockOverlay() {
         _showLockOverlay.value = false
+    }
+
+    fun addPenaltyTime(seconds: Int) {
+        timerService?.addExtraTime(seconds)
     }
 
     fun completeFocusSession() {
