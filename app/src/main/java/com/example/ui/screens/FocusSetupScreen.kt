@@ -676,7 +676,10 @@ fun FocusSetupScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
-                                .clickable { onNavigateToAppSelector() }
+                                .clickable {
+                                    viewModel.setAppSelectorProfile("MANUAL")
+                                    onNavigateToAppSelector()
+                                }
                         ) {
                             Row(
                                 modifier = Modifier

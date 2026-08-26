@@ -9,6 +9,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
@@ -17,6 +18,11 @@ import com.example.ui.navigation.FocusNavGraph
 import com.example.ui.navigation.FocusRoutes
 import com.example.ui.theme.FocusOSTheme
 import com.example.ui.viewmodel.FocusViewModel
+
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.runtime.getValue
+import com.example.ui.navigation.FocusBottomNavigation
+
 
 class MainActivity : ComponentActivity() {
 
@@ -36,8 +42,29 @@ class MainActivity : ComponentActivity() {
         setContent {
             FocusOSTheme {
                 val navController = rememberNavController()
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
+                val showBottomBar = currentRoute in listOf(FocusRoutes.HOME, FocusRoutes.SCHEDULE_MAIN, FocusRoutes.STATS, FocusRoutes.SETTINGS)
+
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    bottomBar = {
+                        if (showBottomBar) {
+                            FocusBottomNavigation(
+                                currentRoute = currentRoute ?: FocusRoutes.HOME,
+                                onNavigate = { route -> 
+                                    navController.navigate(route) {
+                                        popUpTo(FocusRoutes.HOME) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                onQuickFocus = { navController.navigate(FocusRoutes.SETUP) }
+                            )
+                        }
+                    }
+                ) { innerPadding ->
+                    Box(modifier = Modifier.fillMaxSize().padding(innerPadding).background(com.example.ui.theme.FocusBackground)) {
                         FocusNavGraph(
                             navController = navController,
                             viewModel = viewModel,

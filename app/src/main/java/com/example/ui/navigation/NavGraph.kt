@@ -18,6 +18,8 @@ object FocusRoutes {
     const val HOME = "home"
     const val SETUP = "setup"
     const val SCHEDULE_CREATE = "schedule_create"
+    const val SCHEDULE_MAIN = "schedule_main"
+    const val SETTINGS = "settings"
     const val APP_SELECTOR = "app_selector"
     const val CAMERA_START = "camera_start"
     const val TIMER = "timer"
@@ -46,7 +48,16 @@ fun FocusNavGraph(
                 onNavigateToTimer = { navController.navigate(FocusRoutes.TIMER) }
             )
         }
-                composable(FocusRoutes.SCHEDULE_CREATE) {
+                
+        composable(FocusRoutes.SCHEDULE_MAIN) {
+            // Placeholder for now
+            com.example.ui.screens.ScheduleMainScreen(viewModel = viewModel, onNavigateToCreate = { navController.navigate(FocusRoutes.SCHEDULE_CREATE) })
+        }
+        composable(FocusRoutes.SETTINGS) {
+            // Placeholder for now
+            com.example.ui.screens.SettingsScreen(viewModel = viewModel)
+        }
+        composable(FocusRoutes.SCHEDULE_CREATE) {
             ScheduleCreateScreen(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() },

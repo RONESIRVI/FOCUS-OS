@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,7 +38,7 @@ fun ScheduleCreateScreen(
     onScheduleCreated: () -> Unit
 ) {
     val setup by viewModel.setupState.collectAsState()
-    val whitelistedApps by viewModel.whitelistedAppsManual.collectAsState()
+    val whitelistedApps by viewModel.whitelistedAppsStrict.collectAsState()
     val context = LocalContext.current
 
     var sessionName by remember { mutableStateOf(setup.sessionName) }
@@ -182,7 +183,10 @@ fun ScheduleCreateScreen(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onNavigateToAppSelector() }
+                    .clickable {
+                        viewModel.setAppSelectorProfile("STRICT")
+                        onNavigateToAppSelector()
+                    }
             ) {
                 Row(
                     modifier = Modifier

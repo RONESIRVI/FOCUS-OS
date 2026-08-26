@@ -1,4 +1,6 @@
-package com.example.ui.screens
+import os
+
+content = """package com.example.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -269,7 +271,7 @@ fun HomeScreen(
                     
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Start a focus session anytime.\\nNo fixed schedule required.",
+                        text = "Start a focus session anytime.\nNo fixed schedule required.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = FocusTextSecondary,
                         lineHeight = 20.sp
@@ -292,3 +294,9 @@ fun HomeScreen(
         item { Spacer(modifier = Modifier.height(60.dp)) }
     }
 }
+"""
+
+with open("app/src/main/java/com/example/ui/screens/HomeScreen.kt", "w", encoding="utf-8") as f:
+    f.write(content)
+
+print("Rewrote HomeScreen.kt")

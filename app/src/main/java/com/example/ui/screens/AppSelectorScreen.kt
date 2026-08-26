@@ -95,7 +95,7 @@ fun AppSelectorScreen(
             Spacer(modifier = Modifier.width(8.dp))
             Column {
                 Text(
-                    text = "SELECT ALLOWED APPS",
+                    text = if (currentProfile == "STRICT") "STRICT SCHEDULE APPS" else "FOCUS SESSION APPS",
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 0.5.sp
@@ -103,7 +103,7 @@ fun AppSelectorScreen(
                     color = Color.White
                 )
                 Text(
-                    text = "Whitelisted apps will stay accessible during Focus Lock",
+                    text = if (currentProfile == "STRICT") "Only these apps will be allowed during strict schedule" else "Whitelisted apps will stay accessible during manual focus",
                     style = MaterialTheme.typography.bodySmall,
                     color = FocusTextSecondary
                 )
