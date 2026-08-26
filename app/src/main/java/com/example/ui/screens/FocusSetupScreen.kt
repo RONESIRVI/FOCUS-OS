@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Headphones
 import android.app.TimePickerDialog
 import java.util.Calendar
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -840,25 +841,68 @@ fun FocusSetupScreen(
                                 }
                                 Spacer(modifier = Modifier.height(12.dp))
 
-                                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     items(SoundType.entries) { st ->
                                         val isSel = setup.selectedSound == st
-                                        Box(
+                                        Card(
                                             modifier = Modifier
-                                                .background(
-                                                    if (isSel) FocusPrimary else FocusSurfaceVariant,
-                                                    RoundedCornerShape(12.dp)
-                                                )
-                                                .clickable { viewModel.updateSetup(soundType = st) }
-                                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                                        ) {
-                                            Text(
-                                                text = st.label,
-                                                style = MaterialTheme.typography.bodySmall.copy(
-                                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium
-                                                ),
-                                                color = if (isSel) Color.Black else Color.White
+                                                .width(220.dp)
+                                                .clickable { viewModel.updateSetup(soundType = st) },
+                                            shape = RoundedCornerShape(16.dp),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = if (isSel) FocusPrimary.copy(alpha = 0.15f) else FocusBackground,
+                                            ),
+                                            border = BorderStroke(
+                                                width = if (isSel) 2.dp else 1.dp,
+                                                color = if (isSel) FocusPrimary else FocusSurfaceVariant
                                             )
+                                        ) {
+                                            Column(modifier = Modifier.padding(16.dp)) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Text(
+                                                        text = st.badge,
+                                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                                        color = if (isSel) FocusPrimary else FocusTextSecondary,
+                                                        modifier = Modifier
+                                                            .background(
+                                                                if (isSel) FocusPrimary.copy(alpha = 0.2f) else FocusSurfaceVariant,
+                                                                RoundedCornerShape(6.dp)
+                                                            )
+                                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                    if (st.isBinaural) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Headphones,
+                                                            contentDescription = "Headphones Recommended",
+                                                            tint = if (isSel) FocusPrimary else FocusTextSecondary,
+                                                            modifier = Modifier.size(14.dp)
+                                                        )
+                                                    }
+                                                }
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                Text(
+                                                    text = st.label,
+                                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                                    color = if (isSel) FocusPrimary else Color.White
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = st.hindiTitle,
+                                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                                                    color = FocusWarning
+                                                )
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                Text(
+                                                    text = st.description,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = FocusTextSecondary,
+                                                    maxLines = 3
+                                                )
+                                            }
                                         }
                                     }
                                 }

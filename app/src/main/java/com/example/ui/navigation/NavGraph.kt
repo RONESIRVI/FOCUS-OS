@@ -55,7 +55,12 @@ fun FocusNavGraph(
                 viewModel = viewModel,
                 onNavigateToCreate = { navController.navigate(FocusRoutes.SCHEDULE_CREATE) },
                 onStartScheduled = { _ ->
-                    navController.navigate(FocusRoutes.CAMERA_START)
+                    if (viewModel.setupState.value.requiresPhoto) {
+                        navController.navigate(FocusRoutes.CAMERA_START)
+                    } else {
+                        viewModel.startFocusSession()
+                        navController.navigate(FocusRoutes.TIMER)
+                    }
                 }
             )
         }
@@ -113,9 +118,18 @@ fun FocusNavGraph(
         composable(FocusRoutes.TIMER) {
             FocusTimerScreen(
                 viewModel = viewModel,
-                onSessionComplete = { navController.navigate(FocusRoutes.CAMERA_END) {
-                    popUpTo(FocusRoutes.TIMER) { inclusive = true }
-                } }
+                onSessionComplete = { 
+                    if (viewModel.setupState.value.requiresSelfie) {
+                        navController.navigate(FocusRoutes.CAMERA_END) {
+                            popUpTo(FocusRoutes.TIMER) { inclusive = true }
+                        }
+                    } else {
+                        viewModel.completeFocusSession()
+                        navController.navigate(FocusRoutes.SESSION_COMPLETE) {
+                            popUpTo(FocusRoutes.TIMER) { inclusive = true }
+                        }
+                    }
+                }
             )
         }
         composable(FocusRoutes.CAMERA_END) {

@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -1139,24 +1140,69 @@ fun ScheduleCreateScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            SoundType.values().forEach { sound ->
+                            SoundType.entries.forEach { sound ->
                                 val isSelected = selectedSound == sound
-                                Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = if (isSelected) FocusPrimary.copy(alpha = 0.2f) else FocusSurfaceVariant,
-                                    border = BorderStroke(1.dp, if (isSelected) FocusPrimary else FocusOutline),
-                                    modifier = Modifier.clickable { selectedSound = sound }
-                                ) {
-                                    Text(
-                                        text = sound.label,
-                                        style = MaterialTheme.typography.labelMedium.copy(
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                        ),
-                                        color = if (isSelected) FocusPrimary else FocusTextSecondary,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                Card(
+                                    modifier = Modifier
+                                        .width(220.dp)
+                                        .clickable { selectedSound = sound },
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isSelected) FocusPrimary.copy(alpha = 0.15f) else FocusBackground,
+                                    ),
+                                    border = BorderStroke(
+                                        width = if (isSelected) 2.dp else 1.dp,
+                                        color = if (isSelected) FocusPrimary else FocusSurfaceVariant
                                     )
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(
+                                                text = sound.badge,
+                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                                color = if (isSelected) FocusPrimary else FocusTextSecondary,
+                                                modifier = Modifier
+                                                    .background(
+                                                        if (isSelected) FocusPrimary.copy(alpha = 0.2f) else FocusSurfaceVariant,
+                                                        RoundedCornerShape(6.dp)
+                                                    )
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                            if (sound.isBinaural) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Headphones,
+                                                    contentDescription = "Headphones Recommended",
+                                                    tint = if (isSelected) FocusPrimary else FocusTextSecondary,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = sound.label,
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = if (isSelected) FocusPrimary else Color.White
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = sound.hindiTitle,
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                                            color = FocusWarning
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = sound.description,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = FocusTextSecondary,
+                                            maxLines = 3
+                                        )
+                                    }
                                 }
                             }
                         }
