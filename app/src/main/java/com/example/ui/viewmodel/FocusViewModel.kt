@@ -17,6 +17,7 @@ import com.example.data.repository.FocusRepository
 import com.example.services.FocusTimerService
 import com.example.services.SoundType
 import com.example.services.TimerState
+import com.example.util.FocusLockManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -37,15 +38,18 @@ data class UiSessionSetup(
     val scheduledStartTime: Long? = null,
     val scheduledEndTime: Long? = null,
     val requiresPhoto: Boolean = true,
-    val requiresSelfie: Boolean = true
+    val requiresSelfie: Boolean = true,
+    val startPhotoUri: String? = null,
+    val endSelfieUri: String? = null
 )
 
 data class StudySummaryStats(
     val todayFocusSeconds: Int = 0,
     val currentStreakDays: Int = 0,
     val totalFocusHours: Float = 0f,
-    val focusScore: Int = 0,
-    val totalSessions: Int = 0
+    val focusScore: Int = 100,
+    val totalSessions: Int = 0,
+    val dailyGoalSeconds: Int = 5 * 3600 // 5 hours default goal
 )
 
 class FocusViewModel(application: Application) : AndroidViewModel(application) {
@@ -99,19 +103,50 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         val todayStart = calendar.timeInMillis
         
         var todaySec = 0
+        var totalSec = 0
         var totalDistractions = 0
+        val completedSessions = sessions.filter { it.completedDurationSeconds > 0 || it.status == "COMPLETED" }
         
-        sessions.forEach {
+        completedSessions.forEach {
+            totalSec += it.completedDurationSeconds
             if (it.timestamp >= todayStart) {
                 todaySec += it.completedDurationSeconds
                 totalDistractions += it.distractionAttempts
             }
         }
+
+        // Real Streak Calculation: consecutive days with study activity
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+        val activeDates = completedSessions.map { sdf.format(java.util.Date(it.timestamp)) }.toSet()
+
+        val cal = java.util.Calendar.getInstance()
+        val todayStr = sdf.format(cal.time)
+        cal.add(java.util.Calendar.DAY_OF_YEAR, -1)
+        val yesterdayStr = sdf.format(cal.time)
+
+        var streak = 0
+        val checkCal = java.util.Calendar.getInstance()
+
+        if (activeDates.contains(todayStr)) {
+            while (activeDates.contains(sdf.format(checkCal.time))) {
+                streak++
+                checkCal.add(java.util.Calendar.DAY_OF_YEAR, -1)
+            }
+        } else if (activeDates.contains(yesterdayStr)) {
+            checkCal.add(java.util.Calendar.DAY_OF_YEAR, -1)
+            while (activeDates.contains(sdf.format(checkCal.time))) {
+                streak++
+                checkCal.add(java.util.Calendar.DAY_OF_YEAR, -1)
+            }
+        }
         
         StudySummaryStats(
             todayFocusSeconds = todaySec,
-            totalSessions = sessions.size,
-            focusScore = maxOf(60, 100 - (totalDistractions * 5))
+            currentStreakDays = streak,
+            totalFocusHours = totalSec / 3600f,
+            totalSessions = completedSessions.size,
+            focusScore = maxOf(60, 100 - (totalDistractions * 5)),
+            dailyGoalSeconds = 5 * 3600
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StudySummaryStats())
 
@@ -150,9 +185,23 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch {
                 service.timerState.collect { state ->
                     _serviceTimerState.value = state
+                    syncFocusLockState(state)
                 }
             }
         }
+    }
+
+    private fun syncFocusLockState(state: TimerState) {
+        val allowedPackages = if (state.lockMode == LockMode.STRICT_LOCK || state.lockMode == LockMode.MAXIMUM_LOCK) {
+            whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
+        } else {
+            whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
+        }
+        FocusLockManager.updateFocusState(
+            isActive = state.isRunning,
+            lockMode = state.lockMode,
+            allowedPackageNames = allowedPackages
+        )
     }
 
     private val _activeScheduledSessionId = MutableStateFlow<Long?>(null)
@@ -187,7 +236,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         scheduledStartTime: Long? = null,
         scheduledEndTime: Long? = null,
         requiresPhoto: Boolean? = null,
-        requiresSelfie: Boolean? = null
+        requiresSelfie: Boolean? = null,
+        startPhotoUri: String? = null,
+        endSelfieUri: String? = null
     ) {
         _setupState.value = _setupState.value.copy(
             sessionName = sessionName ?: _setupState.value.sessionName,
@@ -198,8 +249,18 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             scheduledStartTime = scheduledStartTime ?: _setupState.value.scheduledStartTime,
             scheduledEndTime = scheduledEndTime ?: _setupState.value.scheduledEndTime,
             requiresPhoto = requiresPhoto ?: _setupState.value.requiresPhoto,
-            requiresSelfie = requiresSelfie ?: _setupState.value.requiresSelfie
+            requiresSelfie = requiresSelfie ?: _setupState.value.requiresSelfie,
+            startPhotoUri = startPhotoUri ?: _setupState.value.startPhotoUri,
+            endSelfieUri = endSelfieUri ?: _setupState.value.endSelfieUri
         )
+    }
+
+    fun setStartPhotoUri(uri: String) {
+        _setupState.value = _setupState.value.copy(startPhotoUri = uri)
+    }
+
+    fun setEndSelfieUri(uri: String) {
+        _setupState.value = _setupState.value.copy(endSelfieUri = uri)
     }
 
     fun startFocusSession() {
@@ -236,18 +297,29 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    fun scheduleFocusSession(hour: Int, minute: Int) {
+    fun scheduleFocusSession(
+        hour: Int,
+        minute: Int,
+        targetYear: Int? = null,
+        targetMonth: Int? = null,
+        targetDayOfMonth: Int? = null
+    ) {
         val setup = _setupState.value
         val context = getApplication<Application>()
         
         val calendar = java.util.Calendar.getInstance().apply {
+            if (targetYear != null && targetMonth != null && targetDayOfMonth != null) {
+                set(java.util.Calendar.YEAR, targetYear)
+                set(java.util.Calendar.MONTH, targetMonth)
+                set(java.util.Calendar.DAY_OF_MONTH, targetDayOfMonth)
+            }
             set(java.util.Calendar.HOUR_OF_DAY, hour)
             set(java.util.Calendar.MINUTE, minute)
             set(java.util.Calendar.SECOND, 0)
             set(java.util.Calendar.MILLISECOND, 0)
         }
         
-        if (calendar.timeInMillis <= System.currentTimeMillis()) {
+        if (targetYear == null && calendar.timeInMillis <= System.currentTimeMillis()) {
             calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
         }
         
@@ -322,10 +394,12 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             }
             
             launch(Dispatchers.Main) {
-                val formatter = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+                val formatter = java.text.SimpleDateFormat("EEE, d MMM • h:mm a", java.util.Locale.getDefault())
                 val timeStr = formatter.format(java.util.Date(scheduledStartTime))
-                val diffMins = (scheduledStartTime - System.currentTimeMillis()) / 60000
-                android.widget.Toast.makeText(context, "✅ Strict Focus scheduled for $timeStr (in $diffMins mins)", android.widget.Toast.LENGTH_LONG).show()
+                val diffMins = ((scheduledStartTime - System.currentTimeMillis()) / 60000).coerceAtLeast(0)
+                val diffHours = diffMins / 60
+                val durationText = if (diffHours >= 24) "${diffHours / 24}d ${diffHours % 24}h" else "${diffMins}m"
+                android.widget.Toast.makeText(context, "✅ Strict Focus scheduled for $timeStr (in $durationText)", android.widget.Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -391,6 +465,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     fun completeFocusSession() {
         val current = _serviceTimerState.value
         val scheduledId = _activeScheduledSessionId.value
+        val setup = _setupState.value
         viewModelScope.launch(Dispatchers.IO) {
             if (current.totalSeconds > 0) {
                 val completedSecs = current.totalSeconds - current.remainingSeconds
@@ -403,7 +478,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                                 status = "COMPLETED",
                                 completedDurationSeconds = completedSecs,
                                 distractionAttempts = current.distractionAttempts,
-                                lockMode = current.lockMode.name
+                                lockMode = current.lockMode.name,
+                                startPhotoUri = setup.startPhotoUri ?: existing.startPhotoUri,
+                                endSelfieUri = setup.endSelfieUri ?: existing.endSelfieUri
                             )
                         )
                     } else {
@@ -415,7 +492,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                             lockMode = current.lockMode.name,
                             distractionAttempts = current.distractionAttempts,
                             allowedAppsCount = whitelistedAppsManual.value.size,
-                            status = "COMPLETED"
+                            status = "COMPLETED",
+                            startPhotoUri = setup.startPhotoUri,
+                            endSelfieUri = setup.endSelfieUri
                         )
                         repository.saveSession(session)
                     }
@@ -428,7 +507,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                         lockMode = current.lockMode.name,
                         distractionAttempts = current.distractionAttempts,
                         allowedAppsCount = whitelistedAppsManual.value.size,
-                        status = "COMPLETED"
+                        status = "COMPLETED",
+                        startPhotoUri = setup.startPhotoUri,
+                        endSelfieUri = setup.endSelfieUri
                     )
                     repository.saveSession(session)
                 }
@@ -436,17 +517,20 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             _activeScheduledSessionId.value = null
             timerService?.stopTimer()
             _showLockOverlay.value = false
+            FocusLockManager.updateFocusState(false, LockMode.NORMAL, emptyList())
         }
     }
 
     fun emergencyExitSession() {
         timerService?.stopTimer()
         _showLockOverlay.value = false
+        FocusLockManager.updateFocusState(false, LockMode.NORMAL, emptyList())
     }
 
     fun toggleAppAllowed(packageName: String, isAllowed: Boolean, profile: String = "MANUAL") {
         viewModelScope.launch {
             repository.toggleAppWhitelist(packageName, isAllowed, profile)
+            syncFocusLockState(_serviceTimerState.value)
         }
     }
 

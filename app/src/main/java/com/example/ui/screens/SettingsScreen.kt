@@ -1,10 +1,12 @@
 package com.example.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -13,32 +15,60 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import android.content.Context
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.example.data.model.LockMode
+import com.example.ui.theme.*
 import com.example.ui.viewmodel.FocusViewModel
+import com.example.util.LockPermissionHelper
+import com.example.util.PermissionItemState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: FocusViewModel,
     onNavigateToAppSelector: (String) -> Unit
 ) {
     var showEditProfileDialog by remember { mutableStateOf(false) }
+    var showInfoDialog by remember { mutableStateOf(false) }
     var userName by remember { mutableStateOf("Focus Student") }
-    
+
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
-    
+
+    var permissionsList by remember {
+        mutableStateOf(LockPermissionHelper.getAllPermissionsStatus(context))
+    }
+
+    // Refresh permissions automatically when returning from Settings screen
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                permissionsList = LockPermissionHelper.getAllPermissionsStatus(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     LaunchedEffect(Unit) {
         userName = sharedPrefs.getString("USER_NAME", "Focus Student") ?: "Focus Student"
     }
+
+    val grantedCount = permissionsList.count { it.isGranted }
+    val totalCount = permissionsList.size
+    val shieldPercentage = (grantedCount.toFloat() / totalCount.toFloat() * 100).toInt()
 
     LazyColumn(
         modifier = Modifier
@@ -48,13 +78,22 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item { Spacer(modifier = Modifier.height(24.dp)) }
-        
+
         item {
-            Text(
-                text = "SETTINGS",
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black, letterSpacing = 1.sp),
-                color = FocusPrimary
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "SETTINGS",
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black, letterSpacing = 1.sp),
+                    color = FocusPrimary
+                )
+                IconButton(onClick = { showInfoDialog = true }) {
+                    Icon(imageVector = Icons.Default.Info, contentDescription = "Permission Architecture Info", tint = FocusPrimary)
+                }
+            }
         }
 
         // Profile Section
@@ -62,7 +101,7 @@ fun SettingsScreen(
             Card(
                 colors = CardDefaults.cardColors(containerColor = FocusSurface),
                 shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -71,7 +110,6 @@ fun SettingsScreen(
                     Box(
                         modifier = Modifier
                             .size(64.dp)
-                            .clickable { /* TODO: Image Picker */ }
                     ) {
                         Box(
                             modifier = Modifier
@@ -90,13 +128,13 @@ fun SettingsScreen(
                                 .border(2.dp, FocusSurface, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(imageVector = Icons.Default.CameraAlt, contentDescription = "Upload Photo", tint = Color.Black, modifier = Modifier.size(12.dp))
+                            Icon(imageVector = Icons.Default.Shield, contentDescription = "Pro Protection", tint = Color.Black, modifier = Modifier.size(12.dp))
                         }
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(userName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = FocusTextPrimary)
-                        Text("Free Plan", style = MaterialTheme.typography.bodyMedium, color = FocusPrimary)
+                        Text("Strict Lockdown Mode Active", style = MaterialTheme.typography.bodySmall, color = FocusPrimary)
                     }
                     IconButton(onClick = { showEditProfileDialog = true }) {
                         Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit Profile", tint = FocusTextSecondary)
@@ -104,23 +142,258 @@ fun SettingsScreen(
                 }
             }
         }
-        
+
+        // Shield Health Overview Card
+        item {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (grantedCount >= 8) Color(0xFF10281C) else Color(0xFF281E10)
+                ),
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (grantedCount >= 8) FocusPrimary.copy(alpha = 0.5f) else Color(0xFFFFB74D)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = if (grantedCount >= 8) Icons.Default.VerifiedUser else Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = if (grantedCount >= 8) FocusPrimary else Color(0xFFFFB74D),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "SHIELD PROTECTION LEVEL",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                                    color = FocusTextSecondary
+                                )
+                                Text(
+                                    text = if (grantedCount == totalCount) "Maximum Lockdown Ready (10/10)" else "$grantedCount of $totalCount Permissions Active",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = if (grantedCount >= 8) FocusPrimary else Color(0xFFFFB74D)
+                                )
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (grantedCount >= 8) FocusPrimary.copy(alpha = 0.2f) else Color(0xFFFFB74D).copy(alpha = 0.2f)
+                        ) {
+                            Text(
+                                text = "$shieldPercentage%",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Black),
+                                color = if (grantedCount >= 8) FocusPrimary else Color(0xFFFFB74D),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LinearProgressIndicator(
+                        progress = { grantedCount.toFloat() / totalCount.toFloat() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = if (grantedCount >= 8) FocusPrimary else Color(0xFFFFB74D),
+                        trackColor = FocusSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (grantedCount == totalCount) "All 10 required services and permissions are active. Your study sessions are 100% distraction-proof." else "Setup all listed permissions below for bulletproof app blocking and background stability.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = FocusTextSecondary
+                    )
+                }
+            }
+        }
+
         // App Blocking System
         item {
             SettingsSectionTitle("APP BLOCKING SYSTEM")
             SettingsCard {
                 SettingsClickableItem(
-                    icon = Icons.Default.Apps, 
-                    title = "Manual Focus Apps", 
-                    subtitle = "Apps to block during Quick Focus",
+                    icon = Icons.Default.Apps,
+                    title = "Manual Focus Whitelist",
+                    subtitle = "Allowed apps during Quick Focus sessions",
                     onClick = { onNavigateToAppSelector("MANUAL") }
                 )
                 Divider(color = FocusSurfaceVariant)
                 SettingsClickableItem(
-                    icon = Icons.Default.AppRegistration, 
-                    title = "Strict Schedule Apps", 
-                    subtitle = "Apps to block during Strict Focus",
+                    icon = Icons.Default.AppRegistration,
+                    title = "Strict Schedule Whitelist",
+                    subtitle = "Allowed apps during Strict Scheduled Focus",
                     onClick = { onNavigateToAppSelector("STRICT") }
+                )
+            }
+        }
+
+        // Section 1: 🔴 Most Important (Core App-Blocking)
+        item {
+            SettingsSectionTitle("🔴 CORE APP-BLOCKING ENGINE (MOST IMPORTANT)")
+            Text(
+                text = "These 3 permissions instantly detect blocked apps and immediately redirect back to Focus App.",
+                style = MaterialTheme.typography.bodySmall,
+                color = FocusTextSecondary,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+            )
+        }
+
+        item {
+            SettingsCard {
+                // 1. Accessibility
+                PermissionRowItem(
+                    number = "1",
+                    title = "Accessibility Service",
+                    badgeText = "Main Blocker",
+                    description = "When a blocked distracting app is tapped, instantly intercepts window state and redirects to study screen.",
+                    isGranted = LockPermissionHelper.isAccessibilityServiceEnabled(context),
+                    actionLabel = "Enable Service",
+                    onAction = { LockPermissionHelper.openAccessibilitySettings(context) }
+                )
+                Divider(color = FocusSurfaceVariant)
+
+                // 2. Usage Stats
+                PermissionRowItem(
+                    number = "2",
+                    title = "Usage Access (PACKAGE_USAGE_STATS)",
+                    badgeText = "App Monitor",
+                    description = "Monitors foreground/background app switching to detect unauthorized app launches.",
+                    isGranted = LockPermissionHelper.hasUsageStatsPermission(context),
+                    actionLabel = "Grant Access",
+                    onAction = { LockPermissionHelper.openUsageStatsSettings(context) }
+                )
+                Divider(color = FocusSurfaceVariant)
+
+                // 3. Query All Packages
+                PermissionRowItem(
+                    number = "3",
+                    title = "Query All Packages",
+                    badgeText = "App Scanner",
+                    description = "Discovers all installed apps on phone to configure custom study whitelists and blocklists.",
+                    isGranted = LockPermissionHelper.hasQueryAllPackagesPermission(context),
+                    actionLabel = "System Configured",
+                    onAction = { /* System manifest permission */ }
+                )
+            }
+        }
+
+        // Section 2: 🟠 Background Reliability & Persistence
+        item {
+            SettingsSectionTitle("🟠 BACKGROUND PERSISTENCE & RELIABILITY")
+            Text(
+                text = "Ensures background timer stability and protects against Android OEM battery cleaners.",
+                style = MaterialTheme.typography.bodySmall,
+                color = FocusTextSecondary,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+            )
+        }
+
+        item {
+            SettingsCard {
+                // 4. Foreground Service
+                PermissionRowItem(
+                    number = "4",
+                    title = "Foreground Service",
+                    badgeText = "Active Service",
+                    description = "Maintains the focus protection engine and binaural audio synthesizer in background.",
+                    isGranted = true,
+                    actionLabel = "Active",
+                    onAction = { }
+                )
+                Divider(color = FocusSurfaceVariant)
+
+                // 5. Special Use FGS
+                PermissionRowItem(
+                    number = "5",
+                    title = "Foreground Service Type: specialUse",
+                    badgeText = "High Priority",
+                    description = "Designated high-priority Android runtime classification for continuous study lockdown.",
+                    isGranted = true,
+                    actionLabel = "Active",
+                    onAction = { }
+                )
+                Divider(color = FocusSurfaceVariant)
+
+                // 6. Battery Optimization
+                PermissionRowItem(
+                    number = "6",
+                    title = "Ignore Battery Optimisation",
+                    badgeText = "Anti-Kill",
+                    description = "Prevents aggressive Android Doze mode and OEM task killers from terminating focus sessions.",
+                    isGranted = LockPermissionHelper.isIgnoringBatteryOptimizations(context),
+                    actionLabel = "Exempt Battery",
+                    onAction = { LockPermissionHelper.requestIgnoreBatteryOptimizations(context) }
+                )
+                Divider(color = FocusSurfaceVariant)
+
+                // 7. Boot Startup
+                PermissionRowItem(
+                    number = "7",
+                    title = "Run at Startup (RECEIVE_BOOT_COMPLETED)",
+                    badgeText = "Auto Restore",
+                    description = "Restores all scheduled study timers and alarms automatically after phone reboot.",
+                    isGranted = LockPermissionHelper.hasBootPermission(context),
+                    actionLabel = "Configured",
+                    onAction = { }
+                )
+            }
+        }
+
+        // Section 3: 🟡 Supporting Lockdown Tools
+        item {
+            SettingsSectionTitle("🟡 SUPPORTING LOCKDOWN SERVICES")
+            Text(
+                text = "Provides instant lock screen overlay, alert alarms, and precise timer triggers.",
+                style = MaterialTheme.typography.bodySmall,
+                color = FocusTextSecondary,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+            )
+        }
+
+        item {
+            SettingsCard {
+                // 8. Draw Over Other Apps
+                PermissionRowItem(
+                    number = "8",
+                    title = "Draw Over Other Apps (Overlay)",
+                    badgeText = "Lock Shield",
+                    description = "Draws full-screen study lock screen directly over blocked apps when opened.",
+                    isGranted = LockPermissionHelper.hasOverlayPermission(context),
+                    actionLabel = "Allow Overlay",
+                    onAction = { LockPermissionHelper.openOverlaySettings(context) }
+                )
+                Divider(color = FocusSurfaceVariant)
+
+                // 9. Notifications
+                PermissionRowItem(
+                    number = "9",
+                    title = "Notifications (POST_NOTIFICATIONS)",
+                    badgeText = "Timer Bar",
+                    description = "Displays ongoing focus countdown in status bar and 2-minute pre-schedule reminders.",
+                    isGranted = LockPermissionHelper.hasNotificationPermission(context),
+                    actionLabel = "Enable Alerts",
+                    onAction = { LockPermissionHelper.openNotificationSettings(context) }
+                )
+                Divider(color = FocusSurfaceVariant)
+
+                // 10. Schedule Exact Alarms
+                PermissionRowItem(
+                    number = "10",
+                    title = "Schedule Exact Alarms",
+                    badgeText = "Precise Alarms",
+                    description = "Triggers strict scheduled focus sessions at the exact planned second.",
+                    isGranted = LockPermissionHelper.canScheduleExactAlarms(context),
+                    actionLabel = "Allow Alarms",
+                    onAction = { LockPermissionHelper.openExactAlarmSettings(context) }
                 )
             }
         }
@@ -131,7 +404,7 @@ fun SettingsScreen(
             SettingsCard {
                 SettingsItem(icon = Icons.Default.Timer, title = "Default Duration", valueText = "45 Min")
                 Divider(color = FocusSurfaceVariant)
-                SettingsItem(icon = Icons.Default.Tune, title = "Default Mode", valueText = "Strict")
+                SettingsItem(icon = Icons.Default.Tune, title = "Default Mode", valueText = "Strict Lock")
                 Divider(color = FocusSurfaceVariant)
                 SettingsItem(icon = Icons.Default.Headphones, title = "Focus Audio", valueText = "Deep Space")
             }
@@ -141,30 +414,18 @@ fun SettingsScreen(
         item {
             SettingsSectionTitle("STRICT FOCUS RULES")
             SettingsCard {
-                SettingsToggleItem(icon = Icons.Default.CameraAlt, title = "Start Verification", subtitle = "Require photo to start", defaultChecked = true)
+                SettingsToggleItem(icon = Icons.Default.CameraAlt, title = "Start Verification", subtitle = "Require study desk photo to start", defaultChecked = true)
                 Divider(color = FocusSurfaceVariant)
-                SettingsToggleItem(icon = Icons.Default.Face, title = "End Verification", subtitle = "Require selfie to end", defaultChecked = true)
+                SettingsToggleItem(icon = Icons.Default.Face, title = "End Verification", subtitle = "Require selfie proof to complete", defaultChecked = true)
                 Divider(color = FocusSurfaceVariant)
-                SettingsToggleItem(icon = Icons.Default.Warning, title = "Security Alerts", subtitle = "Loud alarm on blocked apps", defaultChecked = true)
+                SettingsToggleItem(icon = Icons.Default.Warning, title = "Security Audio Siren", subtitle = "Plays warning sound on distraction", defaultChecked = true)
             }
         }
 
-        // Notifications
-        item {
-            SettingsSectionTitle("NOTIFICATIONS")
-            SettingsCard {
-                SettingsToggleItem(icon = Icons.Default.NotificationsActive, title = "15 Min Warning", defaultChecked = true)
-                Divider(color = FocusSurfaceVariant)
-                SettingsToggleItem(icon = Icons.Default.NotificationsActive, title = "5 Min Warning", defaultChecked = true)
-                Divider(color = FocusSurfaceVariant)
-                SettingsToggleItem(icon = Icons.Default.Event, title = "Schedule Reminder", defaultChecked = true)
-            }
-        }
-
-        // Lock & Security Status
+        // Lock & Security Status Mode Selector
         item {
             val setup by viewModel.setupState.collectAsState()
-            SettingsSectionTitle("LOCK SHIELD STATUS")
+            SettingsSectionTitle("LOCK MODE SHIELD")
             SettingsCard {
                 LockMode.entries.filter { it != LockMode.NORMAL }.forEachIndexed { index, mode ->
                     val isSelected = setup.lockMode == mode
@@ -196,45 +457,70 @@ fun SettingsScreen(
             }
         }
 
-        // Permissions & Security
-        item {
-            SettingsSectionTitle("PERMISSIONS & SECURITY")
-            SettingsCard {
-                SettingsItem(icon = Icons.Default.Camera, title = "Camera", valueText = "Granted", valueColor = FocusPrimary)
-                Divider(color = FocusSurfaceVariant)
-                SettingsItem(icon = Icons.Default.Notifications, title = "Notifications", valueText = "Granted", valueColor = FocusPrimary)
-                Divider(color = FocusSurfaceVariant)
-                SettingsItem(icon = Icons.Default.Security, title = "App Blocking (Accessibility)", valueText = "Granted", valueColor = FocusPrimary)
-                Divider(color = FocusSurfaceVariant)
-                SettingsItem(icon = Icons.Default.BatteryChargingFull, title = "Battery Optimization", valueText = "Ignored", valueColor = FocusPrimary)
-            }
-        }
-
         // Appearance
         item {
             SettingsSectionTitle("APPEARANCE")
             SettingsCard {
-                SettingsToggleItem(icon = Icons.Default.DarkMode, title = "Dark Mode", defaultChecked = true)
+                SettingsToggleItem(icon = Icons.Default.DarkMode, title = "OLED Dark Mode", defaultChecked = true)
                 Divider(color = FocusSurfaceVariant)
-                SettingsItem(icon = Icons.Default.Palette, title = "Theme", valueText = "Electric Green")
+                SettingsItem(icon = Icons.Default.Palette, title = "Accent Theme", valueText = "Electric Emerald")
             }
         }
-        
+
         item { Spacer(modifier = Modifier.height(100.dp)) }
+    }
+
+    // Permission Architecture Info Dialog
+    if (showInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showInfoDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.Shield, contentDescription = null, tint = FocusPrimary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("App-Blocking Architecture", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Why normal Android apps cannot block other apps with a single permission:",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = FocusPrimary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "• In standard Android OS, security sandboxing prevents any single standard permission from killing or blocking other apps.\n\n" +
+                                "• Professional focus apps use Accessibility Service to intercept window events within milliseconds and redirect back to the study lock screen.\n\n" +
+                                "• Usage Access + Foreground Service + Battery Optimization Exemption work in synergy to ensure continuous, unkillable background protection.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = FocusTextSecondary,
+                        lineHeight = 18.sp
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showInfoDialog = false }) {
+                    Text("Got It", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = FocusSurface
+        )
     }
 
     if (showEditProfileDialog) {
         var tempName by remember { mutableStateOf(userName) }
         AlertDialog(
             onDismissRequest = { showEditProfileDialog = false },
-            title = { Text("Edit Profile", color = Color.White) },
+            title = { Text("Edit Profile Name", color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 OutlinedTextField(
                     value = tempName,
                     onValueChange = { tempName = it },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = FocusPrimary
                     ),
                     singleLine = true
                 )
@@ -245,7 +531,7 @@ fun SettingsScreen(
                     sharedPrefs.edit().putString("USER_NAME", tempName).apply()
                     showEditProfileDialog = false
                 }) {
-                    Text("Save", color = FocusPrimary)
+                    Text("Save", color = FocusPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -254,6 +540,113 @@ fun SettingsScreen(
                 }
             },
             containerColor = FocusSurface
+        )
+    }
+}
+
+@Composable
+fun PermissionRowItem(
+    number: String,
+    title: String,
+    badgeText: String,
+    description: String,
+    isGranted: Boolean,
+    actionLabel: String,
+    onAction: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Surface(
+                    shape = CircleShape,
+                    color = if (isGranted) FocusPrimary.copy(alpha = 0.15f) else Color(0xFFFF5252).copy(alpha = 0.15f),
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = number,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black),
+                            color = if (isGranted) FocusPrimary else Color(0xFFFF5252)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = FocusTextPrimary
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = FocusSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        Text(
+                            text = badgeText,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = FocusTextSecondary,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+
+            if (isGranted) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = FocusPrimary.copy(alpha = 0.15f)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Granted",
+                            tint = FocusPrimary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "ACTIVE",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = FocusPrimary
+                        )
+                    }
+                }
+            } else {
+                Button(
+                    onClick = onAction,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF5252),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(20.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Text(
+                        text = actionLabel,
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+            color = FocusTextSecondary
         )
     }
 }

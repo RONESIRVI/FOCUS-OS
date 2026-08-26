@@ -7,6 +7,7 @@ import com.example.data.db.AppDatabase
 import com.example.data.db.FocusDao
 import com.example.data.model.AllowedApp
 import com.example.data.model.FocusSession
+import com.example.data.model.LockMode
 import com.example.data.model.SubjectTask
 import com.example.data.repository.FocusRepository
 import com.example.services.FocusAudioEngine
@@ -233,5 +234,73 @@ class FocusAppSystemTest {
         val last90DaysSessions = all.filter { it.timestamp in last90DaysStart..now }
         assertEquals(3, last90DaysSessions.size)
         assertEquals(7500, last90DaysSessions.sumOf { it.completedDurationSeconds })
+    }
+
+    @Test
+    fun testFocusLockManagerBlockingLogic() {
+        val ownPkg = "com.example"
+        val allowedApp = "com.google.android.apps.docs"
+        val blockedApp = "com.facebook.katana"
+
+        // 1. When focus is NOT active, all apps are allowed
+        com.example.util.FocusLockManager.updateFocusState(
+            isActive = false,
+            lockMode = LockMode.NORMAL,
+            allowedPackageNames = emptyList()
+        )
+        assertTrue(com.example.util.FocusLockManager.isPackageAllowed(blockedApp, ownPkg))
+
+        // 2. When STRICT_LOCK is active with Docs allowed
+        com.example.util.FocusLockManager.updateFocusState(
+            isActive = true,
+            lockMode = LockMode.STRICT_LOCK,
+            allowedPackageNames = listOf(allowedApp)
+        )
+        // Own package is allowed
+        assertTrue(com.example.util.FocusLockManager.isPackageAllowed(ownPkg, ownPkg))
+        // Whitelisted study app is allowed
+        assertTrue(com.example.util.FocusLockManager.isPackageAllowed(allowedApp, ownPkg))
+        // System essential UI is allowed
+        assertTrue(com.example.util.FocusLockManager.isPackageAllowed("com.android.systemui", ownPkg))
+        // Distracting social media app is BLOCKED
+        assertFalse(com.example.util.FocusLockManager.isPackageAllowed(blockedApp, ownPkg))
+    }
+
+    @Test
+    fun testBootScheduledAlarmRestorationLogic() = runBlocking {
+        val now = System.currentTimeMillis()
+        val futureSession = FocusSession(
+            sessionName = "Scheduled UPSC Study",
+            subjectName = "Polity",
+            targetDurationMinutes = 60,
+            completedDurationSeconds = 0,
+            lockMode = "STRICT_LOCK",
+            status = "SCHEDULED",
+            scheduledStartTime = now + (3600 * 1000L),
+            timestamp = now
+        )
+        val pastSession = FocusSession(
+            sessionName = "Old Study",
+            subjectName = "History",
+            targetDurationMinutes = 30,
+            completedDurationSeconds = 0,
+            lockMode = "STRICT_LOCK",
+            status = "SCHEDULED",
+            scheduledStartTime = now - (3600 * 1000L),
+            timestamp = now - (7200 * 1000L)
+        )
+
+        repository.saveSession(futureSession)
+        repository.saveSession(pastSession)
+
+        val all = repository.allSessions.first()
+        val toRestore = all.filter {
+            it.status == "SCHEDULED" &&
+            it.scheduledStartTime != null &&
+            it.scheduledStartTime!! > now
+        }
+        // Only future scheduled session should be re-registered on reboot
+        assertEquals(1, toRestore.size)
+        assertEquals("Scheduled UPSC Study", toRestore[0].sessionName)
     }
 }

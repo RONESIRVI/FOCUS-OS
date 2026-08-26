@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,6 +46,11 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -118,6 +124,8 @@ fun FocusSetupScreen(
 
     var showAddSubjectDialog by remember { mutableStateOf(false) }
     var newSubjectName by remember { mutableStateOf("") }
+    var customSubject by remember { mutableStateOf(setup.subjectName) }
+    var customGoal by remember { mutableStateOf(setup.sessionName) }
 
     var customDuration by remember { mutableFloatStateOf(setup.durationMinutes.toFloat()) }
 
@@ -467,6 +475,16 @@ fun FocusSetupScreen(
                                         )
                                         .border(2.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
                                         .clickable {
+                                            val finalSubject = if (customSubject.isNotBlank()) customSubject.trim() else "Study Session"
+                                            val finalGoal = if (customGoal.isNotBlank()) customGoal.trim() else finalSubject
+                                            if (customSubject.isNotBlank() && subjects.none { it.name.equals(customSubject.trim(), ignoreCase = true) }) {
+                                                viewModel.addCustomSubject(customSubject.trim(), "#0284C7")
+                                            }
+                                            viewModel.updateSetup(
+                                                sessionName = finalGoal,
+                                                subjectName = finalSubject,
+                                                durationMinutes = customDuration.toInt()
+                                            )
                                             viewModel.startFocusSession()
                                             onStartSession()
                                         }
@@ -574,7 +592,7 @@ fun FocusSetupScreen(
                         modifier = Modifier.padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Section 1: Session Name & Subject Picker
+                        // Section 1: Subject & Study Goal Customization
                         Card(
                             colors = CardDefaults.cardColors(containerColor = FocusSurface),
                             shape = RoundedCornerShape(22.dp),
@@ -583,93 +601,222 @@ fun FocusSetupScreen(
                                 .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
                         ) {
                             Column(modifier = Modifier.padding(18.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.AutoAwesome,
-                                        contentDescription = null,
-                                        tint = FocusPrimary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Session Subject",
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White
-                                    )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.MenuBook,
+                                            contentDescription = null,
+                                            tint = FocusPrimary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "SUBJECT & STUDY GOAL",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = Color.White
+                                        )
+                                    }
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = FocusSurfaceVariant
+                                    ) {
+                                        Text(
+                                            text = "Custom",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = FocusPrimary,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                        )
+                                    }
                                 }
-                                
+
                                 Spacer(modifier = Modifier.height(14.dp))
-                                Text("Select a Subject:", style = MaterialTheme.typography.labelSmall, color = FocusTextSecondary)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                
-                                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    item {
-                                        Box(
-                                            modifier = Modifier
-                                                .background(
-                                                    FocusSurfaceVariant,
-                                                    RoundedCornerShape(12.dp)
-                                                )
-                                                .border(1.dp, FocusPrimary, RoundedCornerShape(12.dp))
-                                                .clickable {
-                                                    showAddSubjectDialog = true
-                                                }
-                                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
+
+                                // Subject input
+                                Text(
+                                    text = "SUBJECT / AREA OF STUDY",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    ),
+                                    color = FocusTextSecondary
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                OutlinedTextField(
+                                    value = customSubject,
+                                    onValueChange = {
+                                        customSubject = it
+                                        viewModel.updateSetup(subjectName = it)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("setup_subject_input"),
+                                    placeholder = {
+                                        Text(
+                                            "e.g. Mathematics, Physics, History, UPSC, Coding...",
+                                            color = FocusTextSecondary.copy(alpha = 0.45f),
+                                            fontSize = 14.sp
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.School,
+                                            contentDescription = null,
+                                            tint = FocusPrimary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        if (customSubject.isNotBlank()) {
+                                            IconButton(onClick = {
+                                                customSubject = ""
+                                                viewModel.updateSetup(subjectName = "")
+                                            }) {
                                                 Icon(
-                                                    imageVector = Icons.Default.Add,
-                                                    contentDescription = "Add Subject",
-                                                    tint = FocusPrimary,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                Text(
-                                                    text = "Add",
-                                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                                    color = FocusPrimary
+                                                    Icons.Default.Clear,
+                                                    contentDescription = "Clear",
+                                                    tint = FocusTextSecondary,
+                                                    modifier = Modifier.size(18.dp)
                                                 )
                                             }
                                         }
-                                    }
-                                    items(subjects) { subject ->
-                                        val isSelected = setup.subjectName == subject.name
-                                        Box(
-                                            modifier = Modifier
-                                                .background(
-                                                    if (isSelected) FocusPrimary else FocusSurfaceVariant,
-                                                    RoundedCornerShape(12.dp)
-                                                )
-                                                .clickable {
-                                                    viewModel.updateSetup(sessionName = subject.name, subjectName = subject.name)
+                                    },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = FocusPrimary,
+                                        unfocusedBorderColor = FocusSurfaceVariant,
+                                        focusedContainerColor = FocusBackground,
+                                        unfocusedContainerColor = FocusBackground,
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    singleLine = true
+                                )
+
+                                // Quick pick from saved subjects
+                                if (subjects.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Quick pick:",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = FocusTextSecondary.copy(alpha = 0.7f),
+                                            fontSize = 11.sp
+                                        )
+                                        subjects.forEach { sub ->
+                                            val isSel = customSubject.equals(sub.name, ignoreCase = true)
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = if (isSel) FocusPrimary.copy(alpha = 0.2f) else FocusBackground,
+                                                border = BorderStroke(1.dp, if (isSel) FocusPrimary else FocusSurfaceVariant),
+                                                modifier = Modifier.clickable {
+                                                    customSubject = sub.name
+                                                    viewModel.updateSetup(subjectName = sub.name)
                                                 }
-                                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    text = subject.name,
-                                                    style = MaterialTheme.typography.bodySmall.copy(
-                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                                    ),
-                                                    color = if (isSelected) Color.Black else Color.White
-                                                )
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Icon(
-                                                    imageVector = Icons.Default.Close,
-                                                    contentDescription = "Delete Subject",
-                                                    tint = if (isSelected) Color.Black.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.3f),
-                                                    modifier = Modifier
-                                                        .size(14.dp)
-                                                        .clickable {
-                                                            viewModel.deleteCustomSubject(subject)
-                                                        }
-                                                )
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                ) {
+                                                    Text(
+                                                        text = sub.name,
+                                                        style = MaterialTheme.typography.labelSmall.copy(
+                                                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal
+                                                        ),
+                                                        color = if (isSel) FocusPrimary else FocusTextSecondary
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Icon(
+                                                        imageVector = Icons.Default.Close,
+                                                        contentDescription = "Delete",
+                                                        tint = if (isSel) FocusPrimary else FocusTextSecondary.copy(alpha = 0.4f),
+                                                        modifier = Modifier
+                                                            .size(12.dp)
+                                                            .clickable {
+                                                                viewModel.deleteCustomSubject(sub)
+                                                            }
+                                                    )
+                                                }
                                             }
                                         }
                                     }
                                 }
-                                
-                        // Section 4: Ambient Focus Sound Generator
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Goal input
+                                Text(
+                                    text = "TARGET GOAL / CHAPTER (OPTIONAL)",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    ),
+                                    color = FocusTextSecondary
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                OutlinedTextField(
+                                    value = customGoal,
+                                    onValueChange = {
+                                        customGoal = it
+                                        viewModel.updateSetup(sessionName = it)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("setup_goal_input"),
+                                    placeholder = {
+                                        Text(
+                                            "e.g. Chapter 4 Numericals, Solve 30 MCQs, Revise notes...",
+                                            color = FocusTextSecondary.copy(alpha = 0.45f),
+                                            fontSize = 14.sp
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.TrackChanges,
+                                            contentDescription = null,
+                                            tint = FocusWarning,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        if (customGoal.isNotBlank()) {
+                                            IconButton(onClick = {
+                                                customGoal = ""
+                                                viewModel.updateSetup(sessionName = "")
+                                            }) {
+                                                Icon(
+                                                    Icons.Default.Clear,
+                                                    contentDescription = "Clear",
+                                                    tint = FocusTextSecondary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = FocusWarning,
+                                        unfocusedBorderColor = FocusSurfaceVariant,
+                                        focusedContainerColor = FocusBackground,
+                                        unfocusedContainerColor = FocusBackground,
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    singleLine = true
+                                )
+                            }
+                        }
+
+                        // Section 2: Ambient Focus Sound Generator
                         Card(
                             colors = CardDefaults.cardColors(containerColor = FocusSurface),
                             shape = RoundedCornerShape(22.dp),
@@ -725,44 +872,4 @@ fun FocusSetupScreen(
             }
         }
     }
-    
-    if (showAddSubjectDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddSubjectDialog = false },
-            title = { Text("Add Quick Subject", color = Color.White) },
-            text = {
-                OutlinedTextField(
-                    value = newSubjectName,
-                    onValueChange = { newSubjectName = it },
-                    placeholder = { Text("Subject Name", color = FocusTextSecondary) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent
-                    ),
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (newSubjectName.isNotBlank()) {
-                        viewModel.addCustomSubject(newSubjectName.trim(), "#0284C7")
-                        newSubjectName = ""
-                        showAddSubjectDialog = false
-                    }
-                }) {
-                    Text("Add", color = FocusPrimary)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddSubjectDialog = false }) {
-                    Text("Cancel", color = FocusTextSecondary)
-                }
-            },
-            containerColor = FocusSurface
-        )
-    }
-}
-}
 }

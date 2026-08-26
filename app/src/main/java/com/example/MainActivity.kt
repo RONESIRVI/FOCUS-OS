@@ -29,6 +29,7 @@ import com.example.ui.navigation.FocusBottomNavigation
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.util.Log
+import com.example.util.FocusLockManager
 
 
 class MainActivity : ComponentActivity() {
@@ -37,6 +38,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FocusLockManager.onDistractionListener = { _ ->
+            runOnUiThread {
+                viewModel.triggerDistractionWarning()
+            }
+        }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
@@ -94,6 +100,10 @@ class MainActivity : ComponentActivity() {
         val startSessionId = intent.getLongExtra("START_SESSION_ID", -1L)
         if (startSessionId != -1L) {
             viewModel.loadScheduledSession(startSessionId)
+        }
+        val blockedPkg = intent.getStringExtra("BLOCKED_PACKAGE_EVENT")
+        if (blockedPkg != null) {
+            viewModel.triggerDistractionWarning()
         }
     }
 

@@ -13,6 +13,7 @@ val FocusPrimaryDark = Color(0xFF004D31)     // Electric Green Dimmed (Backgroun
 val FocusOnPrimary = Color(0xFF000000)       // Text on Primary
 
 val FocusWarning = Color(0xFFFF9500)         // Amber / Orange (Upcoming, Warning)
+val FocusAccent = Color(0xFF38BDF8)          // Neon Cyan / Indigo Accent
 val FocusDanger = Color(0xFFFF2A2A)          // Red Accent (Security Alert, Blocked)
 val FocusDangerDark = Color(0xFF4A0C0C)      // Deep Red Container
 

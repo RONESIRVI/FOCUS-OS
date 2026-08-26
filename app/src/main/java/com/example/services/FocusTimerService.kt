@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.R
@@ -54,6 +55,26 @@ class FocusTimerService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACTION_PAUSE_RESUME -> {
+                if (_timerState.value.isPaused) {
+                    resumeTimer()
+                } else {
+                    pauseTimer()
+                }
+            }
+            ACTION_ADD_TIME -> {
+                val extraSeconds = intent.getIntExtra(EXTRA_ADD_SECONDS, 300)
+                addExtraTime(extraSeconds)
+            }
+            ACTION_STOP -> {
+                stopTimer()
+            }
+        }
+        return START_STICKY
     }
 
     fun startTimer(
@@ -112,9 +133,20 @@ class FocusTimerService : Service() {
         updateNotification()
     }
 
+    fun addExtraTime(seconds: Int = 300) {
+        val currentRem = _timerState.value.remainingSeconds
+        val currentTot = _timerState.value.totalSeconds
+        _timerState.value = _timerState.value.copy(
+            remainingSeconds = currentRem + seconds,
+            totalSeconds = currentTot + seconds
+        )
+        updateNotification()
+    }
+
     fun recordDistractionAttempt() {
         val current = _timerState.value.distractionAttempts
         _timerState.value = _timerState.value.copy(distractionAttempts = current + 1)
+        updateNotification()
     }
 
     fun stopTimer() {
@@ -128,6 +160,7 @@ class FocusTimerService : Service() {
     fun setSound(soundType: SoundType) {
         _timerState.value = _timerState.value.copy(selectedSound = soundType)
         audioEngine.startSound(soundType, scope)
+        updateNotification()
     }
 
     private fun createNotificationChannel() {
@@ -137,7 +170,8 @@ class FocusTimerService : Service() {
                 "Focus Session Active",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Shows ongoing focus countdown timer and lock status"
+                description = "Shows ongoing focus countdown timer, lock status and quick controls"
+                setShowBadge(false)
             }
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
@@ -145,24 +179,110 @@ class FocusTimerService : Service() {
     }
 
     private fun buildNotification(): android.app.Notification {
-        val title = if (_timerState.value.subjectName.isNotBlank()) {
-            "FOCUS OS — ${_timerState.value.subjectName}"
-        } else {
-            "FOCUS OS — Active Session"
+        val state = _timerState.value
+        val formattedTime = formatTimeText(state.remainingSeconds)
+        val totalSec = if (state.totalSeconds > 0) state.totalSeconds else 1
+        val completedSec = (state.totalSeconds - state.remainingSeconds).coerceAtLeast(0)
+        val progressPercent = ((completedSec.toFloat() / totalSec.toFloat()) * 100).toInt().coerceIn(0, 100)
+
+        val subjectTitle = if (state.subjectName.isNotBlank()) state.subjectName else "DEEP STUDY"
+        val sessionTitle = if (state.sessionName.isNotBlank()) state.sessionName else "Focus Session"
+
+        // 1. Collapsed Notification View
+        val collapsedView = RemoteViews(packageName, R.layout.notification_focus_collapsed).apply {
+            setTextViewText(R.id.notif_title, "FOCUS OS")
+            setTextViewText(R.id.notif_mode_badge, state.lockMode.title.uppercase())
+            setTextViewText(R.id.notif_subject_text, "$subjectTitle • $sessionTitle")
+            setTextViewText(
+                R.id.notif_timer_text,
+                if (state.isPaused) "⏸️ PAUSED • $formattedTime" else "⏱️ $formattedTime Remaining ($progressPercent%)"
+            )
+            setProgressBar(R.id.notif_progress_bar, 100, progressPercent, false)
+            
+            // Toggle icon
+            setImageViewResource(
+                R.id.notif_btn_quick_toggle,
+                if (state.isPaused) R.drawable.ic_notif_play else R.drawable.ic_notif_pause
+            )
+            setOnClickPendingIntent(
+                R.id.notif_btn_quick_toggle,
+                createServiceActionPendingIntent(ACTION_PAUSE_RESUME, 101)
+            )
         }
+
+        // 2. Expanded Rich Notification View
+        val expandedView = RemoteViews(packageName, R.layout.notification_focus_expanded).apply {
+            setTextViewText(R.id.notif_exp_app_title, "FOCUS OS")
+            setTextViewText(R.id.notif_exp_mode_badge, state.lockMode.title.uppercase())
+            setTextViewText(R.id.notif_exp_distraction_badge, "🛡️ ${state.distractionAttempts} Blocked")
+            setTextViewText(R.id.notif_exp_subject, "📚 $subjectTitle • $sessionTitle")
+            setTextViewText(R.id.notif_exp_timer, formattedTime)
+            setTextViewText(
+                R.id.notif_exp_status_label,
+                if (state.isPaused) "PAUSED • TAP RESUME" else "REMAINING FOCUS TIME"
+            )
+            setProgressBar(R.id.notif_exp_progress_bar, 100, progressPercent, false)
+            setTextViewText(R.id.notif_exp_progress_percent, "$progressPercent% Completed")
+
+            val soundTitle = if (state.selectedSound != SoundType.NONE) state.selectedSound.label else "Silent Mode"
+            setTextViewText(R.id.notif_exp_sound_info, "🎵 $soundTitle")
+
+            // Quick Action 1: Pause / Resume Button
+            setImageViewResource(
+                R.id.notif_btn_pause_resume_icon,
+                if (state.isPaused) R.drawable.ic_notif_play else R.drawable.ic_notif_pause
+            )
+            setTextViewText(
+                R.id.notif_btn_pause_resume_text,
+                if (state.isPaused) "RESUME" else "PAUSE"
+            )
+            setOnClickPendingIntent(
+                R.id.notif_btn_pause_resume,
+                createServiceActionPendingIntent(ACTION_PAUSE_RESUME, 102)
+            )
+
+            // Quick Action 2: +5 Mins Button
+            setOnClickPendingIntent(
+                R.id.notif_btn_add_time,
+                createServiceActionPendingIntent(ACTION_ADD_TIME, 103)
+            )
+
+            // Quick Action 3: Open App Button
+            setOnClickPendingIntent(
+                R.id.notif_btn_open_app,
+                createPendingIntent()
+            )
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText(formatTimeText(_timerState.value.remainingSeconds) + " Remaining • " + _timerState.value.lockMode.title)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notif_shield)
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+            .setCustomContentView(collapsedView)
+            .setCustomBigContentView(expandedView)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(createPendingIntent())
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
     }
 
     private fun updateNotification() {
+        if (!_timerState.value.isRunning) return
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(NOTIFICATION_ID, buildNotification())
+    }
+
+    private fun createServiceActionPendingIntent(actionStr: String, requestCode: Int): PendingIntent {
+        val intent = Intent(this, FocusTimerService::class.java).apply {
+            action = actionStr
+        }
+        return PendingIntent.getService(
+            this,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
     }
 
     private fun createPendingIntent(): PendingIntent {
@@ -191,5 +311,11 @@ class FocusTimerService : Service() {
     companion object {
         const val CHANNEL_ID = "focus_os_timer_channel"
         const val NOTIFICATION_ID = 8801
+
+        const val ACTION_PAUSE_RESUME = "com.example.services.ACTION_PAUSE_RESUME"
+        const val ACTION_ADD_TIME = "com.example.services.ACTION_ADD_TIME"
+        const val ACTION_STOP = "com.example.services.ACTION_STOP"
+        const val EXTRA_ADD_SECONDS = "extra_add_seconds"
     }
 }
+
