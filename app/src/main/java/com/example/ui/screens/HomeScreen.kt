@@ -38,6 +38,7 @@ fun HomeScreen(
     viewModel: FocusViewModel,
     onNavigateToSetup: () -> Unit,
     onNavigateToScheduleCreate: () -> Unit,
+    onNavigateToScheduleMain: () -> Unit,
     onNavigateToAppSelector: () -> Unit,
     onNavigateToStats: () -> Unit,
     onNavigateToTimer: () -> Unit
@@ -261,8 +262,8 @@ fun HomeScreen(
             Text(
                 text = "VIEW FULL SCHEDULE →",
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                color = FocusTextSecondary,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable { /* TODO: Navigate to schedule */ }
+                color = FocusPrimary,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable { onNavigateToScheduleMain() }
             )
         }
 

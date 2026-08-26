@@ -69,6 +69,14 @@ class FocusRepository(private val focusDao: FocusDao) {
         focusDao.updateSession(session)
     }
 
+    suspend fun deleteSession(session: FocusSession) {
+        focusDao.deleteSession(session)
+    }
+
+    suspend fun deleteSessionById(sessionId: Long) {
+        focusDao.deleteSessionById(sessionId)
+    }
+
     suspend fun addSubject(subjectName: String, colorHex: String) {
         focusDao.insertSubject(SubjectTask(name = subjectName, categoryColorHex = colorHex))
     }

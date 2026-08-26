@@ -41,13 +41,14 @@ fun ScheduleCreateScreen(
     val whitelistedApps by viewModel.whitelistedAppsStrict.collectAsState()
     val context = LocalContext.current
 
-    var sessionName by remember { mutableStateOf(setup.sessionName) }
+    val initCal = remember { Calendar.getInstance().apply { add(Calendar.MINUTE, 5) } }
+    var sessionName by remember { mutableStateOf(if (setup.sessionName.isNotBlank()) setup.sessionName else "Study Session") }
     
-    var startHour by remember { mutableStateOf(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) }
-    var startMinute by remember { mutableStateOf(Calendar.getInstance().get(Calendar.MINUTE)) }
+    var startHour by remember { mutableStateOf(initCal.get(Calendar.HOUR_OF_DAY)) }
+    var startMinute by remember { mutableStateOf(initCal.get(Calendar.MINUTE)) }
     
-    var endHour by remember { mutableStateOf((startHour + 1) % 24) }
-    var endMinute by remember { mutableStateOf(startMinute) }
+    var endHour by remember { mutableStateOf((initCal.get(Calendar.HOUR_OF_DAY) + 1) % 24) }
+    var endMinute by remember { mutableStateOf(initCal.get(Calendar.MINUTE)) }
 
     Scaffold(
         topBar = {

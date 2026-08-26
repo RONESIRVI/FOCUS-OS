@@ -43,6 +43,7 @@ fun FocusNavGraph(
                 viewModel = viewModel,
                 onNavigateToSetup = { navController.navigate(FocusRoutes.SETUP) },
                 onNavigateToScheduleCreate = { navController.navigate(FocusRoutes.SCHEDULE_CREATE) },
+                onNavigateToScheduleMain = { navController.navigate(FocusRoutes.SCHEDULE_MAIN) },
                 onNavigateToAppSelector = { navController.navigate(FocusRoutes.APP_SELECTOR) },
                 onNavigateToStats = { navController.navigate(FocusRoutes.STATS) },
                 onNavigateToTimer = { navController.navigate(FocusRoutes.TIMER) }
@@ -50,8 +51,13 @@ fun FocusNavGraph(
         }
                 
         composable(FocusRoutes.SCHEDULE_MAIN) {
-            // Placeholder for now
-            com.example.ui.screens.ScheduleMainScreen(viewModel = viewModel, onNavigateToCreate = { navController.navigate(FocusRoutes.SCHEDULE_CREATE) })
+            com.example.ui.screens.ScheduleMainScreen(
+                viewModel = viewModel,
+                onNavigateToCreate = { navController.navigate(FocusRoutes.SCHEDULE_CREATE) },
+                onStartScheduled = { _ ->
+                    navController.navigate(FocusRoutes.CAMERA_START)
+                }
+            )
         }
         composable(FocusRoutes.SETTINGS) {
             com.example.ui.screens.SettingsScreen(

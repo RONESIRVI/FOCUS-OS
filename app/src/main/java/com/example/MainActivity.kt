@@ -36,7 +36,6 @@ class MainActivity : ComponentActivity() {
     private val viewModel: FocusViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-                java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("America/Los_Angeles"))
         super.onCreate(savedInstanceState)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -44,7 +43,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        
         var startDestination = FocusRoutes.HOME
         val startSessionId = intent.getLongExtra("START_SESSION_ID", -1L)
         if (startSessionId != -1L) {
@@ -93,8 +91,10 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        // Note: Dynamic deep link or intent handling for an already running activity would go here, 
-        // but for now relying on recreated activity with FLAG_ACTIVITY_CLEAR_TASK is sufficient.
+        val startSessionId = intent.getLongExtra("START_SESSION_ID", -1L)
+        if (startSessionId != -1L) {
+            viewModel.loadScheduledSession(startSessionId)
+        }
     }
 
     override fun onUserLeaveHint() {
@@ -113,8 +113,8 @@ class MainActivity : ComponentActivity() {
         val timerState = viewModel.timerState.value
         if (timerState.isRunning && timerState.lockMode != LockMode.NORMAL) {
             
-            // Check if current foreground app is in the blocklist
-            var shouldBlock = true // Default to true if we can't check
+            // Check if current foreground app is allowed or should be blocked
+            var shouldBlock = false
             try {
                 val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
                 val time = System.currentTimeMillis()
@@ -130,17 +130,19 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     
-                    if (recentApp == packageName || recentApp.contains("launcher") || recentApp.contains("systemui")) {
-                        shouldBlock = false
-                    } else {
-                        // Check against block list
-                        val blockedApps = if (timerState.lockMode == LockMode.STRICT_LOCK) {
+                    if (recentApp.isNotEmpty() &&
+                        recentApp != packageName &&
+                        !recentApp.contains("launcher") &&
+                        !recentApp.contains("systemui")
+                    ) {
+                        // Check if recentApp is in the whitelisted (allowed) set
+                        val allowedList = if (timerState.lockMode == LockMode.STRICT_LOCK || timerState.lockMode == LockMode.MAXIMUM_LOCK) {
                             viewModel.whitelistedAppsStrict.value
                         } else {
                             viewModel.whitelistedAppsManual.value
                         }
-                        val isBlocked = blockedApps.any { it.packageName == recentApp && !it.isAllowed }
-                        shouldBlock = isBlocked
+                        val isWhitelisted = allowedList.any { it.packageName == recentApp && it.isAllowed }
+                        shouldBlock = !isWhitelisted
                     }
                 }
             } catch (e: Exception) {
@@ -150,12 +152,14 @@ class MainActivity : ComponentActivity() {
             if (shouldBlock) {
                 viewModel.triggerDistractionWarning()
 
-                val intent = Intent(this, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP
+                if (timerState.lockMode == LockMode.STRICT_LOCK || timerState.lockMode == LockMode.MAXIMUM_LOCK) {
+                    val intent = Intent(this, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                                Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    }
+                    startActivity(intent)
                 }
-                startActivity(intent)
             }
         }
     }

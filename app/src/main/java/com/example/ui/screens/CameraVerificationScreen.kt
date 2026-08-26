@@ -55,11 +55,37 @@ fun CameraVerificationScreen(
         }
     }
 
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            try {
+                val file = File(context.cacheDir, "focus_photo_${System.currentTimeMillis()}.jpg")
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                currentUriToSave = uri
+                cameraLauncher.launch(uri)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     fun takePhoto() {
-        val file = File(context.cacheDir, "focus_photo_${System.currentTimeMillis()}.jpg")
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        currentUriToSave = uri
-        cameraLauncher.launch(uri)
+        val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.CAMERA
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            try {
+                val file = File(context.cacheDir, "focus_photo_${System.currentTimeMillis()}.jpg")
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                currentUriToSave = uri
+                cameraLauncher.launch(uri)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        } else {
+            permissionLauncher.launch(android.Manifest.permission.CAMERA)
+        }
     }
 
     Box(

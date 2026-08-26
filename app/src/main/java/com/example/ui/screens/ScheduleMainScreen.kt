@@ -9,7 +9,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -29,7 +31,8 @@ import java.util.Locale
 @Composable
 fun ScheduleMainScreen(
     viewModel: FocusViewModel,
-    onNavigateToCreate: () -> Unit
+    onNavigateToCreate: () -> Unit,
+    onStartScheduled: (Long) -> Unit = {}
 ) {
     val scheduledSessions by viewModel.scheduledSessions.collectAsState()
 
@@ -125,31 +128,64 @@ fun ScheduleMainScreen(
                             modifier = Modifier.weight(1f)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = "📚 ${session.subjectName.uppercase()}",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = FocusTextPrimary
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "📚 ${session.subjectName.uppercase()}",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = FocusTextPrimary
+                                    )
+                                    IconButton(
+                                        onClick = { viewModel.deleteScheduledSession(session) },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.DeleteOutline,
+                                            contentDescription = "Delete",
+                                            tint = FocusWarning.copy(alpha = 0.8f),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = "$startTimeStr – $endTimeStr",
+                                        text = "$startTimeStr – $endTimeStr (${session.targetDurationMinutes} mins)",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = FocusTextSecondary
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(14.dp))
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .background(FocusWarning.copy(alpha=0.15f), RoundedCornerShape(8.dp))
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = FocusWarning, modifier = Modifier.size(12.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("STRICT", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = FocusWarning)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .background(FocusWarning.copy(alpha=0.15f), RoundedCornerShape(8.dp))
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = FocusWarning, modifier = Modifier.size(12.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("STRICT", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = FocusWarning)
+                                    }
                                     Spacer(modifier = Modifier.weight(1f))
-                                    Text("Upcoming", style = MaterialTheme.typography.labelSmall, color = FocusWarning)
+                                    FilledTonalButton(
+                                        onClick = {
+                                            viewModel.loadScheduledSession(session.id)
+                                            onStartScheduled(session.id)
+                                        },
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("START NOW", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                                    }
                                 }
                             }
                         }

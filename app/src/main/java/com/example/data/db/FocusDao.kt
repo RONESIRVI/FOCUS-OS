@@ -28,6 +28,12 @@ interface FocusDao {
     @Update
     suspend fun updateSession(session: FocusSession)
 
+    @androidx.room.Delete
+    suspend fun deleteSession(session: FocusSession)
+
+    @Query("DELETE FROM focus_sessions WHERE id = :sessionId")
+    suspend fun deleteSessionById(sessionId: Long)
+
     // Allowed Apps
     @Query("SELECT * FROM allowed_apps WHERE profile = :profile ORDER BY appName ASC")
     fun getAllowedApps(profile: String = "MANUAL"): Flow<List<AllowedApp>>

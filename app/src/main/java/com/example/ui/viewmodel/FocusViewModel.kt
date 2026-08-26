@@ -155,7 +155,11 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private val _activeScheduledSessionId = MutableStateFlow<Long?>(null)
+    val activeScheduledSessionId: StateFlow<Long?> = _activeScheduledSessionId.asStateFlow()
+
     fun loadScheduledSession(sessionId: Long) {
+        _activeScheduledSessionId.value = sessionId
         viewModelScope.launch {
             val sessions = repository.allSessions.first()
             val session = sessions.find { it.id == sessionId }
@@ -164,7 +168,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                     sessionName = session.sessionName,
                     subjectName = session.subjectName,
                     durationMinutes = session.targetDurationMinutes,
-                    lockMode = LockMode.valueOf(session.lockMode),
+                    lockMode = try { LockMode.valueOf(session.lockMode) } catch (e: Exception) { LockMode.STRICT_LOCK },
                     scheduledStartTime = session.scheduledStartTime,
                     scheduledEndTime = session.scheduledEndTime,
                     requiresPhoto = session.requiresPhoto,
@@ -203,16 +207,30 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         val context = getApplication<Application>()
         val intent = Intent(context, FocusTimerService::class.java)
 
+        val scheduledId = _activeScheduledSessionId.value
+        if (scheduledId != null) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val sessions = repository.allSessions.first()
+                val session = sessions.find { it.id == scheduledId }
+                if (session != null) {
+                    repository.updateSession(session.copy(status = "ACTIVE"))
+                }
+            }
+        }
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             context.startForegroundService(intent)
         } else {
             context.startService(intent)
         }
 
+        val name = if (setup.sessionName.isNotBlank()) setup.sessionName else "Deep Focus"
+        val subject = if (setup.subjectName.isNotBlank()) setup.subjectName else name
+
         timerService?.startTimer(
             durationMinutes = setup.durationMinutes,
-            sessionName = setup.sessionName,
-            subjectName = setup.subjectName,
+            sessionName = name,
+            subjectName = subject,
             lockMode = setup.lockMode,
             soundType = setup.selectedSound
         )
@@ -226,26 +244,29 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             set(java.util.Calendar.HOUR_OF_DAY, hour)
             set(java.util.Calendar.MINUTE, minute)
             set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
         }
         
-        if (calendar.timeInMillis < System.currentTimeMillis()) {
+        if (calendar.timeInMillis <= System.currentTimeMillis()) {
             calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
         }
         
         val scheduledStartTime = calendar.timeInMillis
         val scheduledEndTime = scheduledStartTime + (setup.durationMinutes * 60 * 1000L)
+        val sessionTitle = if (setup.sessionName.isNotBlank()) setup.sessionName else "Focus Study Session"
+        val subjectTitle = if (setup.subjectName.isNotBlank()) setup.subjectName else sessionTitle
         
         val session = com.example.data.model.FocusSession(
-            sessionName = setup.sessionName,
-            subjectName = setup.subjectName,
+            sessionName = sessionTitle,
+            subjectName = subjectTitle,
             targetDurationMinutes = setup.durationMinutes,
             completedDurationSeconds = 0,
             lockMode = setup.lockMode.name,
             status = "SCHEDULED",
             scheduledStartTime = scheduledStartTime,
             scheduledEndTime = scheduledEndTime,
-            requiresPhoto = true,
-            requiresSelfie = true,
+            requiresPhoto = setup.requiresPhoto,
+            requiresSelfie = setup.requiresSelfie,
             timestamp = System.currentTimeMillis()
         )
         
@@ -254,11 +275,11 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
             
-            // Alarm 1: 2 minutes early
+            // Alarm 1: 2 minutes early notification
             val earlyIntent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
                 action = "ACTION_PRE_SCHEDULE"
                 putExtra("SESSION_ID", sessionId)
-                putExtra("SESSION_NAME", setup.sessionName)
+                putExtra("SESSION_NAME", sessionTitle)
             }
             val earlyPendingIntent = android.app.PendingIntent.getBroadcast(
                 context,
@@ -268,11 +289,11 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             )
             val earlyTime = scheduledStartTime - (2 * 60 * 1000)
             
-            // Alarm 2: Exact time
+            // Alarm 2: Exact start time notification
             val exactIntent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
                 action = "ACTION_EXACT_SCHEDULE"
                 putExtra("SESSION_ID", sessionId)
-                putExtra("SESSION_NAME", setup.sessionName)
+                putExtra("SESSION_NAME", sessionTitle)
             }
             val exactPendingIntent = android.app.PendingIntent.getBroadcast(
                 context,
@@ -283,7 +304,6 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             
             try {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
-                    // Fallback to inexact alarms
                     if (earlyTime > System.currentTimeMillis()) {
                         alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, earlyTime, earlyPendingIntent)
                     }
@@ -295,7 +315,6 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                     alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, scheduledStartTime, exactPendingIntent)
                 }
             } catch (e: Exception) {
-                // Fallback to inexact alarms in case of SecurityException
                 if (earlyTime > System.currentTimeMillis()) {
                     alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, earlyTime, earlyPendingIntent)
                 }
@@ -308,6 +327,43 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                 val diffMins = (scheduledStartTime - System.currentTimeMillis()) / 60000
                 android.widget.Toast.makeText(context, "✅ Strict Focus scheduled for $timeStr (in $diffMins mins)", android.widget.Toast.LENGTH_LONG).show()
             }
+        }
+    }
+
+    fun deleteScheduledSession(session: FocusSession) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val context = getApplication<Application>()
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? android.app.AlarmManager
+            
+            if (alarmManager != null) {
+                val earlyIntent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
+                    action = "ACTION_PRE_SCHEDULE"
+                }
+                val earlyPendingIntent = android.app.PendingIntent.getBroadcast(
+                    context,
+                    (session.id * 10).toInt() + 1,
+                    earlyIntent,
+                    android.app.PendingIntent.FLAG_NO_CREATE or android.app.PendingIntent.FLAG_IMMUTABLE
+                )
+                if (earlyPendingIntent != null) {
+                    alarmManager.cancel(earlyPendingIntent)
+                }
+
+                val exactIntent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
+                    action = "ACTION_EXACT_SCHEDULE"
+                }
+                val exactPendingIntent = android.app.PendingIntent.getBroadcast(
+                    context,
+                    (session.id * 10).toInt() + 2,
+                    exactIntent,
+                    android.app.PendingIntent.FLAG_NO_CREATE or android.app.PendingIntent.FLAG_IMMUTABLE
+                )
+                if (exactPendingIntent != null) {
+                    alarmManager.cancel(exactPendingIntent)
+                }
+            }
+
+            repository.deleteSession(session)
         }
     }
 
@@ -334,22 +390,50 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     fun completeFocusSession() {
         val current = _serviceTimerState.value
-        viewModelScope.launch {
+        val scheduledId = _activeScheduledSessionId.value
+        viewModelScope.launch(Dispatchers.IO) {
             if (current.totalSeconds > 0) {
                 val completedSecs = current.totalSeconds - current.remainingSeconds
-                val session = FocusSession(
-                    sessionName = current.sessionName,
-                    subjectName = current.subjectName,
-                    targetDurationMinutes = current.totalSeconds / 60,
-                    completedDurationSeconds = completedSecs,
-                    lockMode = current.lockMode.name,
-                    distractionAttempts = current.distractionAttempts,
-                    allowedAppsCount = whitelistedAppsManual.value.size
-                )
-                repository.saveSession(session)
-
-// summaryStats will automatically update via flow
+                if (scheduledId != null) {
+                    val sessions = repository.allSessions.first()
+                    val existing = sessions.find { it.id == scheduledId }
+                    if (existing != null) {
+                        repository.updateSession(
+                            existing.copy(
+                                status = "COMPLETED",
+                                completedDurationSeconds = completedSecs,
+                                distractionAttempts = current.distractionAttempts,
+                                lockMode = current.lockMode.name
+                            )
+                        )
+                    } else {
+                        val session = FocusSession(
+                            sessionName = current.sessionName,
+                            subjectName = current.subjectName,
+                            targetDurationMinutes = current.totalSeconds / 60,
+                            completedDurationSeconds = completedSecs,
+                            lockMode = current.lockMode.name,
+                            distractionAttempts = current.distractionAttempts,
+                            allowedAppsCount = whitelistedAppsManual.value.size,
+                            status = "COMPLETED"
+                        )
+                        repository.saveSession(session)
+                    }
+                } else {
+                    val session = FocusSession(
+                        sessionName = current.sessionName,
+                        subjectName = current.subjectName,
+                        targetDurationMinutes = current.totalSeconds / 60,
+                        completedDurationSeconds = completedSecs,
+                        lockMode = current.lockMode.name,
+                        distractionAttempts = current.distractionAttempts,
+                        allowedAppsCount = whitelistedAppsManual.value.size,
+                        status = "COMPLETED"
+                    )
+                    repository.saveSession(session)
+                }
             }
+            _activeScheduledSessionId.value = null
             timerService?.stopTimer()
             _showLockOverlay.value = false
         }
