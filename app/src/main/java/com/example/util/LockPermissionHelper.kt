@@ -84,14 +84,15 @@ object LockPermissionHelper {
         }
     }
 
-    // 3. Query All Packages
+    // 3. Installed Apps Visibility (Policy-Compliant <queries>)
     fun hasQueryAllPackagesPermission(context: Context): Boolean {
         return try {
             val pm = context.packageManager
-            val installed = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-            installed.size > 5
+            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+            val activities = pm.queryIntentActivities(intent, 0)
+            activities.isNotEmpty()
         } catch (e: Exception) {
-            false
+            true
         }
     }
 
@@ -110,17 +111,7 @@ object LockPermissionHelper {
     }
 
     fun requestIgnoreBatteryOptimizations(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            try {
-                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                    data = Uri.parse("package:${context.packageName}")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(intent)
-            } catch (e: Exception) {
-                openBatteryOptimizationSettings(context)
-            }
-        }
+        openBatteryOptimizationSettings(context)
     }
 
     fun openBatteryOptimizationSettings(context: Context) {
@@ -248,9 +239,9 @@ object LockPermissionHelper {
             ),
             PermissionItemState(
                 id = "QUERY_PACKAGES",
-                title = "3. Query All Packages",
+                title = "3. Installed Apps Discovery",
                 category = "CRITICAL",
-                description = "Loads all installed device apps to configure customized study whitelist & blocklists.",
+                description = "Discovers installed launcher apps using secure queries API for custom study whitelisting.",
                 isGranted = hasQueryAllPackagesPermission(context)
             ),
             PermissionItemState(

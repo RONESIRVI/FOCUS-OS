@@ -37,11 +37,10 @@ class FocusAccessibilityService : AccessibilityService() {
         Log.i(TAG, "FocusAccessibilityService connected & monitoring active")
         
         val info = AccessibilityServiceInfo().apply {
-            eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or AccessibilityEvent.TYPE_WINDOWS_CHANGED
+            eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
-            flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or 
-                    AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
-            notificationTimeout = 50
+            flags = AccessibilityServiceInfo.DEFAULT
+            notificationTimeout = 100
         }
         this.serviceInfo = info
     }

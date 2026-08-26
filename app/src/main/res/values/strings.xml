@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">FOCUS OS</string>
-    <string name="accessibility_service_description">FOCUS OS requires Accessibility Service to detect when a blocked distracting application is launched during a strict focus session and instantly redirect back to the study lock screen.</string>
+    <string name="accessibility_service_description">FOCUS OS utilizes the AccessibilityService API strictly to detect when non-whitelisted distracting apps are opened during your active focus sessions and seamlessly redirect back to your study countdown screen. No personal data, keystrokes, screen text, or credentials are read, collected, or transmitted. All processing is strictly performed locally on your device.</string>
 </resources>

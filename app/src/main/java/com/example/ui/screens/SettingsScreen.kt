@@ -39,6 +39,9 @@ fun SettingsScreen(
 ) {
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showInfoDialog by remember { mutableStateOf(false) }
+    var showAccessibilityDisclosure by remember { mutableStateOf(false) }
+    var showUsageAccessDisclosure by remember { mutableStateOf(false) }
+    var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
     var userName by remember { mutableStateOf("Focus Student") }
 
     val context = LocalContext.current
@@ -254,10 +257,10 @@ fun SettingsScreen(
                     number = "1",
                     title = "Accessibility Service",
                     badgeText = "Main Blocker",
-                    description = "When a blocked distracting app is tapped, instantly intercepts window state and redirects to study screen.",
+                    description = "When a blocked distracting app is tapped, intercepts window state to redirect back to focus countdown.",
                     isGranted = LockPermissionHelper.isAccessibilityServiceEnabled(context),
                     actionLabel = "Enable Service",
-                    onAction = { LockPermissionHelper.openAccessibilitySettings(context) }
+                    onAction = { showAccessibilityDisclosure = true }
                 )
                 Divider(color = FocusSurfaceVariant)
 
@@ -266,22 +269,22 @@ fun SettingsScreen(
                     number = "2",
                     title = "Usage Access (PACKAGE_USAGE_STATS)",
                     badgeText = "App Monitor",
-                    description = "Monitors foreground/background app switching to detect unauthorized app launches.",
+                    description = "Monitors foreground app switching to detect unauthorized app launches during focus.",
                     isGranted = LockPermissionHelper.hasUsageStatsPermission(context),
                     actionLabel = "Grant Access",
-                    onAction = { LockPermissionHelper.openUsageStatsSettings(context) }
+                    onAction = { showUsageAccessDisclosure = true }
                 )
                 Divider(color = FocusSurfaceVariant)
 
-                // 3. Query All Packages
+                // 3. Query Packages
                 PermissionRowItem(
                     number = "3",
-                    title = "Query All Packages",
-                    badgeText = "App Scanner",
-                    description = "Discovers all installed apps on phone to configure custom study whitelists and blocklists.",
+                    title = "Installed Apps Discovery",
+                    badgeText = "Launcher Queries",
+                    description = "Discovers installed launcher apps using secure queries API for custom study whitelisting.",
                     isGranted = LockPermissionHelper.hasQueryAllPackagesPermission(context),
-                    actionLabel = "System Configured",
-                    onAction = { /* System manifest permission */ }
+                    actionLabel = "Configured",
+                    onAction = { }
                 )
             }
         }
@@ -467,6 +470,26 @@ fun SettingsScreen(
             }
         }
 
+        // Privacy & Google Play Policy Compliance
+        item {
+            SettingsSectionTitle("🔒 PRIVACY & PLAY STORE COMPLIANCE")
+            SettingsCard {
+                SettingsClickableItem(
+                    icon = Icons.Default.Policy,
+                    title = "Privacy & Data Policy",
+                    subtitle = "100% Offline, Zero Tracking, No Keystroke Logging",
+                    onClick = { showPrivacyPolicyDialog = true }
+                )
+                Divider(color = FocusSurfaceVariant)
+                SettingsClickableItem(
+                    icon = Icons.Default.AccessibilityNew,
+                    title = "Accessibility API Disclosure",
+                    subtitle = "Google Play Prominent Disclosure & Strict Scope",
+                    onClick = { showAccessibilityDisclosure = true }
+                )
+            }
+        }
+
         item { Spacer(modifier = Modifier.height(100.dp)) }
     }
 
@@ -537,6 +560,173 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(onClick = { showEditProfileDialog = false }) {
                     Text("Cancel", color = FocusTextSecondary)
+                }
+            },
+            containerColor = FocusSurface
+        )
+    }
+
+    // Google Play Prominent Disclosure Dialog for Accessibility Service
+    if (showAccessibilityDisclosure) {
+        AlertDialog(
+            onDismissRequest = { showAccessibilityDisclosure = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.AccessibilityNew,
+                    contentDescription = null,
+                    tint = FocusPrimary,
+                    modifier = Modifier.size(36.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Accessibility Service Disclosure",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Important Play Store Disclosure:",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = FocusPrimary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "FOCUS OS uses Android's AccessibilityService API exclusively for the app-blocking feature during active focus sessions.\n\n" +
+                                "• How It Works: It detects when non-whitelisted distracting apps are brought to foreground and redirects you back to your study timer.\n\n" +
+                                "• Zero Data Collection: This service does NOT read screen content, text, messages, passwords, or personal data.\n\n" +
+                                "• No Keylogging: No keystrokes, touches, or inputs are recorded or saved.\n\n" +
+                                "• Completely Offline: No telemetry or app usage information is ever transmitted to any external server.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = FocusTextSecondary,
+                        lineHeight = 18.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showAccessibilityDisclosure = false
+                        LockPermissionHelper.openAccessibilitySettings(context)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black)
+                ) {
+                    Text("Agree & Open Settings", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAccessibilityDisclosure = false }) {
+                    Text("Decline", color = FocusTextSecondary)
+                }
+            },
+            containerColor = FocusSurface
+        )
+    }
+
+    // Google Play Prominent Disclosure Dialog for Usage Access
+    if (showUsageAccessDisclosure) {
+        AlertDialog(
+            onDismissRequest = { showUsageAccessDisclosure = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Security,
+                    contentDescription = null,
+                    tint = FocusPrimary,
+                    modifier = Modifier.size(36.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Usage Access Disclosure",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Why Usage Access is needed:",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = FocusPrimary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "FOCUS OS requires Usage Access solely to detect which application is running in the foreground during an active study lockdown session.\n\n" +
+                                "• Used strictly to trigger study lock screens if a blocked application is launched.\n\n" +
+                                "• Does NOT track browsing history, accounts, or personal activity.\n\n" +
+                                "• Processed 100% locally on your device with complete data privacy.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = FocusTextSecondary,
+                        lineHeight = 18.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showUsageAccessDisclosure = false
+                        LockPermissionHelper.openUsageStatsSettings(context)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black)
+                ) {
+                    Text("Agree & Open Settings", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUsageAccessDisclosure = false }) {
+                    Text("Decline", color = FocusTextSecondary)
+                }
+            },
+            containerColor = FocusSurface
+        )
+    }
+
+    // Privacy & Transparency Dialog
+    if (showPrivacyPolicyDialog) {
+        AlertDialog(
+            onDismissRequest = { showPrivacyPolicyDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Policy,
+                    contentDescription = null,
+                    tint = FocusPrimary,
+                    modifier = Modifier.size(36.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Privacy & Policy Compliance",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Google Play Policy Compliance Assurances:",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = FocusPrimary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "1. Restricted Permissions: No QUERY_ALL_PACKAGES or battery optimization requests in manifest. Uses compliant launcher queries.\n\n" +
+                                "2. Accessibility API: Strictly isolated to window interception. canRetrieveWindowContent is set to false.\n\n" +
+                                "3. Foreground Service: Declared with 'specialUse' for student focus session lockdown.\n\n" +
+                                "4. Zero External Transmission: All study stats, custom notes, and app whitelists remain strictly on your local device.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = FocusTextSecondary,
+                        lineHeight = 18.sp
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPrivacyPolicyDialog = false }) {
+                    Text("Close", color = FocusPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             containerColor = FocusSurface
