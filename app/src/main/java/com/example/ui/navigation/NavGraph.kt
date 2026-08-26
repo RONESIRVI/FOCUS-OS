@@ -64,6 +64,7 @@ fun FocusNavGraph(
                 }
             )
         }
+
         composable(FocusRoutes.SETTINGS) {
             com.example.ui.screens.SettingsScreen(
                 viewModel = viewModel,
@@ -73,6 +74,7 @@ fun FocusNavGraph(
                 }
             )
         }
+
         composable(FocusRoutes.SCHEDULE_CREATE) {
             ScheduleCreateScreen(
                 viewModel = viewModel,
@@ -81,6 +83,7 @@ fun FocusNavGraph(
                 onScheduleCreated = { navController.popBackStack() }
             )
         }
+
         composable(FocusRoutes.SETUP) {
             FocusSetupScreen(
                 viewModel = viewModel,
@@ -96,12 +99,14 @@ fun FocusNavGraph(
                 }
             )
         }
+
         composable(FocusRoutes.APP_SELECTOR) {
             AppSelectorScreen(
                 viewModel = viewModel,
                 onBack = { navController.popBackStack() }
             )
         }
+
         composable(FocusRoutes.CAMERA_START) {
             CameraVerificationScreen(
                 viewModel = viewModel,
@@ -115,6 +120,7 @@ fun FocusNavGraph(
                 onCancel = { navController.popBackStack() }
             )
         }
+
         composable(FocusRoutes.TIMER) {
             FocusTimerScreen(
                 viewModel = viewModel,
@@ -130,7 +136,6 @@ fun FocusNavGraph(
                             android.widget.Toast.makeText(navController.context, "SCHEDULE History Save Ho चुकी है", android.widget.Toast.LENGTH_LONG).show()
                             navController.navigate(FocusRoutes.SCHEDULE_MAIN) {
                                 popUpTo(FocusRoutes.TIMER) { inclusive = true }
-                                popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
                             }
                         } else {
                             navController.navigate(FocusRoutes.SESSION_COMPLETE) {
@@ -141,6 +146,7 @@ fun FocusNavGraph(
                 }
             )
         }
+
         composable(FocusRoutes.CAMERA_END) {
             CameraVerificationScreen(
                 viewModel = viewModel,
@@ -150,19 +156,16 @@ fun FocusNavGraph(
                     viewModel.completeFocusSession() // Save end photo
                     if (wasScheduled) {
                         android.widget.Toast.makeText(navController.context, "SCHEDULE History Save Ho चुकी है", android.widget.Toast.LENGTH_LONG).show()
-                        navController.navigate(FocusRoutes.SCHEDULE_MAIN) {
-                            popUpTo(FocusRoutes.TIMER) { inclusive = true }
-                            popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
-                        }
-                    } else {
-                        navController.navigate(FocusRoutes.SESSION_COMPLETE) {
-                            popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
-                        }
+                    }
+                    navController.navigate(FocusRoutes.HOME) {
+                        popUpTo(FocusRoutes.TIMER) { inclusive = true }
+                        popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
                     }
                 },
                 onCancel = { /* No cancel allowed at end */ }
             )
         }
+
         composable(FocusRoutes.SESSION_COMPLETE) {
             SessionCompleteScreen(
                 viewModel = viewModel,
@@ -174,6 +177,7 @@ fun FocusNavGraph(
                 onNavigateStats = { navController.navigate(FocusRoutes.STATS) }
             )
         }
+
         composable(FocusRoutes.STATS) {
             StatisticsScreen(
                 viewModel = viewModel,

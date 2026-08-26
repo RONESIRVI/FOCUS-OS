@@ -26,6 +26,15 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.data.model.LockMode
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
+import java.io.File
+import java.io.FileOutputStream
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.FocusViewModel
 import com.example.util.LockPermissionHelper
@@ -43,9 +52,32 @@ fun SettingsScreen(
     var showUsageAccessDisclosure by remember { mutableStateOf(false) }
     var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
     var userName by remember { mutableStateOf("Focus Student") }
-
+    var profilePhotoUri by remember { mutableStateOf<String?>(null) }
+    
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri: Uri? ->
+            uri?.let {
+                try {
+                    val inputStream = context.contentResolver.openInputStream(it)
+                    val file = File(context.filesDir, "profile_photo.jpg")
+                    val outputStream = FileOutputStream(file)
+                    inputStream?.copyTo(outputStream)
+                    inputStream?.close()
+                    outputStream.close()
+                    
+                    val newUri = Uri.fromFile(file).toString()
+                    sharedPrefs.edit().putString("PROFILE_PHOTO_URI", newUri).apply()
+                    profilePhotoUri = newUri
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    )
+
 
     var permissionsList by remember {
         mutableStateOf(LockPermissionHelper.getAllPermissionsStatus(context))
@@ -67,6 +99,7 @@ fun SettingsScreen(
 
     LaunchedEffect(Unit) {
         userName = sharedPrefs.getString("USER_NAME", "Focus Student") ?: "Focus Student"
+        profilePhotoUri = sharedPrefs.getString("PROFILE_PHOTO_URI", null)
     }
 
     val grantedCount = permissionsList.count { it.isGranted }
@@ -113,15 +146,33 @@ fun SettingsScreen(
                     Box(
                         modifier = Modifier
                             .size(64.dp)
+                            .clickable {
+                                photoPickerLauncher.launch(
+                                    androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            }
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(60.dp)
-                                .background(FocusSurfaceVariant, CircleShape)
-                                .align(Alignment.Center),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = FocusTextSecondary, modifier = Modifier.size(32.dp))
+                        if (profilePhotoUri != null) {
+                            AsyncImage(
+                                model = profilePhotoUri,
+                                contentDescription = "Profile Photo",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .align(Alignment.Center)
+                                    .clip(CircleShape)
+                                    .border(2.dp, FocusPrimary, CircleShape)
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .background(FocusSurfaceVariant, CircleShape)
+                                    .align(Alignment.Center),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = FocusTextSecondary, modifier = Modifier.size(32.dp))
+                            }
                         }
                         Box(
                             modifier = Modifier

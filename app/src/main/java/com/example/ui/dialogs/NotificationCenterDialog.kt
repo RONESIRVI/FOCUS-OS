@@ -49,6 +49,7 @@ fun NotificationCenterDialog(
     summaryStats: StudySummaryStats,
     dismissedIds: Set<String>,
     onDismissNotification: (String) -> Unit,
+    onClearAll: (List<String>) -> Unit,
     onDismiss: () -> Unit,
     onStartScheduledSession: (FocusSession) -> Unit,
     onOpenShield: () -> Unit,
@@ -57,7 +58,7 @@ fun NotificationCenterDialog(
     val formatter = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
     
     // Build real dynamic notifications based on live data
-    val notifications = remember(scheduledSessions, summaryStats) {
+    val notifications = remember(scheduledSessions, summaryStats, dismissedIds) {
         val list = mutableListOf<AppNotification>()
         
 
@@ -131,7 +132,7 @@ fun NotificationCenterDialog(
             )
         )
 
-        list
+        list.filter { it.id !in dismissedIds }
     }
 
     Dialog(
@@ -173,7 +174,7 @@ fun NotificationCenterDialog(
                         }
                     },
                     actions = {
-                        TextButton(onClick = onDismiss) {
+                        TextButton(onClick = { onClearAll(notifications.map { it.id }) }) {
                             Text("Clear All", color = FocusTextSecondary, fontSize = 12.sp)
                         }
                     },

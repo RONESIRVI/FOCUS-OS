@@ -3,20 +3,12 @@ import re
 with open("app/src/main/java/com/example/ui/screens/StatisticsScreen.kt", "r") as f:
     content = f.read()
 
-content = content.replace("fun StatisticsScreen(\n    viewModel: FocusViewModel,\n    onBack: () -> Unit\n) {", "fun StatisticsScreen(\n    viewModel: FocusViewModel,\n    onBack: () -> Unit,\n    isExporting: Boolean = false\n) {")
-
-# Find the verticalScroll part
-# modifier = Modifier
-#     .fillMaxSize()
-#     .padding(padding)
-#     .padding(horizontal = 16.dp)
-#     .verticalScroll(rememberScrollState()),
-
 old_modifier = """                .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),"""
-new_modifier = """                .fillMaxSize()
+                .let { if (isExporting) it else it.verticalScroll(rememberScrollState()) },"""
+
+new_modifier = """                .let { if (isExporting) it.fillMaxWidth() else it.fillMaxSize() }
                 .padding(padding)
                 .padding(horizontal = 16.dp)
                 .let { if (isExporting) it else it.verticalScroll(rememberScrollState()) },"""

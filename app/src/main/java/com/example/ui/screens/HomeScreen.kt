@@ -25,6 +25,10 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.FocusSession
 import com.example.ui.dialogs.AppGuideDialog
 import com.example.ui.dialogs.NotificationCenterDialog
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.FocusViewModel
 import java.text.SimpleDateFormat
@@ -48,13 +52,15 @@ fun HomeScreen(
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
     var userName by remember { mutableStateOf("Focus Student") }
+    var profilePhotoUri by remember { mutableStateOf<String?>(null) }
     
     var showAppGuide by remember { mutableStateOf(false) }
     var showNotifications by remember { mutableStateOf(false) }
-    var dismissedNotificationIds by remember { mutableStateOf(setOf<String>()) }
+    var dismissedNotificationIds by remember { mutableStateOf(sharedPrefs.getStringSet("DISMISSED_NOTIFS", setOf()) ?: setOf()) }
 
     LaunchedEffect(Unit) {
         userName = sharedPrefs.getString("USER_NAME", "Focus Student") ?: "Focus Student"
+        profilePhotoUri = sharedPrefs.getString("PROFILE_PHOTO_URI", null)
     }
 
     // App Guide Dialog (opened via Hamburger Menu 3 lines)
@@ -73,7 +79,16 @@ fun HomeScreen(
             scheduledSessions = scheduledSessions,
             summaryStats = stats,
             dismissedIds = dismissedNotificationIds,
-            onDismissNotification = { id -> dismissedNotificationIds = dismissedNotificationIds + id },
+            onClearAll = { idsToClear ->
+                val newSet = dismissedNotificationIds + idsToClear
+                dismissedNotificationIds = newSet
+                sharedPrefs.edit().putStringSet("DISMISSED_NOTIFS", newSet).apply()
+            },
+            onDismissNotification = { id -> 
+                val newSet = dismissedNotificationIds + id
+                dismissedNotificationIds = newSet
+                sharedPrefs.edit().putStringSet("DISMISSED_NOTIFS", newSet).apply()
+            },
             onDismiss = { showNotifications = false },
             onStartScheduledSession = { session ->
                 viewModel.loadScheduledSession(session.id)
@@ -166,17 +181,31 @@ fun HomeScreen(
 
         // Greeting & Motivation
         item {
-            Column(modifier = Modifier.padding(top = 4.dp)) {
-                Text(
-                    text = "Hi, $userName 👋",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                    color = FocusTextPrimary
-                )
-                Text(
-                    text = "100% Distraction-free Study Environment",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = FocusTextSecondary
-                )
+            Row(modifier = Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (profilePhotoUri != null) {
+                    AsyncImage(
+                        model = profilePhotoUri,
+                        contentDescription = "Profile Photo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, FocusPrimary, CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                }
+                Column {
+                    Text(
+                        text = "Hi, $userName 👋",
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                        color = FocusTextPrimary
+                    )
+                    Text(
+                        text = "100% Distraction-free Study Environment",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = FocusTextSecondary
+                    )
+                }
             }
         }
 

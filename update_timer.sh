@@ -1,0 +1,1 @@
+sed -i 's/val currentProfile = viewModel.setupState.collectAsState().value.lockMode.name/val currentProfile = viewModel.setupState.collectAsState().value.lockMode.name\n    val isScheduled = viewModel.activeScheduledSessionId.collectAsState().value != null/g' app/src/main/java/com/example/ui/screens/FocusTimerScreen.kt

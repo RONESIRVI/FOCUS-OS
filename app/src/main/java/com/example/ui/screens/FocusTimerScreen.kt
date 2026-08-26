@@ -118,6 +118,7 @@ fun FocusTimerScreen(
     val allAppsManual by viewModel.allowedAppsManual.collectAsState()
     val allAppsStrict by viewModel.allowedAppsStrict.collectAsState()
     val allApps = if (currentProfile == "STRICT") allAppsStrict else allAppsManual
+    val isScheduled = viewModel.activeScheduledSessionId.collectAsState().value != null
 
     var showExitAttemptDialog by remember { mutableStateOf(false) }
     var showManageWhitelistDialog by remember { mutableStateOf(false) }
@@ -411,12 +412,13 @@ fun FocusTimerScreen(
                             )
                         }
 
-                        // Quick Add / Manage Button
+                        if (!isScheduled) {
+                            // Quick Add / Manage Button
                         Surface(
                             shape = RoundedCornerShape(8.dp),
                             color = FocusPrimary.copy(alpha = 0.15f),
                             border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.5f)),
-                            modifier = Modifier.clickable { showManageWhitelistDialog = true }
+                            modifier = Modifier.clickable(enabled = !isScheduled) { showManageWhitelistDialog = true }
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -435,6 +437,7 @@ fun FocusTimerScreen(
                                     color = FocusPrimary
                                 )
                             }
+                        }
                         }
                     }
 
@@ -514,8 +517,9 @@ fun FocusTimerScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = FocusTextSecondary
                             )
-                            Button(
-                                onClick = { showManageWhitelistDialog = true },
+                            if (!isScheduled) {
+                                Button(
+                                onClick = { showManageWhitelistDialog = true }, enabled = !isScheduled,
                                 colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black),
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.height(36.dp)
@@ -523,6 +527,7 @@ fun FocusTimerScreen(
                                 Text("+ Select Apps", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                             }
                         }
+                            }
                     }
                 }
             }
@@ -733,15 +738,17 @@ fun FocusTimerScreen(
                                         color = FocusTextSecondary
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Button(
+                                    if (!isScheduled) {
+                                        Button(
                                         onClick = {
                                             showExitAttemptDialog = false
                                             showManageWhitelistDialog = true
-                                        },
+                                        }, enabled = !isScheduled,
                                         colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black),
                                         shape = RoundedCornerShape(10.dp)
                                     ) {
                                         Text("+ Select Study Apps", fontWeight = FontWeight.Bold)
+                                    }
                                     }
                                 }
                             }

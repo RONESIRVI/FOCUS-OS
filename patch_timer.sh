@@ -1,0 +1,2 @@
+# Remove the Quick Add Button if isScheduled is true
+perl -0777 -pi -e 's/(\/\/ Quick Add \/ Manage Button\s+Surface\(\s+shape = RoundedCornerShape\(8\.dp\),\s+color = FocusPrimary\.copy\(alpha = 0\.15f\),\s+border = BorderStroke\(1\.dp, FocusPrimary\.copy\(alpha = 0\.5f\)\),\s+modifier = Modifier\.clickable\(enabled = !isScheduled\) \{ showManageWhitelistDialog = true \}\s+\) \{.*?\} \/\/ End Surface)/if (!isScheduled) {\n                            $1\n                        }/s' app/src/main/java/com/example/ui/screens/FocusTimerScreen.kt

@@ -6,12 +6,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.BarChart
+
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -222,11 +227,32 @@ fun calculatePeriodPreset(type: String, customStart: Long? = null, customEnd: Lo
     }
 }
 
+@Composable
+fun ConditionalScaffold(
+    isExporting: Boolean,
+    topBar: @Composable () -> Unit,
+    containerColor: androidx.compose.ui.graphics.Color,
+    content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit
+) {
+    if (isExporting) {
+        androidx.compose.material3.Surface(color = containerColor) {
+            content(androidx.compose.foundation.layout.PaddingValues(0.dp))
+        }
+    } else {
+        androidx.compose.material3.Scaffold(
+            topBar = topBar,
+            containerColor = containerColor,
+            content = content
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatisticsScreen(
     viewModel: FocusViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    isExporting: Boolean = false
 ) {
     val context = LocalContext.current
     val view = androidx.compose.ui.platform.LocalView.current
@@ -271,9 +297,11 @@ fun StatisticsScreen(
     }
     val period2DailyAvg = remember(period2TotalSeconds, period2Days) { period2TotalSeconds / period2Days }
 
-    Scaffold(
+    ConditionalScaffold(
+        isExporting = isExporting,
         topBar = {
-            TopAppBar(
+            if (!isExporting) {
+                TopAppBar(
                 title = { Text("Statistics", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -285,84 +313,64 @@ fun StatisticsScreen(
                         Icon(Icons.Default.Tune, contentDescription = "Period Filter & Compare", tint = Color.White)
                     }
                     IconButton(onClick = { 
-                        com.example.util.StatsExporter.exportViewToImage(context, view)
+                        com.example.util.ComposeViewExporter.captureAndSaveComposeView(context = context, width = view.width) { androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.wrapContentHeight()) { StatisticsScreen(viewModel, onBack = {}, isExporting = true) } }
                     }) {
                         Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = FocusBackground)
             )
+            }
         },
         containerColor = FocusBackground
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
-                .fillMaxSize()
+                .let { if (isExporting) it.fillMaxWidth() else it.fillMaxSize() }
                 .padding(padding)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .let { if (isExporting) it else it.verticalScroll(rememberScrollState()) },
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Navigation Tabs
-            item {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                ) {
-                    val tabs = listOf("Period", "Day", "Week", "Month", "Trend")
-                    items(tabs) { tab ->
-                        val isSelected = tab == selectedTab
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(if (isSelected) StatBlue else FocusSurfaceVariant.copy(alpha = 0.5f))
-                                .border(1.dp, if (isSelected) Color.Transparent else FocusSurfaceVariant, RoundedCornerShape(20.dp))
-                                .clickable { selectedTab = tab }
-                                .padding(horizontal = 18.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = tab,
-                                color = if (isSelected) Color.White else FocusTextSecondary,
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                        }
-                    }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                listOf("Period", "Day", "Week", "Month", "Trend").forEach { tab ->
+                    TabButton(
+                        text = tab,
+                        isSelected = selectedTab == tab,
+                        onClick = { selectedTab = tab }
+                    )
                 }
             }
 
-            if (selectedTab == "Period") {
-                // Period Selector Cards
-                item {
+            when (selectedTab) {
+                "Period" -> {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         PeriodCard(
                             color = StatBlue,
                             title = primaryPeriod.title,
                             subtitle = primaryPeriod.displayRange,
-                            onClick = {
-                                showCompareDialog = true
-                            }
+                            onClick = { showCompareDialog = true }
                         )
                         if (compareModeEnabled) {
                             PeriodCard(
                                 color = StatGreen,
                                 title = comparisonPeriod.title,
                                 subtitle = comparisonPeriod.displayRange,
-                                onClick = {
-                                    showCompareDialog = true
-                                }
+                                onClick = { showCompareDialog = true }
                             )
                         }
                     }
-                }
 
-                // Summary Statistics Cards
-                item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = FocusSurface),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
-                            // Primary Period Summary
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceAround
@@ -386,8 +394,6 @@ fun StatisticsScreen(
                                     )
                                 }
                             }
-
-                            // Comparison Period Summary
                             if (compareModeEnabled) {
                                 Spacer(modifier = Modifier.height(16.dp))
                                 HorizontalDivider(color = FocusSurfaceVariant)
@@ -418,36 +424,20 @@ fun StatisticsScreen(
                             }
                         }
                     }
-                }
 
-                // Cumulative Time Comparison Line Graph
-                item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = FocusSurface),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().height(280.dp)
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Cumulative time comparison", color = Color.White, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(modifier = Modifier.size(8.dp).background(StatBlue, CircleShape))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("P1", color = FocusTextSecondary, style = MaterialTheme.typography.labelSmall)
-                                    if (compareModeEnabled) {
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Box(modifier = Modifier.size(8.dp).background(StatGreen, CircleShape))
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("P2", color = FocusTextSecondary, style = MaterialTheme.typography.labelSmall)
-                                    }
-                                }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.TrendingUp, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Cumulative focus time", color = Color.White, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
                             }
                             Spacer(modifier = Modifier.height(12.dp))
-                            Box(modifier = Modifier.fillMaxSize()) {
+                            Box(modifier = Modifier.fillMaxWidth().height(250.dp)) {
                                 CumulativeLineChart(
                                     period1 = primaryPeriod,
                                     sessions1 = period1Sessions,
@@ -458,39 +448,29 @@ fun StatisticsScreen(
                             }
                         }
                     }
-                }
 
-                // Subject Ratio Donut Chart 1 (Primary - Blue)
-                item {
                     SubjectRatioCard(
                         color = StatBlue,
                         periodTitle = primaryPeriod.title,
                         sessions = period1Sessions
                     )
-                }
 
-                // Subject Ratio Donut Chart 2 (Comparison - Green)
-                if (compareModeEnabled) {
-                    item {
+                    if (compareModeEnabled) {
                         SubjectRatioCard(
                             color = StatGreen,
                             periodTitle = comparisonPeriod.title,
-                            sessions = period2Sessions,
-                            isSecond = true
+                            sessions = period2Sessions
                         )
                     }
-                }
 
-                // Subject Time Per Day - Stacked Bar Chart
-                item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = FocusSurface),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(10.dp).background(StatBlue, RoundedCornerShape(2.dp)))
+                                Icon(Icons.Default.BarChart, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Subject time per day", color = Color.White, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
                             }
@@ -502,21 +482,15 @@ fun StatisticsScreen(
                         }
                     }
                 }
-            } else if (selectedTab == "Day") {
-                item { DayTabContent(allSessions = allSessions) }
-            } else if (selectedTab == "Week") {
-                item { WeekTabContent(allSessions = allSessions) }
-            } else if (selectedTab == "Month") {
-                item { MonthTabContent(allSessions = allSessions) }
-            } else {
-                item { TrendTabContent(allSessions = allSessions) }
+                "Day" -> { DayTabContent(allSessions = allSessions) }
+                "Week" -> { WeekTabContent(allSessions = allSessions) }
+                "Month" -> { MonthTabContent(allSessions = allSessions) }
+                "Trend" -> { TrendTabContent(allSessions = allSessions) }
             }
-
-            item { Spacer(modifier = Modifier.height(40.dp)) }
+            Spacer(modifier = Modifier.height(40.dp))
         }
-    }
 
-    // Comprehensive Period Compare Dialog
+
     if (showCompareDialog) {
         CompareDialog(
             compareModeEnabled = compareModeEnabled,
@@ -529,7 +503,6 @@ fun StatisticsScreen(
                 showCompareDialog = false
             },
             onOpenDatePicker = { target ->
-                // target 1 = primary, target 2 = comparison
                 datePickerTargetPeriod = target
             },
             onDismiss = { showCompareDialog = false }
@@ -563,8 +536,10 @@ fun StatisticsScreen(
             onDismiss = { datePickerTargetPeriod = null }
         )
     }
-}
 
+
+}
+}
 @Composable
 fun PeriodCard(
     color: Color,
@@ -1678,5 +1653,23 @@ fun TrendTabContent(allSessions: List<FocusSession>) {
                 }
             }
         }
+    }
+}
+
+
+@Composable
+fun TabButton(text: String, isSelected: Boolean, onClick: () -> Unit) {
+    androidx.compose.material3.TextButton(
+        onClick = onClick,
+        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+            contentColor = if (isSelected) androidx.compose.ui.graphics.Color.White else FocusTextSecondary
+        ),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        modifier = androidx.compose.ui.Modifier.background(
+            if (isSelected) FocusSurfaceVariant else androidx.compose.ui.graphics.Color.Transparent,
+            androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+        )
+    ) {
+        androidx.compose.material3.Text(text, style = androidx.compose.material3.MaterialTheme.typography.labelMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
     }
 }
