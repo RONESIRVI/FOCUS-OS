@@ -121,9 +121,9 @@ fun FocusSetupScreen(
 
     var customDuration by remember { mutableFloatStateOf(setup.durationMinutes.toFloat()) }
 
-    var isScheduled by remember { mutableStateOf(false) }
-    var scheduleHour by remember { mutableStateOf(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) }
-    var scheduleMinute by remember { mutableStateOf(Calendar.getInstance().get(Calendar.MINUTE)) }
+    
+    
+    
 
     val hasOverlay = remember { LockPermissionHelper.hasOverlayPermission(context) }
     val hasUsage = remember { LockPermissionHelper.hasUsageStatsPermission(context) }
@@ -467,14 +467,8 @@ fun FocusSetupScreen(
                                         )
                                         .border(2.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
                                         .clickable {
-                                            if (isScheduled) {
-                                                viewModel.scheduleFocusSession(scheduleHour, scheduleMinute)
-                                                // After scheduling, just go back
-                                                onBack()
-                                            } else {
-                                                viewModel.startFocusSession()
-                                                onStartSession()
-                                            }
+                                            viewModel.startFocusSession()
+                                            onStartSession()
                                         }
                                         .testTag("start_session_confirm_btn"),
                                     contentAlignment = Alignment.Center
@@ -498,7 +492,7 @@ fun FocusSetupScreen(
                                         }
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Text(
-                                            text = if (isScheduled) "SCHEDULE SESSION" else "LAUNCH FOCUS SHIELD",
+                                            text = "LAUNCH FOCUS SHIELD",
                                             style = MaterialTheme.typography.titleMedium.copy(
                                                 fontWeight = FontWeight.ExtraBold,
                                                 letterSpacing = 1.sp
@@ -675,78 +669,6 @@ fun FocusSetupScreen(
                                     }
                                 }
                                 
-                                Spacer(modifier = Modifier.height(24.dp))
-                                
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Schedule,
-                                        contentDescription = null,
-                                        tint = FocusAccentOrange,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Schedule Time",
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White
-                                    )
-                                }
-                                
-                                Spacer(modifier = Modifier.height(14.dp))
-                                
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        androidx.compose.material3.Switch(
-                                            checked = isScheduled,
-                                            onCheckedChange = { isScheduled = it },
-                                            colors = androidx.compose.material3.SwitchDefaults.colors(
-                                                checkedThumbColor = Color.White,
-                                                checkedTrackColor = FocusAccentOrange,
-                                                uncheckedThumbColor = FocusTextSecondary,
-                                                uncheckedTrackColor = FocusSurfaceVariant
-                                            )
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(if (isScheduled) "Scheduled" else "Start Now", color = Color.White)
-                                    }
-                                    
-                                    if (isScheduled) {
-                                        Box(
-                                            modifier = Modifier
-                                                .background(FocusSurfaceVariant, RoundedCornerShape(8.dp))
-                                                .clickable {
-                                                    TimePickerDialog(
-                                                        context,
-                                                        { _, hour, min -> 
-                                                            scheduleHour = hour
-                                                            scheduleMinute = min
-                                                        },
-                                                        scheduleHour,
-                                                        scheduleMinute,
-                                                        false
-                                                    ).show()
-                                                }
-                                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                                        ) {
-                                            val amPm = if (scheduleHour >= 12) "PM" else "AM"
-                                            val h = if (scheduleHour % 12 == 0) 12 else scheduleHour % 12
-                                            val m = String.format("%02d", scheduleMinute)
-                                            Text(
-                                                text = "$h:$m $amPm",
-                                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                                color = FocusAccentOrange
-                                            )
-                                        }
-                                    }
-                                }
-                                
-                            }
-                        }
-
                         // Section 2: Allowed Apps Whitelist
                         Card(
                             colors = CardDefaults.cardColors(containerColor = FocusSurface),
@@ -966,4 +888,6 @@ fun FocusSetupScreen(
             containerColor = FocusSurface
         )
     }
+}
+}
 }

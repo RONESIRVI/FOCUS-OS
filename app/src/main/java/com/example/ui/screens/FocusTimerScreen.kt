@@ -437,93 +437,136 @@ fun FocusTimerScreen(
                 onDismissRequest = { /* Modal lock - require explicit action */ },
                 properties = DialogProperties(
                     dismissOnBackPress = false,
-                    dismissOnClickOutside = false
+                    dismissOnClickOutside = false,
+                    usePlatformDefaultWidth = false
                 )
             ) {
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = FocusSurface,
-                    tonalElevation = 8.dp,
-                    modifier = Modifier.fillMaxWidth()
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(Color.Black, Color(0xFF6B0000), Color(0xFF330000))
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
                     Column(
-                        modifier = Modifier.padding(24.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        Text(
+                            text = "WARNING:\nSECURITY ALERT",
+                            style = MaterialTheme.typography.headlineLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 1.sp,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            ),
+                            color = Color.White
+                        )
+                        
+                        Spacer(modifier = Modifier.height(48.dp))
+                        
                         Box(
                             modifier = Modifier
-                                .size(60.dp)
-                                .background(FocusCoralRed.copy(alpha = 0.2f), CircleShape)
-                                .border(2.dp, FocusCoralRed, CircleShape),
+                                .size(120.dp)
+                                .background(Color.Red.copy(alpha = 0.1f), CircleShape)
+                                .border(4.dp, Color.Red, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Warning,
                                 contentDescription = "Warning",
-                                tint = FocusCoralRed,
-                                modifier = Modifier.size(32.dp)
+                                tint = Color.Red,
+                                modifier = Modifier.size(60.dp)
                             )
                         }
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        Text(
+                            text = "FOCUS LOCK ACTIVE",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 2.sp
+                            ),
+                            color = Color.Red
+                        )
 
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = "⚠️ FOCUS SESSION IS ACTIVE",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 0.5.sp
-                            ),
-                            color = FocusCoralRed
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = "You are trying to leave your study session. Stay disciplined!",
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = "This app is currently unavailable.",
+                            style = MaterialTheme.typography.bodyLarge,
                             color = Color.White,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
+                        
+                        Spacer(modifier = Modifier.height(32.dp))
+                        
+                        androidx.compose.material3.HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+                        
+                        Spacer(modifier = Modifier.height(32.dp))
+                        
+                        Text(
+                            text = "Current Session",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = FocusTextSecondary
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text(
+                            text = timerState.subjectName,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White
+                        )
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        val mins = timerState.remainingSeconds / 60
+                        val secs = timerState.remainingSeconds % 60
+                        val timeStr = String.format("%02d:%02d", mins, secs)
+                        
+                        Text(
+                            text = "⏱ $timeStr Remaining",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = FocusCyan
+                        )
+                        
+                        Spacer(modifier = Modifier.height(32.dp))
+                        
+                        androidx.compose.material3.HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+                        
+                        Spacer(modifier = Modifier.height(32.dp))
+                        
+                        Text(
+                            text = "Complete your focus session\nto unlock blocked apps",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.7f),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .background(FocusSlateBg, RoundedCornerShape(12.dp))
-                                .padding(horizontal = 16.dp, vertical = 10.dp)
-                        ) {
-                            Text(
-                                text = "Time Remaining: ${timerState.remainingSeconds / 60}m ${timerState.remainingSeconds % 60}s",
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                color = FocusCyan
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(48.dp))
 
                         // Return to Focus Button
                         Button(
                             onClick = { viewModel.dismissLockOverlay() },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(50.dp)
+                                .height(56.dp)
                                 .testTag("return_to_focus_btn"),
-                            colors = ButtonDefaults.buttonColors(containerColor = FocusCyan, contentColor = Color.Black),
-                            shape = RoundedCornerShape(14.dp)
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f), contentColor = Color.White),
+                            shape = RoundedCornerShape(28.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
                         ) {
-                            Text("RETURN TO FOCUS SESSION", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Emergency Exit Button
-                        OutlinedButton(
-                            onClick = { showEmergencyConfirm = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = FocusCoralRed),
-                            shape = RoundedCornerShape(14.dp)
-                        ) {
-                            Text("EMERGENCY EXIT", style = MaterialTheme.typography.labelLarge)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("BACK TO FOCUS", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Icon(imageVector = Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
+                            }
                         }
                     }
                 }

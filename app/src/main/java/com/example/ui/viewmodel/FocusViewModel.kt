@@ -242,6 +242,12 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                     pendingIntent
                 )
             }
+            
+            launch(Dispatchers.Main) {
+                val formatter = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+                val timeStr = formatter.format(java.util.Date(scheduledStartTime))
+                android.widget.Toast.makeText(context, "✅ Strict Focus scheduled for $timeStr", android.widget.Toast.LENGTH_LONG).show()
+            }
         }
     }
 

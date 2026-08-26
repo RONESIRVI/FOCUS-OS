@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.ui.screens.AppSelectorScreen
 import com.example.ui.screens.FocusSetupScreen
+import com.example.ui.screens.ScheduleCreateScreen
 import com.example.ui.screens.FocusTimerScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.SessionCompleteScreen
@@ -16,6 +17,7 @@ import com.example.ui.viewmodel.FocusViewModel
 object FocusRoutes {
     const val HOME = "home"
     const val SETUP = "setup"
+    const val SCHEDULE_CREATE = "schedule_create"
     const val APP_SELECTOR = "app_selector"
     const val CAMERA_START = "camera_start"
     const val TIMER = "timer"
@@ -38,9 +40,18 @@ fun FocusNavGraph(
             HomeScreen(
                 viewModel = viewModel,
                 onNavigateToSetup = { navController.navigate(FocusRoutes.SETUP) },
+                onNavigateToScheduleCreate = { navController.navigate(FocusRoutes.SCHEDULE_CREATE) },
                 onNavigateToAppSelector = { navController.navigate(FocusRoutes.APP_SELECTOR) },
                 onNavigateToStats = { navController.navigate(FocusRoutes.STATS) },
                 onNavigateToTimer = { navController.navigate(FocusRoutes.TIMER) }
+            )
+        }
+                composable(FocusRoutes.SCHEDULE_CREATE) {
+            ScheduleCreateScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+                onNavigateToAppSelector = { navController.navigate(FocusRoutes.APP_SELECTOR) },
+                onScheduleCreated = { navController.popBackStack() }
             )
         }
         composable(FocusRoutes.SETUP) {

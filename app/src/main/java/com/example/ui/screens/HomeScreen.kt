@@ -69,6 +69,7 @@ import com.example.ui.viewmodel.FocusViewModel
 fun HomeScreen(
     viewModel: FocusViewModel,
     onNavigateToSetup: () -> Unit,
+    onNavigateToScheduleCreate: () -> Unit,
     onNavigateToAppSelector: () -> Unit,
     onNavigateToStats: () -> Unit,
     onNavigateToTimer: () -> Unit
@@ -516,56 +517,83 @@ fun HomeScreen(
             }
         }
         
-        // Today's Schedule
-        if (scheduledSessions.isNotEmpty()) {
-            item {
-                Text(
-                    text = "TODAY'S SCHEDULE",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = FocusTextSecondary,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
-                )
-            }
-            
-            items(scheduledSessions.take(3)) { session ->
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = FocusSurface),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            val formatter = SimpleDateFormat("h:mm a", Locale.getDefault())
-                            val timeStr = session.scheduledStartTime?.let { formatter.format(Date(it)) } ?: "Upcoming"
-                            Text(
-                                text = timeStr,
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = FocusAccentOrange
-                            )
-                            Text(
-                                text = "${session.sessionName} • ${session.targetDurationMinutes} min",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White
-                            )
-                        }
-                        
+        // Today's Schedule Card
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = FocusSurface),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "TODAY'S SCHEDULE",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = FocusTextSecondary
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    if (scheduledSessions.isEmpty()) {
                         Box(
                             modifier = Modifier
-                                .background(FocusSurfaceVariant, RoundedCornerShape(8.dp))
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("SCHEDULED", style = MaterialTheme.typography.labelSmall, color = FocusCyan)
+                            Text(
+                                text = "No sessions scheduled.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = FocusTextSecondary
+                            )
                         }
+                    } else {
+                        scheduledSessions.take(5).forEach { session ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(modifier = Modifier.size(8.dp).background(FocusAccentOrange, CircleShape))
+                                Spacer(modifier = Modifier.width(12.dp))
+                                
+                                val formatter = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+                                val timeStr = session.scheduledStartTime?.let { formatter.format(java.util.Date(it)) } ?: "Upcoming"
+                                
+                                Text(
+                                    text = timeStr,
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = Color.White,
+                                    modifier = Modifier.width(80.dp)
+                                )
+                                
+                                Text(
+                                    text = session.subjectName.uppercase(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    OutlinedButton(
+                        onClick = { onNavigateToScheduleCreate() },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("ADD SESSION", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                     }
                 }
             }
         }
-        
+
     }
 }
