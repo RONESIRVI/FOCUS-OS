@@ -243,7 +243,7 @@ fun SettingsScreen(
         item {
             SettingsSectionTitle("🔴 CORE APP-BLOCKING ENGINE (MOST IMPORTANT)")
             Text(
-                text = "These 3 permissions instantly detect blocked apps and immediately redirect back to Focus App.",
+                text = "These core permissions detect distracting apps and display the focus shield overlay during study.",
                 style = MaterialTheme.typography.bodySmall,
                 color = FocusTextSecondary,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -252,27 +252,27 @@ fun SettingsScreen(
 
         item {
             SettingsCard {
-                // 1. Accessibility
+                // 1. Usage Stats
                 PermissionRowItem(
                     number = "1",
-                    title = "Accessibility Service",
-                    badgeText = "Main Blocker",
-                    description = "When a blocked distracting app is tapped, intercepts window state to redirect back to focus countdown.",
-                    isGranted = LockPermissionHelper.isAccessibilityServiceEnabled(context),
-                    actionLabel = "Enable Service",
-                    onAction = { showAccessibilityDisclosure = true }
-                )
-                Divider(color = FocusSurfaceVariant)
-
-                // 2. Usage Stats
-                PermissionRowItem(
-                    number = "2",
                     title = "Usage Access (PACKAGE_USAGE_STATS)",
-                    badgeText = "App Monitor",
-                    description = "Monitors foreground app switching to detect unauthorized app launches during focus.",
+                    badgeText = "Main Blocker",
+                    description = "Monitors foreground app switching in real-time to detect and block unauthorized apps during study.",
                     isGranted = LockPermissionHelper.hasUsageStatsPermission(context),
                     actionLabel = "Grant Access",
                     onAction = { showUsageAccessDisclosure = true }
+                )
+                Divider(color = FocusSurfaceVariant)
+
+                // 2. Draw Over Apps
+                PermissionRowItem(
+                    number = "2",
+                    title = "Draw Over Other Apps (Overlay)",
+                    badgeText = "Shield Lock",
+                    description = "Instantly brings the Focus lock shield over distracting apps when tapped during active sessions.",
+                    isGranted = LockPermissionHelper.hasOverlayPermission(context),
+                    actionLabel = "Enable Overlay",
+                    onAction = { LockPermissionHelper.openOverlaySettings(context) }
                 )
                 Divider(color = FocusSurfaceVariant)
 
@@ -482,10 +482,10 @@ fun SettingsScreen(
                 )
                 Divider(color = FocusSurfaceVariant)
                 SettingsClickableItem(
-                    icon = Icons.Default.AccessibilityNew,
-                    title = "Accessibility API Disclosure",
+                    icon = Icons.Default.Security,
+                    title = "Usage Access Disclosure",
                     subtitle = "Google Play Prominent Disclosure & Strict Scope",
-                    onClick = { showAccessibilityDisclosure = true }
+                    onClick = { showUsageAccessDisclosure = true }
                 )
             }
         }
@@ -507,15 +507,15 @@ fun SettingsScreen(
             text = {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Why normal Android apps cannot block other apps with a single permission:",
+                        text = "How FOCUS OS reliably blocks distracting apps during study:",
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                         color = FocusPrimary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "• In standard Android OS, security sandboxing prevents any single standard permission from killing or blocking other apps.\n\n" +
-                                "• Professional focus apps use Accessibility Service to intercept window events within milliseconds and redirect back to the study lock screen.\n\n" +
-                                "• Usage Access + Foreground Service + Battery Optimization Exemption work in synergy to ensure continuous, unkillable background protection.",
+                        text = "• Official Usage Access (PACKAGE_USAGE_STATS) monitors foreground app changes with zero privacy invasion.\n\n" +
+                                "• When a blocked distracting app is opened during active study, the system instantly raises the Focus Lock screen.\n\n" +
+                                "• Foreground Service + Battery Optimization Exemption work in synergy to ensure continuous, unkillable background protection.",
                         style = MaterialTheme.typography.bodySmall,
                         color = FocusTextSecondary,
                         lineHeight = 18.sp
@@ -560,66 +560,6 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(onClick = { showEditProfileDialog = false }) {
                     Text("Cancel", color = FocusTextSecondary)
-                }
-            },
-            containerColor = FocusSurface
-        )
-    }
-
-    // Google Play Prominent Disclosure Dialog for Accessibility Service
-    if (showAccessibilityDisclosure) {
-        AlertDialog(
-            onDismissRequest = { showAccessibilityDisclosure = false },
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.AccessibilityNew,
-                    contentDescription = null,
-                    tint = FocusPrimary,
-                    modifier = Modifier.size(36.dp)
-                )
-            },
-            title = {
-                Text(
-                    text = "Accessibility Service Disclosure",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleLarge
-                )
-            },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = "Important Play Store Disclosure:",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        color = FocusPrimary
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "FOCUS OS uses Android's AccessibilityService API exclusively for the app-blocking feature during active focus sessions.\n\n" +
-                                "• How It Works: It detects when non-whitelisted distracting apps are brought to foreground and redirects you back to your study timer.\n\n" +
-                                "• Zero Data Collection: This service does NOT read screen content, text, messages, passwords, or personal data.\n\n" +
-                                "• No Keylogging: No keystrokes, touches, or inputs are recorded or saved.\n\n" +
-                                "• Completely Offline: No telemetry or app usage information is ever transmitted to any external server.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = FocusTextSecondary,
-                        lineHeight = 18.sp
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showAccessibilityDisclosure = false
-                        LockPermissionHelper.openAccessibilitySettings(context)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black)
-                ) {
-                    Text("Agree & Open Settings", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAccessibilityDisclosure = false }) {
-                    Text("Decline", color = FocusTextSecondary)
                 }
             },
             containerColor = FocusSurface
@@ -714,8 +654,8 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "1. Restricted Permissions: No QUERY_ALL_PACKAGES or battery optimization requests in manifest. Uses compliant launcher queries.\n\n" +
-                                "2. Accessibility API: Strictly isolated to window interception. canRetrieveWindowContent is set to false.\n\n" +
+                        text = "1. Zero Dangerous Interception: No sensitive accessibility logging or keylogging.\n\n" +
+                                "2. Official Usage Access API: Monitors foreground apps without reading screen text, messages, or credentials.\n\n" +
                                 "3. Foreground Service: Declared with 'specialUse' for student focus session lockdown.\n\n" +
                                 "4. Zero External Transmission: All study stats, custom notes, and app whitelists remain strictly on your local device.",
                         style = MaterialTheme.typography.bodySmall,

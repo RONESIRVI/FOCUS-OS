@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.R
 import com.example.data.model.LockMode
+import com.example.util.FocusLockManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -45,6 +46,7 @@ class FocusTimerService : Service() {
     val timerState: StateFlow<TimerState> = _timerState.asStateFlow()
 
     private var timerJob: Job? = null
+    private var appMonitorJob: Job? = null
 
     inner class LocalBinder : Binder() {
         fun getService(): FocusTimerService = this@FocusTimerService
@@ -99,6 +101,40 @@ class FocusTimerService : Service() {
         audioEngine.startSound(soundType, scope)
         startForeground(NOTIFICATION_ID, buildNotification())
         runCountdown()
+        startAppLockMonitoring()
+    }
+
+    private fun startAppLockMonitoring() {
+        appMonitorJob?.cancel()
+        appMonitorJob = scope.launch {
+            val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
+            while (_timerState.value.isRunning) {
+                try {
+                    if (FocusLockManager.isFocusActive && !_timerState.value.isPaused) {
+                        val endTime = System.currentTimeMillis()
+                        val startTime = endTime - 4000
+                        val events = usageStatsManager?.queryEvents(startTime, endTime)
+                        if (events != null) {
+                            var lastEventPackage: String? = null
+                            val event = android.app.usage.UsageEvents.Event()
+                            while (events.hasNextEvent()) {
+                                events.getNextEvent(event)
+                                if (event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED) {
+                                    lastEventPackage = event.packageName
+                                }
+                            }
+                            if (lastEventPackage != null && !FocusLockManager.isPackageAllowed(lastEventPackage, packageName)) {
+                                recordDistractionAttempt()
+                                FocusLockManager.handleBlockedAppOpened(this@FocusTimerService, lastEventPackage)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Ignore query failures
+                }
+                delay(750)
+            }
+        }
     }
 
     private fun runCountdown() {
@@ -118,6 +154,7 @@ class FocusTimerService : Service() {
                 // Timer complete
                 _timerState.value = _timerState.value.copy(isRunning = false)
                 audioEngine.stopSound()
+                appMonitorJob?.cancel()
                 stopForeground(STOP_FOREGROUND_REMOVE)
             }
         }
@@ -151,6 +188,7 @@ class FocusTimerService : Service() {
 
     fun stopTimer() {
         timerJob?.cancel()
+        appMonitorJob?.cancel()
         audioEngine.stopSound()
         _timerState.value = TimerState(isRunning = false)
         stopForeground(STOP_FOREGROUND_REMOVE)

@@ -1,7 +1,6 @@
 package com.example.util
 
 import android.Manifest
-import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.AlarmManager
 import android.app.AppOpsManager
 import android.content.Context
@@ -12,9 +11,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.os.Process
 import android.provider.Settings
-import android.view.accessibility.AccessibilityManager
 import androidx.core.content.ContextCompat
-import com.example.services.FocusAccessibilityService
 
 data class PermissionItemState(
     val id: String,
@@ -27,28 +24,7 @@ data class PermissionItemState(
 
 object LockPermissionHelper {
 
-    // 1. Accessibility Service
-    fun isAccessibilityServiceEnabled(context: Context): Boolean {
-        val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager ?: return false
-        val enabledServices = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC or AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-        val expectedServiceName = FocusAccessibilityService::class.java.name
-        return enabledServices.any { 
-            it.resolveInfo.serviceInfo.packageName == context.packageName && 
-            (it.resolveInfo.serviceInfo.name == expectedServiceName || it.id.contains(expectedServiceName))
-        }
-    }
-
-    fun openAccessibilitySettings(context: Context) {
-        try {
-            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            openAppSettings(context)
-        }
-    }
-
-    // 2. Usage Stats (PACKAGE_USAGE_STATS)
+    // 1. Usage Stats (PACKAGE_USAGE_STATS) - Primary App Blocker Engine
     fun hasUsageStatsPermission(context: Context): Boolean {
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager
             ?: return false
@@ -84,7 +60,7 @@ object LockPermissionHelper {
         }
     }
 
-    // 3. Installed Apps Visibility (Policy-Compliant <queries>)
+    // 2. Installed Apps Visibility (Policy-Compliant <queries>)
     fun hasQueryAllPackagesPermission(context: Context): Boolean {
         return try {
             val pm = context.packageManager
@@ -96,12 +72,12 @@ object LockPermissionHelper {
         }
     }
 
-    // 4. Foreground Service & Special Use
+    // 3. Foreground Service & Special Use
     fun isForegroundServiceConfigured(): Boolean {
         return true // Declared in Manifest & configured with specialUse
     }
 
-    // 6. Battery Optimization Exemption
+    // 4. Battery Optimization Exemption
     fun isIgnoringBatteryOptimizations(context: Context): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
@@ -127,12 +103,12 @@ object LockPermissionHelper {
         }
     }
 
-    // 7. Run at Startup (RECEIVE_BOOT_COMPLETED)
+    // 5. Run at Startup (RECEIVE_BOOT_COMPLETED)
     fun hasBootPermission(context: Context): Boolean {
         return ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_BOOT_COMPLETED) == PackageManager.PERMISSION_GRANTED
     }
 
-    // 8. Draw Over Other Apps (SYSTEM_ALERT_WINDOW)
+    // 6. Draw Over Other Apps (SYSTEM_ALERT_WINDOW)
     fun hasOverlayPermission(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Settings.canDrawOverlays(context)
@@ -158,7 +134,7 @@ object LockPermissionHelper {
         }
     }
 
-    // 9. Notifications (POST_NOTIFICATIONS)
+    // 7. Notifications (POST_NOTIFICATIONS)
     fun hasNotificationPermission(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -183,7 +159,7 @@ object LockPermissionHelper {
         }
     }
 
-    // 10. Schedule Exact Alarms
+    // 8. Schedule Exact Alarms
     fun canScheduleExactAlarms(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
@@ -224,18 +200,18 @@ object LockPermissionHelper {
     fun getAllPermissionsStatus(context: Context): List<PermissionItemState> {
         return listOf(
             PermissionItemState(
-                id = "ACCESSIBILITY",
-                title = "1. Accessibility Service",
+                id = "USAGE_ACCESS",
+                title = "1. Usage Access (App Blocker)",
                 category = "CRITICAL",
-                description = "Instantly redirects away from blocked distracting apps to keep your study focus unbroken.",
-                isGranted = isAccessibilityServiceEnabled(context)
+                description = "Monitors foreground application activity in real time to intercept unauthorized distracting apps.",
+                isGranted = hasUsageStatsPermission(context)
             ),
             PermissionItemState(
-                id = "USAGE_ACCESS",
-                title = "2. Usage Access",
+                id = "OVERLAY",
+                title = "2. Draw Over Other Apps",
                 category = "CRITICAL",
-                description = "Monitors foreground application activity to detect distraction attempts in real time.",
-                isGranted = hasUsageStatsPermission(context)
+                description = "Displays the security lock shield directly over unauthorized apps when opened.",
+                isGranted = hasOverlayPermission(context)
             ),
             PermissionItemState(
                 id = "QUERY_PACKAGES",
@@ -273,22 +249,15 @@ object LockPermissionHelper {
                 isGranted = hasBootPermission(context)
             ),
             PermissionItemState(
-                id = "OVERLAY",
-                title = "8. Draw Over Other Apps",
-                category = "SUPPORTING",
-                description = "Displays the security lock shield directly over unauthorized apps when opened.",
-                isGranted = hasOverlayPermission(context)
-            ),
-            PermissionItemState(
                 id = "NOTIFICATIONS",
-                title = "9. Notifications",
+                title = "8. Notifications",
                 category = "SUPPORTING",
                 description = "Displays active countdown bar and 2-minute pre-schedule study alerts.",
                 isGranted = hasNotificationPermission(context)
             ),
             PermissionItemState(
                 id = "EXACT_ALARMS",
-                title = "10. Schedule Exact Alarms",
+                title = "9. Schedule Exact Alarms",
                 category = "SUPPORTING",
                 description = "Triggers planned study sessions at the exact scheduled second.",
                 isGranted = canScheduleExactAlarms(context)

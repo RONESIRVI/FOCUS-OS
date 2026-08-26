@@ -121,13 +121,13 @@ fun AppGuideDialog(
                 detailsEn = listOf(
                     "NORMAL MODE: Basic study timer without app blocking. Ideal for light revision.",
                     "SOFT LOCK (Level 1): Displays a warning full-screen overlay if you attempt to leave FOCUS OS.",
-                    "STRICT LOCK (Level 2): 50ms accessibility blocker + UsageStats monitor. Instantly blocks and closes any unwhitelisted app (Instagram, YouTube, Games, WhatsApp).",
+                    "STRICT LOCK (Level 2): Usage Access Monitor + Overlay Shield. Automatically detects and blocks any unwhitelisted app (Instagram, YouTube, Games, WhatsApp).",
                     "MAXIMUM LOCK (Level 3 - Kiosk): Enforces strict kiosk mode with a 200-second emergency penalty timer before exit."
                 ),
                 detailsHi = listOf(
                     "नॉर्मल मोड: बिना ऐप ब्लॉकिंग के सामान्य टाइमर।",
                     "सॉफ्ट लॉक (लेवल 1): ऐप से बाहर निकलने पर स्क्रीन पर चेतावनी दिखाई देगी।",
-                    "स्ट्रिक्ट लॉक (लेवल 2): 50 मिलीसेकंड का एक्सेसिबिलिटी ब्लॉकर। प्रतिबंधित ऐप (इंस्टाग्राम, यूट्यूब आदि) खुलते ही तुरंत बंद हो जाएंगे।",
+                    "स्ट्रिक्ट लॉक (लेवल 2): यूसेज एक्सेस मॉनिटर + शील्ड ओवरले। प्रतिबंधित ऐप (इंस्टाग्राम, यूट्यूब आदि) खुलते ही तुरंत ब्लॉक हो जाएंगे।",
                     "मैक्सिमम लॉक (लेवल 3 - कियोस्क): फुल फोन लॉकडाउन। इमरजेंसी में बाहर निकलने के लिए 200 सेकंड की पेनल्टी लगेगी।"
                 ),
                 tag = "SECURITY"
@@ -173,33 +173,31 @@ fun AppGuideDialog(
             GuideSection(
                 id = "section_shield",
                 icon = Icons.Default.Shield,
-                titleEn = "7. 10-Permission Shield Architecture",
-                titleHi = "7. 10 परमिशन्स शील्ड गाइड",
-                summaryEn = "Understanding why Android requires these 10 permissions to achieve 100% distraction-proof blocking.",
-                summaryHi = "जानिए एंड्रॉइड पर 100% ऐप ब्लॉकिंग के लिए ये 10 परमिशन्स क्यों जरूरी हैं।",
+                titleEn = "7. Permission Shield Architecture",
+                titleHi = "7. परमिशन्स शील्ड गाइड",
+                summaryEn = "Understanding how Android permissions work together to achieve policy-compliant distraction blocking.",
+                summaryHi = "जानिए एंड्रॉइड पर सुरक्षित और सटीक ऐप ब्लॉकिंग के लिए ये परमिशन्स कैसे काम करते हैं।",
                 detailsEn = listOf(
-                    "1. Accessibility Service: Detects unauthorized app opens within 50ms and redirects back.",
-                    "2. Usage Access (PACKAGE_USAGE_STATS): Real-time monitor of foreground running apps.",
-                    "3. Draw Over Other Apps (Overlay): Displays strict lock screen over blocked apps.",
-                    "4. Ignore Battery Optimization: Prevents Android from killing the focus background service.",
-                    "5. Schedule Exact Alarms: Guarantees precise schedule alarms down to the exact second.",
-                    "6. Query All Packages: Allows reading installed apps to populate the whitelist selector.",
+                    "1. Usage Access (PACKAGE_USAGE_STATS): Real-time monitor of foreground apps to detect unauthorized app launches.",
+                    "2. Draw Over Other Apps (Overlay): Displays strict lock screen shield over blocked apps.",
+                    "3. Query Packages: Allows discovering installed apps for custom whitelist selection.",
+                    "4. Ignore Battery Optimization: Prevents Android OEM killers from terminating the active focus timer.",
+                    "5. Schedule Exact Alarms: Guarantees precise schedule timetable alarms down to the exact second.",
+                    "6. Foreground Service (specialUse): Keeps study countdown and audio engines active in background.",
                     "7. Post Notifications: Displays live study timer countdown in the status bar.",
-                    "8. Camera: Enables anti-cheat desk photo & selfie capture.",
-                    "9. Full Screen Intent: Rings heads-up alarm when scheduled session starts.",
-                    "10. Boot Completed: Re-registers your timetable alarms after phone reboot."
+                    "8. Camera: Enables anti-cheat desk photo & selfie verification.",
+                    "9. Boot Completed: Re-registers your timetable alarms after phone reboot."
                 ),
                 detailsHi = listOf(
-                    "1. एक्सेसिबिलिटी सर्विस: प्रतिबंधित ऐप खुलते ही 50ms में ब्लॉक करके वापस लाता है।",
-                    "2. यूसेज एक्सेस: बैकग्राउंड में कौन सा ऐप चल रहा है उसे ट्रैक करता है।",
-                    "3. डिस्प्ले ओवर अदर ऐप्स: ब्लॉक ऐप्स के ऊपर लॉक स्क्रीन दिखाता है।",
+                    "1. यूसेज एक्सेस: बैकग्राउंड और फोरग्राउंड ऐप्स को मॉनिटर करता है।",
+                    "2. डिस्प्ले ओवर अदर ऐप्स: ब्लॉक ऐप्स के ऊपर सुरक्षा लॉक स्क्रीन दिखाता है।",
+                    "3. क्वेरी पैकेज: फोन के ऐप्स को व्हाइटलिस्ट करने के लिए स्कैन करता है।",
                     "4. बैटरी ऑप्टिमाइजेशन छूट: बैकग्राउंड सर्विस को कभी बंद नहीं होने देता।",
                     "5. शेड्यूल एग्जैक्ट अलार्म: तय समय पर बिना चूके अलार्म बजाता है।",
-                    "6. क्वेरी ऑल पैकेज: फोन के ऐप्स को व्हाइटलिस्ट करने के लिए स्कैन करता है।",
+                    "6. फोरग्राउंड सर्विस: बैकग्राउंड में स्टडी टाइमर और बाइनॉरल साउंड चालू रखता है।",
                     "7. नोटिफिकेशन्स: स्टेटस बार में टाइमर का लाइव काउंटडाउन दिखाता है।",
                     "8. कैमरा: फोटो और सेल्फी वेरिफिकेशन के लिए।",
-                    "9. फुल स्क्रीन इंटेंट: शेड्यूल शुरू होते ही स्क्रीन पर बड़ा अलार्म लाता है।",
-                    "10. बूट कम्प्लीट: फोन चालू होने पर टाइमटेबल वापस सेट करता है।"
+                    "9. बूट कम्प्लीट: फोन चालू होने पर टाइमटेबल वापस सेट करता है।"
                 ),
                 tag = "SHIELD"
             ),
