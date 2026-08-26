@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -49,9 +52,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.FocusPrimary
-import com.example.ui.theme.FocusPrimary
 import com.example.ui.theme.FocusBackground
+import com.example.ui.theme.FocusDanger
+import com.example.ui.theme.FocusPrimary
 import com.example.ui.theme.FocusSurface
 import com.example.ui.theme.FocusSurfaceVariant
 import com.example.ui.theme.FocusTextSecondary
@@ -68,10 +71,20 @@ fun AppSelectorScreen(
     val apps = if (currentProfile == "STRICT") appsStrict else appsManual
 
     var searchQuery by remember { mutableStateOf("") }
+    var filterTab by remember { mutableStateOf("ALL") } // "ALL", "ALLOWED", "BLOCKED"
 
-    val filteredApps = apps.filter {
-        it.appName.contains(searchQuery, ignoreCase = true) ||
-                it.category.contains(searchQuery, ignoreCase = true)
+    val allowedCount = apps.count { it.isAllowed }
+    val blockedCount = apps.count { !it.isAllowed }
+
+    val filteredApps = apps.filter { app ->
+        val matchesSearch = app.appName.contains(searchQuery, ignoreCase = true) ||
+                app.category.contains(searchQuery, ignoreCase = true)
+        val matchesTab = when (filterTab) {
+            "ALLOWED" -> app.isAllowed
+            "BLOCKED" -> !app.isAllowed
+            else -> true
+        }
+        matchesSearch && matchesTab
     }
 
     Column(
@@ -95,22 +108,22 @@ fun AppSelectorScreen(
             Spacer(modifier = Modifier.width(8.dp))
             Column {
                 Text(
-                    text = if (currentProfile == "STRICT") "STRICT FOCUS APPS" else "FOCUS SESSION APPS",
-                    style = MaterialTheme.typography.titleLarge.copy(
+                    text = if (currentProfile == "STRICT") "ALLOWED STUDY APPS (STRICT)" else "ALLOWED STUDY APPS (MANUAL)",
+                    style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 0.5.sp
                     ),
                     color = Color.White
                 )
                 Text(
-                    text = if (currentProfile == "STRICT") "Only these apps will be allowed during strict schedule" else "Whitelisted apps will stay accessible during manual focus",
+                    text = "Apps toggled ON will remain accessible during session; all others are blocked",
                     style = MaterialTheme.typography.bodySmall,
                     color = FocusTextSecondary
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         // Search Bar
         OutlinedTextField(
@@ -137,7 +150,42 @@ fun AppSelectorScreen(
             shape = RoundedCornerShape(16.dp)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Filter Tabs
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(
+                "ALL" to "All (${apps.size})",
+                "ALLOWED" to "Allowed (${allowedCount})",
+                "BLOCKED" to "Blocked (${blockedCount})"
+            ).forEach { (key, label) ->
+                val isSelected = filterTab == key
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isSelected) FocusPrimary else FocusSurface,
+                    border = BorderStroke(1.dp, if (isSelected) FocusPrimary else FocusSurfaceVariant),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { filterTab = key }
+                ) {
+                    Box(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = if (isSelected) Color.Black else Color.White
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Apps List
         LazyColumn(
@@ -147,7 +195,11 @@ fun AppSelectorScreen(
             items(filteredApps, key = { it.packageName }) { app ->
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = if (!app.isAllowed) FocusSurface else FocusSurfaceVariant.copy(alpha = 0.5f)
+                        containerColor = if (app.isAllowed) FocusPrimary.copy(alpha = 0.12f) else FocusSurface
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        if (app.isAllowed) FocusPrimary.copy(alpha = 0.5f) else FocusSurfaceVariant
                     ),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -159,20 +211,23 @@ fun AppSelectorScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(38.dp)
                                     .background(
-                                        if (!app.isAllowed) Color.Red.copy(alpha = 0.15f) else FocusPrimary.copy(alpha = 0.2f),
+                                        if (app.isAllowed) FocusPrimary.copy(alpha = 0.25f) else FocusDanger.copy(alpha = 0.15f),
                                         CircleShape
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = if (!app.isAllowed) Icons.Default.Lock else Icons.Default.Check,
+                                    imageVector = if (app.isAllowed) Icons.Default.Check else Icons.Default.Lock,
                                     contentDescription = null,
-                                    tint = if (!app.isAllowed) Color.Red else FocusPrimary,
+                                    tint = if (app.isAllowed) FocusPrimary else FocusDanger,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -180,21 +235,21 @@ fun AppSelectorScreen(
                             Column {
                                 Text(
                                     text = app.appName,
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                                     color = Color.White
                                 )
                                 Text(
-                                    text = app.category,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = FocusTextSecondary
+                                    text = if (app.isAllowed) "✓ ALLOWED FOR STUDY" else "🔒 BLOCKED DURING SESSION",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = if (app.isAllowed) FocusPrimary else FocusDanger
                                 )
                             }
                         }
 
                         Switch(
-                            checked = !app.isAllowed,
-                            onCheckedChange = { isBlocked ->
-                                viewModel.toggleAppAllowed(app.packageName, !isBlocked, currentProfile)
+                            checked = app.isAllowed,
+                            onCheckedChange = { isAllowed ->
+                                viewModel.toggleAppAllowed(app.packageName, isAllowed, currentProfile)
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.Black,
@@ -220,7 +275,8 @@ fun AppSelectorScreen(
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black)
         ) {
-            Text("SAVE BLOCKLIST", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+            Text("SAVE ALLOWED APPS", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
         }
     }
 }
+

@@ -87,6 +87,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     private val _showLockOverlay = MutableStateFlow(false)
     val showLockOverlay: StateFlow<Boolean> = _showLockOverlay.asStateFlow()
 
+    private val _lastBlockedPackage = MutableStateFlow<String?>(null)
+    val lastBlockedPackage: StateFlow<String?> = _lastBlockedPackage.asStateFlow()
+
     private val _currentAppSelectorProfile = MutableStateFlow("MANUAL")
     val currentAppSelectorProfile: StateFlow<String> = _currentAppSelectorProfile.asStateFlow()
 
@@ -279,6 +282,18 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+        // Immediately update FocusLockManager allowed packages
+        val allowedList = if (setup.lockMode == LockMode.STRICT_LOCK || setup.lockMode == LockMode.MAXIMUM_LOCK) {
+            whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
+        } else {
+            whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
+        }
+        FocusLockManager.updateFocusState(
+            isActive = true,
+            lockMode = setup.lockMode,
+            allowedPackageNames = allowedList
+        )
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             context.startForegroundService(intent)
         } else {
@@ -449,12 +464,25 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         timerService?.resumeTimer()
     }
 
-    fun triggerDistractionWarning() {
+    fun triggerDistractionWarning(blockedPackage: String = "") {
         if (_serviceTimerState.value.isRunning) {
             timerService?.recordDistractionAttempt()
+            if (blockedPackage.isNotBlank()) {
+                _lastBlockedPackage.value = blockedPackage
+            }
             if (_serviceTimerState.value.lockMode != LockMode.NORMAL) {
                 _showLockOverlay.value = true
             }
+        }
+    }
+
+    fun getAppDisplayName(packageName: String): String {
+        return try {
+            val pm = getApplication<Application>().packageManager
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            pm.getApplicationLabel(appInfo).toString()
+        } catch (e: Exception) {
+            packageName.substringAfterLast(".").replaceFirstChar { it.uppercase() }
         }
     }
 

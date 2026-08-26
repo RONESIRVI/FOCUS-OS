@@ -1,9 +1,11 @@
 package com.example.ui.screens
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,36 +15,47 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,23 +77,24 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.activity.compose.BackHandler
+import com.example.data.model.AllowedApp
 import com.example.data.model.LockMode
-import com.example.services.SoundType
-import com.example.ui.theme.FocusWarning
+import com.example.ui.theme.FocusBackground
 import com.example.ui.theme.FocusDanger
 import com.example.ui.theme.FocusPrimary
 import com.example.ui.theme.FocusPrimaryDark
-import com.example.ui.theme.FocusPrimary
-import com.example.ui.theme.FocusPrimary
-import com.example.ui.theme.FocusBackground
 import com.example.ui.theme.FocusSurface
+import com.example.ui.theme.FocusSurfaceVariant
 import com.example.ui.theme.FocusTextSecondary
+import com.example.ui.theme.FocusWarning
 import com.example.ui.viewmodel.FocusViewModel
+import com.example.util.FocusLockManager
 import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
@@ -93,22 +107,32 @@ fun FocusTimerScreen(
 ) {
     val timerState by viewModel.timerState.collectAsState()
     val showLockOverlay by viewModel.showLockOverlay.collectAsState()
-    val whitelistedApps by viewModel.whitelistedAppsManual.collectAsState()
+    val lastBlockedPackage by viewModel.lastBlockedPackage.collectAsState()
     val context = LocalContext.current
 
+    val whitelistedAppsManual by viewModel.whitelistedAppsManual.collectAsState()
+    val whitelistedAppsStrict by viewModel.whitelistedAppsStrict.collectAsState()
+    val currentProfile = if (timerState.lockMode == LockMode.STRICT_LOCK || timerState.lockMode == LockMode.MAXIMUM_LOCK) "STRICT" else "MANUAL"
+    val whitelistedApps = if (currentProfile == "STRICT") whitelistedAppsStrict else whitelistedAppsManual
+
+    val allAppsManual by viewModel.allowedAppsManual.collectAsState()
+    val allAppsStrict by viewModel.allowedAppsStrict.collectAsState()
+    val allApps = if (currentProfile == "STRICT") allAppsStrict else allAppsManual
+
+    var showExitAttemptDialog by remember { mutableStateOf(false) }
+    var showManageWhitelistDialog by remember { mutableStateOf(false) }
     var showEmergencyConfirm by remember { mutableStateOf(false) }
     var emergencyPenaltyCountdown by remember { mutableIntStateOf(10) }
 
-    // Intercept hardware Back Button to enforce anti-exit focus lock
+    // Intercept hardware Back Button: Instead of letting user exit to social media, prompt with allowed apps chooser
     BackHandler(enabled = timerState.isRunning) {
-        viewModel.triggerDistractionWarning()
-        Toast.makeText(context, "Anti-Exit Shield Active: Finish your session first!", Toast.LENGTH_SHORT).show()
+        showExitAttemptDialog = true
     }
 
     // Emergency exit penalty timer
     LaunchedEffect(showEmergencyConfirm) {
         if (showEmergencyConfirm) {
-            emergencyPenaltyCountdown = 200
+            emergencyPenaltyCountdown = 10
             while (emergencyPenaltyCountdown > 0) {
                 delay(1000)
                 emergencyPenaltyCountdown--
@@ -179,7 +203,7 @@ fun FocusTimerScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -187,7 +211,7 @@ fun FocusTimerScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 16.dp),
+                    .padding(top = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -196,7 +220,7 @@ fun FocusTimerScreen(
                     modifier = Modifier
                         .background(FocusSurface.copy(alpha = 0.85f), CircleShape)
                         .border(1.dp, FocusPrimary.copy(alpha = 0.5f), CircleShape)
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
@@ -204,7 +228,7 @@ fun FocusTimerScreen(
                                 .size(8.dp)
                                 .background(FocusPrimary, CircleShape)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = timerState.subjectName.ifBlank { "Active Session" },
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
@@ -213,26 +237,43 @@ fun FocusTimerScreen(
                     }
                 }
 
-                // Lock Mode Badge
-                Box(
-                    modifier = Modifier
-                        .background(FocusWarning.copy(alpha = 0.2f), CircleShape)
-                        .border(1.dp, FocusWarning, CircleShape)
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = FocusWarning,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = timerState.lockMode.title.uppercase(),
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = FocusWarning
-                        )
+                // Lock Mode Badge & Distraction counter
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (timerState.distractionAttempts > 0) {
+                        Box(
+                            modifier = Modifier
+                                .background(FocusDanger.copy(alpha = 0.2f), CircleShape)
+                                .border(1.dp, FocusDanger, CircleShape)
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "🛡️ ${timerState.distractionAttempts} Blocked",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = FocusDanger
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .background(FocusWarning.copy(alpha = 0.2f), CircleShape)
+                            .border(1.dp, FocusWarning, CircleShape)
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = FocusWarning,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = timerState.lockMode.title.uppercase(),
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = FocusWarning
+                            )
+                        }
                     }
                 }
             }
@@ -240,7 +281,7 @@ fun FocusTimerScreen(
             // Central Ring Clock Timer
             Box(
                 modifier = Modifier
-                    .size(280.dp)
+                    .size(260.dp)
                     .testTag("timer_clock_ring"),
                 contentAlignment = Alignment.Center
             ) {
@@ -250,7 +291,7 @@ fun FocusTimerScreen(
 
                 // Animated Circular Ring Canvas
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val strokeWidth = 14.dp.toPx()
+                    val strokeWidth = 12.dp.toPx()
                     val diameter = size.minDimension - strokeWidth
                     val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
                     val arcSize = Size(diameter, diameter)
@@ -312,7 +353,7 @@ fun FocusTimerScreen(
 
                     Text(
                         text = timeFormatted,
-                        style = MaterialTheme.typography.displayLarge.copy(
+                        style = MaterialTheme.typography.displayMedium.copy(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 2.sp
                         ),
@@ -322,52 +363,164 @@ fun FocusTimerScreen(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = if (timerState.isPaused) "PAUSED" else "FOCUS SESSION ACTIVE",
-                        style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
-                        color = if (timerState.isPaused) FocusPrimary else FocusPrimary
+                        style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp, fontWeight = FontWeight.Bold),
+                        color = if (timerState.isPaused) FocusWarning else FocusPrimary
                     )
                 }
             }
 
+            // ALLOWED STUDY APPS SECTION DIRECTLY UNDER THE TIMER
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("allowed_apps_container"),
+                colors = CardDefaults.cardColors(containerColor = FocusSurface.copy(alpha = 0.95f)),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.35f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Apps,
+                                contentDescription = null,
+                                tint = FocusPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "ALLOWED STUDY APPS",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 0.5.sp
+                                ),
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "(${whitelistedApps.size})",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = FocusPrimary
+                            )
+                        }
 
-            // Allowed Apps Launcher Bar
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "ALLOWED STUDY APPS",
-                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                    color = FocusTextSecondary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(whitelistedApps) { app ->
-                        Box(
-                            modifier = Modifier
-                                .background(FocusSurface.copy(alpha = 0.9f), RoundedCornerShape(14.dp))
-                                .border(1.dp, FocusPrimary.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
-                                .clickable {
-                                    Toast
-                                        .makeText(
-                                            context,
-                                            "Launching ${app.appName} within Whitelist",
-                                            Toast.LENGTH_SHORT
-                                        )
-                                        .show()
-                                }
-                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                        // Quick Add / Manage Button
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = FocusPrimary.copy(alpha = 0.15f),
+                            border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.5f)),
+                            modifier = Modifier.clickable { showManageWhitelistDialog = true }
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
                                 Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Add",
                                     tint = FocusPrimary,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = app.appName.take(12),
-                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                                    color = Color.White
+                                    text = "Manage Apps",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = FocusPrimary
                                 )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    if (whitelistedApps.isNotEmpty()) {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(whitelistedApps, key = { it.packageName }) { app ->
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = FocusBackground.copy(alpha = 0.8f),
+                                    border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.4f)),
+                                    modifier = Modifier
+                                        .clickable {
+                                            val launched = FocusLockManager.launchAllowedApp(context, app.packageName)
+                                            if (launched) {
+                                                Toast.makeText(context, "Opening ${app.appName} (Study Session)", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                Toast.makeText(context, "Could not open ${app.appName}", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .background(FocusPrimary.copy(alpha = 0.25f), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = app.appName.take(1).uppercase(),
+                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                color = FocusPrimary
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Column {
+                                            Text(
+                                                text = app.appName,
+                                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                                color = Color.White,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = "TAP TO OPEN ↗",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 9.sp
+                                                ),
+                                                color = FocusPrimary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Empty state: guide the student to select allowed study apps
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(FocusBackground.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                                .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(12.dp))
+                                .padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "No external apps whitelisted.\nSocial media & other apps are locked.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = FocusTextSecondary
+                            )
+                            Button(
+                                onClick = { showManageWhitelistDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                Text("+ Select Apps", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                             }
                         }
                     }
@@ -378,7 +531,7 @@ fun FocusTimerScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Pause / Resume
@@ -388,7 +541,7 @@ fun FocusTimerScreen(
                     },
                     modifier = Modifier
                         .weight(1f)
-                        .height(52.dp)
+                        .height(50.dp)
                         .testTag("pause_resume_btn"),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (timerState.isPaused) FocusPrimary else FocusSurface,
@@ -414,7 +567,7 @@ fun FocusTimerScreen(
                     },
                     modifier = Modifier
                         .weight(1f)
-                        .height(52.dp)
+                        .height(50.dp)
                         .testTag("finish_session_btn"),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = FocusWarning,
@@ -431,10 +584,375 @@ fun FocusTimerScreen(
             }
         }
 
-        // STRICT LOCK ANTI-EXIT OVERLAY DIALOG
-        if (showLockOverlay) {
+        // ==========================================
+        // 1. EXIT ATTEMPT / ALLOWED APP SELECTOR DIALOG
+        // ==========================================
+        if (showExitAttemptDialog) {
             Dialog(
-                onDismissRequest = { /* Modal lock - require explicit action */ },
+                onDismissRequest = { showExitAttemptDialog = false },
+                properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = FocusSurface,
+                    border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .background(FocusPrimary.copy(alpha = 0.2f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Shield,
+                                contentDescription = null,
+                                tint = FocusPrimary,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = "FOCUS SESSION IN PROGRESS",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 0.5.sp
+                            ),
+                            color = Color.White,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = "Social media & distracting apps are blocked. Which allowed study app would you like to open?",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = FocusTextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        if (whitelistedApps.isNotEmpty()) {
+                            Text(
+                                text = "CHOOSE STUDY APP TO OPEN:",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = FocusPrimary,
+                                modifier = Modifier.align(Alignment.Start)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height((whitelistedApps.size * 60).coerceAtMost(220).dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(whitelistedApps, key = { it.packageName }) { app ->
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = FocusBackground,
+                                        border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.3f)),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                showExitAttemptDialog = false
+                                                val launched = FocusLockManager.launchAllowedApp(context, app.packageName)
+                                                if (launched) {
+                                                    Toast.makeText(context, "Opening ${app.appName} (Study Mode)", Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    Toast.makeText(context, "Could not open ${app.appName}", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(32.dp)
+                                                        .background(FocusPrimary.copy(alpha = 0.2f), CircleShape),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = app.appName.take(1).uppercase(),
+                                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                                        color = FocusPrimary
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                                Text(
+                                                    text = app.appName,
+                                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                                    color = Color.White
+                                                )
+                                            }
+
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = "OPEN",
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                    color = FocusPrimary
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                                    contentDescription = null,
+                                                    tint = FocusPrimary,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = FocusBackground,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "No study apps whitelisted yet.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = FocusTextSecondary
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Button(
+                                        onClick = {
+                                            showExitAttemptDialog = false
+                                            showManageWhitelistDialog = true
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text("+ Select Study Apps", fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Actions: Stay on timer vs Emergency exit
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Button(
+                                onClick = { showExitAttemptDialog = false },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Stay on Timer", fontWeight = FontWeight.Bold)
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    showExitAttemptDialog = false
+                                    showEmergencyConfirm = true
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(48.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = FocusDanger),
+                                border = BorderStroke(1.dp, FocusDanger.copy(alpha = 0.5f)),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Emergency Stop", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 2. IN-SESSION APP WHITELIST MANAGER DIALOG
+        // ==========================================
+        if (showManageWhitelistDialog) {
+            var inSessionSearch by remember { mutableStateOf("") }
+            val filteredInSessionApps = allApps.filter {
+                it.appName.contains(inSessionSearch, ignoreCase = true) ||
+                        it.category.contains(inSessionSearch, ignoreCase = true)
+            }
+
+            Dialog(
+                onDismissRequest = { showManageWhitelistDialog = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = FocusSurface,
+                    border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .fillMaxWidth(0.92f)
+                        .fillMaxHeight(0.85f)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(18.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "SELECT ALLOWED STUDY APPS",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "Toggle apps you want to use during this session",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = FocusTextSecondary
+                                )
+                            }
+                            IconButton(onClick = { showManageWhitelistDialog = false }) {
+                                Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = inSessionSearch,
+                            onValueChange = { inSessionSearch = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("Search installed apps...", color = FocusTextSecondary) },
+                            leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = FocusPrimary) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = FocusPrimary,
+                                unfocusedBorderColor = FocusSurfaceVariant,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(filteredInSessionApps, key = { it.packageName }) { app ->
+                                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (app.isAllowed) FocusPrimary.copy(alpha = 0.15f) else FocusBackground
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, if (app.isAllowed) FocusPrimary.copy(alpha = 0.6f) else FocusSurfaceVariant),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(34.dp)
+                                                    .background(
+                                                        if (app.isAllowed) FocusPrimary.copy(alpha = 0.2f) else FocusSurfaceVariant,
+                                                        CircleShape
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (app.isAllowed) Icons.Default.Check else Icons.Default.Lock,
+                                                    contentDescription = null,
+                                                    tint = if (app.isAllowed) FocusPrimary else Color.Gray,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Column {
+                                                Text(
+                                                    text = app.appName,
+                                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                                    color = Color.White,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = if (app.isAllowed) "✓ ALLOWED FOR STUDY" else "🔒 BLOCKED",
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                    color = if (app.isAllowed) FocusPrimary else FocusDanger
+                                                )
+                                            }
+                                        }
+
+                                        Switch(
+                                            checked = app.isAllowed,
+                                            onCheckedChange = { allowed ->
+                                                viewModel.toggleAppAllowed(app.packageName, allowed, currentProfile)
+                                            },
+                                            colors = SwitchDefaults.colors(
+                                                checkedThumbColor = Color.Black,
+                                                checkedTrackColor = FocusPrimary,
+                                                uncheckedThumbColor = Color.Gray,
+                                                uncheckedTrackColor = FocusSurfaceVariant
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Button(
+                            onClick = { showManageWhitelistDialog = false },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black)
+                        ) {
+                            Text("SAVE & CONTINUE STUDY", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 3. STRICT LOCK DISTRACTION OVERLAY DIALOG
+        // ==========================================
+        if (showLockOverlay) {
+            val blockedAppName = lastBlockedPackage?.let { viewModel.getAppDisplayName(it) } ?: "Distraction App"
+
+            Dialog(
+                onDismissRequest = { /* Modal lock - require explicit button */ },
                 properties = DialogProperties(
                     dismissOnBackPress = false,
                     dismissOnClickOutside = false,
@@ -445,8 +963,8 @@ fun FocusTimerScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
-                            androidx.compose.ui.graphics.Brush.verticalGradient(
-                                colors = listOf(Color.Black, Color(0xFF6B0000), Color(0xFF330000))
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Black, Color(0xFF5C0000), Color(0xFF220000))
                             )
                         ),
                     contentAlignment = Alignment.Center
@@ -454,77 +972,69 @@ fun FocusTimerScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(32.dp),
+                            .padding(28.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "WARNING:\nSECURITY ALERT",
-                            style = MaterialTheme.typography.headlineLarge.copy(
+                            text = "DISTRACTION BLOCKED",
+                            style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 1.sp,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                textAlign = TextAlign.Center
                             ),
                             color = Color.White
                         )
                         
-                        Spacer(modifier = Modifier.height(48.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
                         
                         Box(
                             modifier = Modifier
-                                .size(120.dp)
-                                .background(Color.Red.copy(alpha = 0.1f), CircleShape)
-                                .border(4.dp, Color.Red, CircleShape),
+                                .size(110.dp)
+                                .background(Color.Red.copy(alpha = 0.15f), CircleShape)
+                                .border(3.dp, Color.Red, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Warning,
                                 contentDescription = "Warning",
                                 tint = Color.Red,
-                                modifier = Modifier.size(60.dp)
+                                modifier = Modifier.size(54.dp)
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
                         Text(
-                            text = "FOCUS LOCK ACTIVE",
-                            style = MaterialTheme.typography.titleLarge.copy(
+                            text = "FOCUS SHIELD ENFORCED",
+                            style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 2.sp
+                                letterSpacing = 1.5.sp
                             ),
                             color = Color.Red
                         )
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = "This app is currently unavailable.",
+                            text = "⚠️ $blockedAppName is blocked during your focus session to keep you on track.",
                             style = MaterialTheme.typography.bodyLarge,
                             color = Color.White,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            textAlign = TextAlign.Center
                         )
                         
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
                         
-                        androidx.compose.material3.HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                         
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        Text(
-                            text = "Current Session",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = FocusTextSecondary
-                        )
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
                         
                         Text(
-                            text = timerState.subjectName,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            text = "Current Subject: ${timerState.subjectName.ifBlank { "Deep Study" }}",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                             color = Color.White
                         )
                         
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         
                         val mins = timerState.remainingSeconds / 60
                         val secs = timerState.remainingSeconds % 60
@@ -536,36 +1046,48 @@ fun FocusTimerScreen(
                             color = FocusPrimary
                         )
                         
+                        Spacer(modifier = Modifier.height(20.dp))
+                        
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+                        
                         Spacer(modifier = Modifier.height(32.dp))
-                        
-                        androidx.compose.material3.HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
-                        
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        Text(
-                            text = "Complete your focus session\nto unlock blocked apps",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.7f),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-
-                        Spacer(modifier = Modifier.height(48.dp))
 
                         // Return to Focus Button
                         Button(
                             onClick = { viewModel.dismissLockOverlay() },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(56.dp)
+                                .height(54.dp)
                                 .testTag("return_to_focus_btn"),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f), contentColor = Color.White),
-                            shape = RoundedCornerShape(28.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
+                            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black),
+                            shape = RoundedCornerShape(27.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("BACK TO FOCUS", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                                Text("BACK TO FOCUS TIMER", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Icon(imageVector = Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Open an allowed study app button
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.dismissLockOverlay()
+                                showExitAttemptDialog = true
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f)),
+                            shape = RoundedCornerShape(25.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Default.Apps, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("OPEN ALLOWED STUDY APP", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
                             }
                         }
                     }
@@ -573,7 +1095,9 @@ fun FocusTimerScreen(
             }
         }
 
-        // Emergency Penalty Confirmation Dialog
+        // ==========================================
+        // 4. EMERGENCY PENALTY CONFIRMATION DIALOG
+        // ==========================================
         if (showEmergencyConfirm) {
             Dialog(
                 onDismissRequest = { showEmergencyConfirm = false }
@@ -581,6 +1105,7 @@ fun FocusTimerScreen(
                 Surface(
                     shape = RoundedCornerShape(20.dp),
                     color = FocusBackground,
+                    border = BorderStroke(1.dp, FocusDanger.copy(alpha = 0.4f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
@@ -588,16 +1113,16 @@ fun FocusTimerScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Emergency Exit Penalty",
+                            text = "Emergency Early Exit",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = Color.White
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Exiting early will reset your daily focus streak! Please wait for the cooling timer.",
+                            text = "Exiting early will reset your daily study streak. Please wait for cooling timer.",
                             style = MaterialTheme.typography.bodySmall,
                             color = FocusTextSecondary,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            textAlign = TextAlign.Center
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -605,7 +1130,7 @@ fun FocusTimerScreen(
                         Text(
                             text = if (emergencyPenaltyCountdown > 0) "Wait $emergencyPenaltyCountdown Seconds..." else "Exit Unlocked",
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                            color = if (emergencyPenaltyCountdown > 0) FocusPrimary else FocusPrimary
+                            color = if (emergencyPenaltyCountdown > 0) FocusWarning else FocusDanger
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -625,7 +1150,7 @@ fun FocusTimerScreen(
                                 .testTag("confirm_emergency_exit_btn"),
                             colors = ButtonDefaults.buttonColors(containerColor = FocusDanger)
                         ) {
-                            Text("CONFIRM EARLY EXIT")
+                            Text("CONFIRM EARLY EXIT", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -633,3 +1158,4 @@ fun FocusTimerScreen(
         }
     }
 }
+

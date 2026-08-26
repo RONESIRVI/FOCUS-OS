@@ -22,7 +22,7 @@ object FocusLockManager {
 
     var onDistractionListener: ((packageName: String) -> Unit)? = null
 
-    // Always allowed system components to prevent device bricking / freeze
+    // Essential system components allowed for phone dialer, keyboard and emergency
     private val SYSTEM_WHITELIST = setOf(
         "com.android.systemui",
         "android",
@@ -31,7 +31,10 @@ object FocusLockManager {
         "com.android.dialer",
         "com.google.android.dialer",
         "com.android.phone",
-        "com.android.server.telecom"
+        "com.android.server.telecom",
+        "com.google.android.apps.nexuslauncher",
+        "com.android.launcher3",
+        "com.google.android.googlequicksearchbox"
     )
 
     fun updateFocusState(
@@ -46,6 +49,10 @@ object FocusLockManager {
         Log.d(TAG, "FocusLockState updated: isActive=$isActive, mode=$lockMode, allowedCount=${whitelistedPackages.size}")
     }
 
+    fun getAllowedPackages(): Set<String> {
+        return whitelistedPackages.toSet()
+    }
+
     fun isPackageAllowed(packageName: String, ourPackageName: String): Boolean {
         if (!isFocusActive || currentLockMode == LockMode.NORMAL) {
             return true
@@ -56,12 +63,11 @@ object FocusLockManager {
             return true
         }
 
-        // Essential system UI / dialer / keyboard
+        // Allow keyboard and core phone call dialer
         if (SYSTEM_WHITELIST.contains(packageName) || 
-            packageName.contains("launcher", ignoreCase = true) ||
-            packageName.contains("inputmethod", ignoreCase = true)
+            packageName.contains("inputmethod", ignoreCase = true) ||
+            packageName.contains("telecom", ignoreCase = true)
         ) {
-            // Note: launchers might be permitted or blocked depending on preference; allowing launcher allows navigating to allowed apps
             return true
         }
 
@@ -73,7 +79,7 @@ object FocusLockManager {
         
         onDistractionListener?.invoke(blockedPackageName)
 
-        // Launch MainActivity over the blocked app
+        // Launch MainActivity with high-priority flags over the blocked app
         val redirectIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
@@ -81,6 +87,26 @@ object FocusLockManager {
                     Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("BLOCKED_PACKAGE_EVENT", blockedPackageName)
         }
-        context.startActivity(redirectIntent)
+        try {
+            context.startActivity(redirectIntent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to redirect from blocked app: $blockedPackageName", e)
+        }
+    }
+
+    fun launchAllowedApp(context: Context, packageName: String): Boolean {
+        return try {
+            val intent = context.packageManager.getLaunchIntentForPackage(packageName)
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch $packageName", e)
+            false
+        }
     }
 }

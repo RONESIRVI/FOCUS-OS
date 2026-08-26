@@ -39,11 +39,22 @@ class FocusRepository(private val focusDao: FocusDao) {
             }.distinctBy { it.first }
             
             uniquePackages.forEach { (packageName, appName) ->
+                val isStudyTool = packageName.contains("calculator", ignoreCase = true) ||
+                        packageName.contains("dictionary", ignoreCase = true) ||
+                        packageName.contains("drive", ignoreCase = true) ||
+                        packageName.contains("classroom", ignoreCase = true) ||
+                        appName.contains("calculator", ignoreCase = true) ||
+                        appName.contains("dictionary", ignoreCase = true) ||
+                        appName.contains("notes", ignoreCase = true) ||
+                        appName.contains("clock", ignoreCase = true)
+
+                val category = if (isStudyTool) "Study Utility" else "Application"
+
                 if (existingAppsManual.isEmpty()) {
-                    appsToInsert.add(AllowedApp(packageName, "MANUAL", appName, "Installed App", false))
+                    appsToInsert.add(AllowedApp(packageName, "MANUAL", appName, category, isStudyTool))
                 }
                 if (existingAppsStrict.isEmpty()) {
-                    appsToInsert.add(AllowedApp(packageName, "STRICT", appName, "Installed App", false))
+                    appsToInsert.add(AllowedApp(packageName, "STRICT", appName, category, isStudyTool))
                 }
             }
             

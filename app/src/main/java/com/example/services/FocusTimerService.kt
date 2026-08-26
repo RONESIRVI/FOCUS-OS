@@ -112,27 +112,46 @@ class FocusTimerService : Service() {
                 try {
                     if (FocusLockManager.isFocusActive && !_timerState.value.isPaused) {
                         val endTime = System.currentTimeMillis()
-                        val startTime = endTime - 4000
+                        val startTime = endTime - 10000
+                        var lastEventPackage: String? = null
+                        
                         val events = usageStatsManager?.queryEvents(startTime, endTime)
                         if (events != null) {
-                            var lastEventPackage: String? = null
                             val event = android.app.usage.UsageEvents.Event()
                             while (events.hasNextEvent()) {
                                 events.getNextEvent(event)
-                                if (event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED) {
+                                if (event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED ||
+                                    event.eventType == android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND
+                                ) {
                                     lastEventPackage = event.packageName
                                 }
                             }
-                            if (lastEventPackage != null && !FocusLockManager.isPackageAllowed(lastEventPackage, packageName)) {
-                                recordDistractionAttempt()
-                                FocusLockManager.handleBlockedAppOpened(this@FocusTimerService, lastEventPackage)
+                        }
+                        
+                        // Fallback check if events were not captured
+                        if (lastEventPackage == null) {
+                            val stats = usageStatsManager?.queryUsageStats(
+                                android.app.usage.UsageStatsManager.INTERVAL_DAILY,
+                                endTime - 10000,
+                                endTime
+                            )
+                            if (!stats.isNullOrEmpty()) {
+                                val mostRecent = stats.maxByOrNull { it.lastTimeUsed }
+                                if (mostRecent != null && (endTime - mostRecent.lastTimeUsed) < 5000) {
+                                    lastEventPackage = mostRecent.packageName
+                                }
                             }
+                        }
+
+                        if (lastEventPackage != null && !FocusLockManager.isPackageAllowed(lastEventPackage, packageName)) {
+                            recordDistractionAttempt()
+                            FocusLockManager.handleBlockedAppOpened(this@FocusTimerService, lastEventPackage)
                         }
                     }
                 } catch (e: Exception) {
                     // Ignore query failures
                 }
-                delay(750)
+                delay(400)
             }
         }
     }

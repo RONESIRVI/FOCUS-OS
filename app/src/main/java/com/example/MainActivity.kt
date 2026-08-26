@@ -38,9 +38,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        FocusLockManager.onDistractionListener = { _ ->
+        FocusLockManager.onDistractionListener = { blockedPkg ->
             runOnUiThread {
-                viewModel.triggerDistractionWarning()
+                viewModel.triggerDistractionWarning(blockedPkg)
             }
         }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
@@ -103,7 +103,7 @@ class MainActivity : ComponentActivity() {
         }
         val blockedPkg = intent.getStringExtra("BLOCKED_PACKAGE_EVENT")
         if (blockedPkg != null) {
-            viewModel.triggerDistractionWarning()
+            viewModel.triggerDistractionWarning(blockedPkg)
         }
     }
 
