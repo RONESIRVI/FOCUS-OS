@@ -144,3 +144,4 @@ dependencies {
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
 }
+// Triggering git diff for GitHub Sync
