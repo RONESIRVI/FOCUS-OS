@@ -54,8 +54,13 @@ fun FocusNavGraph(
             com.example.ui.screens.ScheduleMainScreen(viewModel = viewModel, onNavigateToCreate = { navController.navigate(FocusRoutes.SCHEDULE_CREATE) })
         }
         composable(FocusRoutes.SETTINGS) {
-            // Placeholder for now
-            com.example.ui.screens.SettingsScreen(viewModel = viewModel)
+            com.example.ui.screens.SettingsScreen(
+                viewModel = viewModel,
+                onNavigateToAppSelector = { profile ->
+                    viewModel.setAppSelectorProfile(profile)
+                    navController.navigate(FocusRoutes.APP_SELECTOR)
+                }
+            )
         }
         composable(FocusRoutes.SCHEDULE_CREATE) {
             ScheduleCreateScreen(
