@@ -240,11 +240,13 @@ object FocusLockManager {
             val pId = pendingSessionId
             val pName = pendingSessionName ?: "Scheduled Focus"
                         
-            FocusLockOverlayManager.showPendingScheduleOverlay(
+            FocusLockOverlayManager.dismissOverlay()
+            FocusLockOverlayManager.bringAppToFront(
                 context = context,
                 blockedPackage = blockedPackageName,
-                sessionName = pName,
-                sessionId = pId
+                sessionId = pId,
+                isPending = true,
+                pendingName = pName
             )
             return
         }

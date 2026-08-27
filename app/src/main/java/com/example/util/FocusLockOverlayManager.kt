@@ -154,7 +154,9 @@ object FocusLockOverlayManager {
         context: Context,
         blockedPackage: String? = null,
         sessionId: Long? = null,
-        isSoftLock: Boolean = false
+        isSoftLock: Boolean = false,
+        isPending: Boolean = false,
+        pendingName: String? = null
     ) {
         try {
             val intent = Intent(context, MainActivity::class.java).apply {
@@ -163,13 +165,17 @@ object FocusLockOverlayManager {
                         Intent.FLAG_ACTIVITY_SINGLE_TOP or
                         Intent.FLAG_ACTIVITY_CLEAR_TOP
                 if (!blockedPackage.isNullOrEmpty()) {
-                    if (isSoftLock) {
+                    if (isPending) {
+                        putExtra("BLOCKED_PACKAGE_EVENT_PENDING", blockedPackage)
+                        putExtra("PENDING_SESSION_NAME", pendingName ?: "Scheduled Focus")
+                        if (sessionId != null) putExtra("PENDING_SESSION_ID", sessionId)
+                    } else if (isSoftLock) {
                         putExtra("BLOCKED_PACKAGE_EVENT_SOFT", blockedPackage)
                     } else {
                         putExtra("BLOCKED_PACKAGE_EVENT", blockedPackage)
                     }
                 }
-                if (sessionId != null) {
+                if (sessionId != null && !isPending) {
                     putExtra("START_SESSION_ID", sessionId)
                 }
             }
