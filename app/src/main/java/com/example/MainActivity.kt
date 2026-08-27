@@ -129,7 +129,7 @@ class MainActivity : ComponentActivity() {
 
     private fun enforceFocusLock() {
         val timerState = viewModel.timerState.value
-        if (timerState.isRunning && timerState.lockMode != LockMode.NORMAL) {
+        if ((timerState.isRunning && timerState.lockMode != LockMode.NORMAL) || FocusLockManager.hasPendingSchedule()) {
             try {
                 val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
                 val time = System.currentTimeMillis()
@@ -145,13 +145,15 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     
-                    if (recentApp.isNotEmpty() && !FocusLockManager.isPackageAllowed(recentApp, packageName)) {
+                    if (recentApp.isNotEmpty() && !FocusLockManager.isPackageAllowed(this, recentApp, packageName)) {
                         FocusLockManager.handleBlockedAppOpened(
                             context = this,
                             blockedPackageName = recentApp,
                             remainingSeconds = timerState.remainingSeconds,
                             subjectName = timerState.subjectName
                         )
+                    } else {
+                        FocusLockOverlayManager.dismissOverlay()
                     }
                 }
             } catch (e: Exception) {

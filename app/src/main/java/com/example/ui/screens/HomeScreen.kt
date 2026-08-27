@@ -254,6 +254,123 @@ fun HomeScreen(
             }
         }
 
+        // Nearest Scheduled Session Warning Banner (NO SECONDS, ONLY REMINDER)
+        item {
+            val now = System.currentTimeMillis()
+            val nearestSession = scheduledSessions
+                .filter { it.status == "SCHEDULED" && it.scheduledStartTime != null }
+                .minByOrNull { 
+                    val diff = (it.scheduledStartTime ?: 0L) - now
+                    if (diff < -300000L) Long.MAX_VALUE else Math.abs(diff)
+                }
+
+            if (nearestSession != null && nearestSession.scheduledStartTime != null) {
+                val startMs = nearestSession.scheduledStartTime
+                val timeFormatter = SimpleDateFormat("h:mm a", Locale.getDefault())
+                val timeStr = timeFormatter.format(Date(startMs))
+
+                val diffMs = startMs - now
+                val diffMins = (diffMs / (60 * 1000L)).toInt()
+                val diffHours = diffMins / 60
+                val diffDays = diffHours / 24
+
+                val reminderText = when {
+                    diffMs <= 0 -> "⚠️ Session time reached ($timeStr) - Pending"
+                    diffDays > 0 -> "Starts in $diffDays day(s) ($timeStr)"
+                    diffHours > 0 -> "Starts in $diffHours hr ${diffMins % 60} mins ($timeStr)"
+                    diffMins > 0 -> "Starts in $diffMins mins ($timeStr)"
+                    else -> "Starting now ($timeStr)"
+                }
+
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = FocusWarning.copy(alpha = 0.12f)
+                    ),
+                    shape = RoundedCornerShape(20.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, FocusWarning),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(FocusWarning.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = "Schedule Warning",
+                                    tint = FocusWarning,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column {
+                                Text(
+                                    text = "UPCOMING SCHEDULE REMINDER",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Black,
+                                        letterSpacing = 0.5.sp
+                                    ),
+                                    color = FocusWarning
+                                )
+                                Text(
+                                    text = nearestSession.sessionName,
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = reminderText,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontWeight = FontWeight.SemiBold
+                                    ),
+                                    color = FocusTextSecondary
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Button(
+                            onClick = {
+                                viewModel.loadScheduledSession(nearestSession.id)
+                                viewModel.startFocusSession()
+                                onNavigateToTimer()
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = FocusWarning,
+                                contentColor = Color.Black
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "START NOW",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Black
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Today's Progress Card
         item {
             val hours = stats.todayFocusSeconds / 3600

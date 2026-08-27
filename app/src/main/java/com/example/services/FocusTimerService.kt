@@ -1,5 +1,6 @@
 package com.example.services
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -9,6 +10,7 @@ import android.content.Intent
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
@@ -48,6 +50,7 @@ class FocusTimerService : Service() {
 
     private var timerJob: Job? = null
     private var appMonitorJob: Job? = null
+    private var wakeLock: android.os.PowerManager.WakeLock? = null
 
     inner class LocalBinder : Binder() {
         fun getService(): FocusTimerService = this@FocusTimerService
@@ -62,6 +65,11 @@ class FocusTimerService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
+            "ACTION_START_PENDING_MONITOR" -> {
+                val sessionId = intent.getLongExtra("SESSION_ID", -1L)
+                val sessionName = intent.getStringExtra("SESSION_NAME") ?: "Focus Session"
+                startPendingMonitor(sessionId, sessionName)
+            }
             ACTION_PAUSE_RESUME -> {
                 if (_timerState.value.isPaused) {
                     resumeTimer()
@@ -80,6 +88,90 @@ class FocusTimerService : Service() {
         return START_STICKY
     }
 
+    fun startPendingMonitor(sessionId: Long, sessionName: String) {
+        if (_timerState.value.isRunning) return
+        FocusLockManager.setPendingSchedule(sessionId, sessionName)
+        startForeground(NOTIFICATION_ID, buildPendingNotification(sessionName, sessionId))
+        startPendingAppLockMonitoring()
+    }
+
+    private fun buildPendingNotification(sessionName: String, sessionId: Long): Notification {
+        val launchIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("START_SESSION_ID", sessionId)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            launchIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("⏳ Scheduled Focus Session Pending")
+            .setContentText("'$sessionName' is waiting to start. Tap to open and start now.")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setOngoing(true)
+            .setContentIntent(pendingIntent)
+            .build()
+    }
+
+    private fun startPendingAppLockMonitoring() {
+        appMonitorJob?.cancel()
+        appMonitorJob = scope.launch {
+            val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
+            while (!FocusLockManager.isFocusActive && FocusLockManager.hasPendingSchedule()) {
+                try {
+                    val endTime = System.currentTimeMillis()
+                    val startTime = endTime - 8000
+                    var lastEventPackage: String? = null
+                    
+                    val events = usageStatsManager?.queryEvents(startTime, endTime)
+                    if (events != null) {
+                        val event = android.app.usage.UsageEvents.Event()
+                        while (events.hasNextEvent()) {
+                            events.getNextEvent(event)
+                            if (event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED ||
+                                event.eventType == android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND
+                            ) {
+                                lastEventPackage = event.packageName
+                            }
+                        }
+                    }
+                    
+                    if (lastEventPackage == null) {
+                        val stats = usageStatsManager?.queryUsageStats(
+                            android.app.usage.UsageStatsManager.INTERVAL_DAILY,
+                            endTime - 8000,
+                            endTime
+                        )
+                        if (!stats.isNullOrEmpty()) {
+                            val mostRecent = stats.maxByOrNull { it.lastTimeUsed }
+                            if (mostRecent != null && (endTime - mostRecent.lastTimeUsed) < 4000) {
+                                lastEventPackage = mostRecent.packageName
+                            }
+                        }
+                    }
+
+                    if (lastEventPackage != null && !FocusLockManager.isPackageAllowed(this@FocusTimerService, lastEventPackage, packageName)) {
+                        FocusLockManager.handleBlockedAppOpened(
+                            context = this@FocusTimerService,
+                            blockedPackageName = lastEventPackage,
+                            remainingSeconds = 0,
+                            subjectName = FocusLockManager.pendingSessionName ?: "Scheduled Focus"
+                        )
+                    } else {
+                        FocusLockOverlayManager.dismissOverlay()
+                    }
+                } catch (e: Exception) {
+                    Log.e("FocusTimerService", "Error in pending app monitor loop", e)
+                }
+                delay(1500)
+            }
+        }
+    }
+
     fun startTimer(
         durationMinutes: Int,
         sessionName: String,
@@ -87,6 +179,7 @@ class FocusTimerService : Service() {
         lockMode: LockMode,
         soundType: SoundType
     ) {
+        FocusLockManager.clearPendingSchedule()
         val totalSecs = durationMinutes * 60
         _timerState.value = TimerState(
             isRunning = true,
@@ -98,6 +191,10 @@ class FocusTimerService : Service() {
             lockMode = lockMode,
             selectedSound = soundType
         )
+
+        val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        wakeLock = powerManager.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "FocusApp::FocusTimerWakeLock")
+        wakeLock?.acquire()
 
         audioEngine.startSound(soundType, scope)
         startForeground(NOTIFICATION_ID, buildNotification())
@@ -144,7 +241,7 @@ class FocusTimerService : Service() {
                             }
                         }
 
-                        if (lastEventPackage != null && !FocusLockManager.isPackageAllowed(lastEventPackage, packageName)) {
+                        if (lastEventPackage != null && !FocusLockManager.isPackageAllowed(this@FocusTimerService, lastEventPackage, packageName)) {
                             recordDistractionAttempt()
                             FocusLockManager.handleBlockedAppOpened(
                                 context = this@FocusTimerService,
@@ -152,8 +249,8 @@ class FocusTimerService : Service() {
                                 remainingSeconds = _timerState.value.remainingSeconds,
                                 subjectName = _timerState.value.subjectName
                             )
-                        } else if (lastEventPackage == packageName) {
-                            // Returned to our app -> dismiss overlay
+                        } else {
+                            // Returned to our app or moved to allowed utility (Home Launcher, Call, SMS) -> dismiss overlay
                             FocusLockOverlayManager.dismissOverlay()
                         }
                     }
@@ -184,6 +281,7 @@ class FocusTimerService : Service() {
                 audioEngine.stopSound()
                 appMonitorJob?.cancel()
                 FocusLockOverlayManager.dismissOverlay()
+                wakeLock?.takeIf { it.isHeld }?.release()
                 stopForeground(STOP_FOREGROUND_REMOVE)
             }
         }
@@ -220,6 +318,7 @@ class FocusTimerService : Service() {
         appMonitorJob?.cancel()
         audioEngine.stopSound()
         FocusLockOverlayManager.dismissOverlay()
+        wakeLock?.takeIf { it.isHeld }?.release()
         _timerState.value = TimerState(isRunning = false)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()

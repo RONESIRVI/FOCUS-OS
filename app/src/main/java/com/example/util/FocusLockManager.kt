@@ -2,6 +2,7 @@ package com.example.util
 
 import android.content.Context
 import android.content.Intent
+import android.telephony.TelephonyManager
 import android.util.Log
 import com.example.MainActivity
 import com.example.data.model.LockMode
@@ -22,17 +23,105 @@ object FocusLockManager {
 
     var onDistractionListener: ((packageName: String, showRedModal: Boolean) -> Unit)? = null
 
-    // Essential system components allowed ONLY for phone dialer, emergency and keyboard
-    private val SYSTEM_WHITELIST = setOf(
-        "com.android.systemui",
-        "android",
-        "com.google.android.inputmethod.latin",
-        "com.samsung.android.honeyboard",
-        "com.android.dialer",
-        "com.google.android.dialer",
-        "com.android.phone",
-        "com.android.server.telecom"
-    )
+    // Cache home launchers
+    private var cachedHomeLaunchers: Set<String>? = null
+    private var lastHomeLauncherCheckTime = 0L
+
+    private fun getHomeLaunchers(context: Context): Set<String> {
+        val now = System.currentTimeMillis()
+        cachedHomeLaunchers?.let {
+            if (now - lastHomeLauncherCheckTime < 60_000) return it
+        }
+        val launchers = mutableSetOf(
+            "com.android.systemui",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.oneplus.launcher",
+            "com.oppo.launcher",
+            "com.huawei.android.launcher",
+            "com.android.launcher",
+            "com.android.launcher3"
+        )
+        try {
+            val intent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+            }
+            val resolveInfos = context.packageManager.queryIntentActivities(intent, 0)
+            for (info in resolveInfos) {
+                info.activityInfo?.packageName?.let { launchers.add(it) }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error querying home launchers", e)
+        }
+        cachedHomeLaunchers = launchers
+        lastHomeLauncherCheckTime = now
+        return launchers
+    }
+
+    private fun isPhoneCallOrCommunication(packageName: String): Boolean {
+        val lower = packageName.lowercase()
+        return lower.contains("dialer") ||
+                lower.contains("phone") ||
+                lower.contains("telecom") ||
+                lower.contains("telephony") ||
+                lower.contains("incallui") ||
+                lower.contains("contacts") ||
+                lower.contains("messaging") ||
+                lower.contains("mms") ||
+                lower.contains("sms") ||
+                lower.contains("message") ||
+                packageName == "com.google.android.apps.messaging" ||
+                packageName == "com.samsung.android.messaging" ||
+                packageName == "com.android.mms" ||
+                packageName == "com.google.android.dialer" ||
+                packageName == "com.android.dialer" ||
+                packageName == "com.android.phone" ||
+                packageName == "com.android.server.telecom"
+    }
+
+    private fun isSystemUtilityOrKeyboard(packageName: String): Boolean {
+        val lower = packageName.lowercase()
+        return lower == "android" ||
+                lower == "com.android.systemui" ||
+                lower == "com.android.settings" ||
+                lower.contains("inputmethod") ||
+                lower.contains("keyboard") ||
+                lower.contains("honeyboard") ||
+                lower.contains("permissioncontroller") ||
+                lower.contains("packageinstaller")
+    }
+
+    private fun isPhoneCallActive(context: Context): Boolean {
+        return try {
+            val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+            tm != null && tm.callState != TelephonyManager.CALL_STATE_IDLE
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    @Volatile
+    var pendingSessionId: Long? = null
+        private set
+
+    @Volatile
+    var pendingSessionName: String? = null
+        private set
+
+    fun setPendingSchedule(sessionId: Long, sessionName: String) {
+        pendingSessionId = sessionId
+        pendingSessionName = sessionName
+        Log.d(TAG, "Pending schedule set: sessionId=$sessionId, sessionName=$sessionName")
+    }
+
+    fun clearPendingSchedule() {
+        pendingSessionId = null
+        pendingSessionName = null
+        Log.d(TAG, "Pending schedule cleared.")
+    }
+
+    fun hasPendingSchedule(): Boolean = pendingSessionId != null
 
     fun updateFocusState(
         isActive: Boolean,
@@ -45,7 +134,9 @@ object FocusLockManager {
         whitelistedPackages.addAll(allowedPackageNames)
         Log.d(TAG, "FocusLockState updated: isActive=$isActive, mode=$lockMode, allowedCount=${whitelistedPackages.size}")
         
-        if (!isActive) {
+        if (isActive) {
+            clearPendingSchedule()
+        } else {
             FocusLockOverlayManager.dismissOverlay()
         }
     }
@@ -54,25 +145,55 @@ object FocusLockManager {
         return whitelistedPackages.toSet()
     }
 
+    fun isPackageAllowed(context: Context?, packageName: String, ourPackageName: String): Boolean {
+        if (packageName.isBlank() || packageName == ourPackageName) {
+            return true
+        }
+
+        // Active phone call in progress -> always allowed!
+        if (context != null && isPhoneCallActive(context)) {
+            return true
+        }
+
+        // Phone calls, Dialer, SMS, Messages, Contacts -> always allowed!
+        if (isPhoneCallOrCommunication(packageName)) {
+            return true
+        }
+
+        // Keyboards and core system utilities -> always allowed!
+        if (isSystemUtilityOrKeyboard(packageName)) {
+            return true
+        }
+
+        // Home Screen / Launchers -> always allowed!
+        if (context != null) {
+            val launchers = getHomeLaunchers(context)
+            if (launchers.contains(packageName) || packageName.lowercase().contains("launcher")) {
+                return true
+            }
+        } else {
+            val lower = packageName.lowercase()
+            if (lower.contains("launcher") || lower.contains("home")) {
+                return true
+            }
+        }
+
+        if (!isFocusActive && !hasPendingSchedule()) {
+            return true
+        }
+
+        if (isFocusActive) {
+            if (currentLockMode == LockMode.NORMAL) return true
+            return whitelistedPackages.contains(packageName)
+        }
+
+        // Pending schedule is active and user opens a blocked app
+        return false
+    }
+
+    // Overload for backward compatibility when context is not passed
     fun isPackageAllowed(packageName: String, ourPackageName: String): Boolean {
-        if (!isFocusActive || currentLockMode == LockMode.NORMAL) {
-            return true
-        }
-
-        // Own app is always allowed
-        if (packageName == ourPackageName) {
-            return true
-        }
-
-        // Allow keyboard and core phone call dialer
-        if (SYSTEM_WHITELIST.contains(packageName) || 
-            packageName.contains("inputmethod", ignoreCase = true) ||
-            packageName.contains("telecom", ignoreCase = true)
-        ) {
-            return true
-        }
-
-        return whitelistedPackages.contains(packageName)
+        return isPackageAllowed(null, packageName, ourPackageName)
     }
 
     fun handleBlockedAppOpened(
@@ -81,10 +202,30 @@ object FocusLockManager {
         remainingSeconds: Int = 0,
         subjectName: String = "Deep Focus"
     ) {
+        // Double check: if package is actually allowed (Home launcher, Call, SMS, etc.), dismiss overlay
+        if (isPackageAllowed(context, blockedPackageName, context.packageName)) {
+            FocusLockOverlayManager.dismissOverlay()
+            return
+        }
+
         Log.w(TAG, "BLOCKED APP DETECTED: $blockedPackageName. Initiating lock enforcement...")
         
         val hasOverlayPerm = android.provider.Settings.canDrawOverlays(context)
         
+        if (!isFocusActive && hasPendingSchedule()) {
+            val pId = pendingSessionId
+            val pName = pendingSessionName ?: "Scheduled Focus"
+            if (hasOverlayPerm) {
+                FocusLockOverlayManager.showPendingScheduleOverlay(
+                    context = context,
+                    blockedPackage = blockedPackageName,
+                    sessionName = pName,
+                    sessionId = pId
+                )
+            }
+            return
+        }
+
         when (currentLockMode) {
             LockMode.SOFT_LOCK -> {
                 onDistractionListener?.invoke(blockedPackageName, false)
@@ -141,3 +282,4 @@ object FocusLockManager {
         }
     }
 }
+

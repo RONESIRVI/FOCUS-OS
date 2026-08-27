@@ -102,14 +102,69 @@ object FocusLockOverlayManager {
         }
     }
 
-    private fun bringAppToFront(context: Context, blockedPackage: String) {
+    fun showPendingScheduleOverlay(
+        context: Context,
+        blockedPackage: String,
+        sessionName: String,
+        sessionId: Long? = null
+    ) {
+        if (!Settings.canDrawOverlays(context)) {
+            Log.w(TAG, "Cannot draw overlays for pending schedule: permission not granted.")
+            bringAppToFront(context, blockedPackage, sessionId)
+            return
+        }
+
+        mainHandler.post {
+            try {
+                if (isShowing.get() && overlayView != null) {
+                    return@post
+                }
+
+                windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                
+                val layoutParamsType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                } else {
+                    @Suppress("DEPRECATION")
+                    WindowManager.LayoutParams.TYPE_PHONE
+                }
+
+                val params = WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.MATCH_PARENT,
+                    layoutParamsType,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
+                    PixelFormat.TRANSLUCENT
+                ).apply {
+                    gravity = Gravity.CENTER
+                }
+
+                val view = createPendingScheduleOverlayView(context, blockedPackage, sessionName, sessionId)
+                scheduleSoftLockDismiss()
+                windowManager?.addView(view, params)
+                overlayView = view
+                isShowing.set(true)
+                Log.d(TAG, "Pending schedule overlay displayed successfully for: $blockedPackage")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to add pending schedule overlay view", e)
+                bringAppToFront(context, blockedPackage, sessionId)
+            }
+        }
+    }
+
+    private fun bringAppToFront(context: Context, blockedPackage: String, sessionId: Long? = null) {
         try {
             val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
                         Intent.FLAG_ACTIVITY_SINGLE_TOP or
                         Intent.FLAG_ACTIVITY_CLEAR_TOP
-                // Intentionally NOT sending BLOCKED_PACKAGE_EVENT so the Red in-app warning doesn't show over the timer
+                if (sessionId != null) {
+                    putExtra("START_SESSION_ID", sessionId)
+                }
             }
             context.startActivity(intent)
         } catch (e: Exception) {
@@ -235,6 +290,83 @@ object FocusLockOverlayManager {
             }
             rootLayout.addView(appsContainer)
         }
+
+        return rootLayout
+    }
+
+    private fun createPendingScheduleOverlayView(
+        context: Context,
+        blockedPackage: String,
+        sessionName: String,
+        sessionId: Long?
+    ): View {
+        val rootLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setBackgroundColor(android.graphics.Color.parseColor("#F50F172A")) // 96% slate dark
+            setPadding(48, 64, 48, 64)
+        }
+
+        // Shield / Pending Badge
+        val badge = TextView(context).apply {
+            text = "⏳ SCHEDULED SESSION PENDING"
+            textSize = 14f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(android.graphics.Color.parseColor("#F59E0B")) // Amber
+            gravity = Gravity.CENTER
+            setPadding(24, 12, 24, 12)
+            setBackgroundColor(android.graphics.Color.parseColor("#33F59E0B"))
+        }
+        rootLayout.addView(badge)
+
+        // Blocked App Title
+        val readableName = getReadableAppName(context, blockedPackage)
+        val titleView = TextView(context).apply {
+            text = "⚠️ '$readableName' is Restricted!"
+            textSize = 22f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(android.graphics.Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(0, 32, 0, 12)
+        }
+        rootLayout.addView(titleView)
+
+        // Subtitle / Prompt
+        val subtitleView = TextView(context).apply {
+            text = "Your scheduled focus session '$sessionName' is pending! Please start your study session now."
+            textSize = 14f
+            setTextColor(android.graphics.Color.parseColor("#94A3B8")) // Slate 400
+            gravity = Gravity.CENTER
+            setPadding(16, 0, 16, 32)
+        }
+        rootLayout.addView(subtitleView)
+
+        // Primary Action: Start Session Now
+        val startBtn = Button(context).apply {
+            text = "🚀 START SCHEDULED SESSION NOW"
+            setBackgroundColor(android.graphics.Color.parseColor("#10B981")) // Emerald green
+            textSize = 15f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextColor(android.graphics.Color.WHITE)
+            setPadding(32, 24, 32, 24)
+            setOnClickListener {
+                dismissOverlay()
+                bringAppToFront(context, blockedPackage, sessionId)
+            }
+        }
+        rootLayout.addView(startBtn)
+
+        // Secondary Action: Dismiss warning for 30s
+        val dismissBtn = Button(context).apply {
+            text = "SNOOZE WARNING (30s)"
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            textSize = 13f
+            setTextColor(android.graphics.Color.parseColor("#94A3B8"))
+            setOnClickListener {
+                dismissOverlay()
+            }
+        }
+        rootLayout.addView(dismissBtn)
 
         return rootLayout
     }

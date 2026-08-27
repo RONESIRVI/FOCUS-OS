@@ -252,26 +252,27 @@ fun ConditionalScaffold(
 fun StatisticsScreen(
     viewModel: FocusViewModel,
     onBack: () -> Unit,
-    isExporting: Boolean = false
+    isExporting: Boolean = false,
+    initialTab: String = "Period",
+    initialPrimaryPeriod: PeriodInfo? = null,
+    initialComparisonPeriod: PeriodInfo? = null,
+    initialCompareModeEnabled: Boolean? = null
 ) {
     val context = LocalContext.current
     val view = androidx.compose.ui.platform.LocalView.current
     val allSessions by viewModel.allSessions.collectAsState()
 
-    var selectedTab by remember { mutableStateOf("Period") }
+    var selectedTab by remember { mutableStateOf(initialTab) }
     var showCompareDialog by remember { mutableStateOf(false) }
-    var compareModeEnabled by remember { mutableStateOf(true) }
+    var compareModeEnabled by remember { mutableStateOf(initialCompareModeEnabled ?: true) }
 
     // Period state (Default: Primary is Last 30 days / Custom, Comparison is Last 90 days)
     var primaryPeriod by remember {
-        mutableStateOf(calculatePeriodPreset("Last 30 days"))
+        mutableStateOf(initialPrimaryPeriod ?: calculatePeriodPreset("Last 30 days"))
     }
     var comparisonPeriod by remember {
-        mutableStateOf(calculatePeriodPreset("Last 90 days"))
+        mutableStateOf(initialComparisonPeriod ?: calculatePeriodPreset("Last 90 days"))
     }
-
-    // Direct Date Picker state
-    var datePickerTargetPeriod by remember { mutableStateOf<Int?>(null) } // 1 for primary, 2 for comparison
 
     // Calculations for Period 1
     val period1Sessions = remember(allSessions, primaryPeriod) {
@@ -313,7 +314,19 @@ fun StatisticsScreen(
                         Icon(Icons.Default.Tune, contentDescription = "Period Filter & Compare", tint = Color.White)
                     }
                     IconButton(onClick = { 
-                        com.example.util.ComposeViewExporter.captureAndSaveComposeView(context = context, width = view.width) { androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.wrapContentHeight()) { StatisticsScreen(viewModel, onBack = {}, isExporting = true) } }
+                        com.example.util.ComposeViewExporter.captureAndSaveComposeView(context = context, width = view.width) {
+                            androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.wrapContentHeight()) {
+                                StatisticsScreen(
+                                    viewModel = viewModel,
+                                    onBack = {},
+                                    isExporting = true,
+                                    initialTab = selectedTab,
+                                    initialPrimaryPeriod = primaryPeriod,
+                                    initialComparisonPeriod = comparisonPeriod,
+                                    initialCompareModeEnabled = compareModeEnabled
+                                )
+                            }
+                        }
                     }) {
                         Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White)
                     }
@@ -337,7 +350,7 @@ fun StatisticsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                listOf("Period", "Day", "Week", "Month", "Trend").forEach { tab ->
+                listOf("Period", "Day", "Week", "Month").forEach { tab ->
                     TabButton(
                         text = tab,
                         isSelected = selectedTab == tab,
@@ -485,7 +498,6 @@ fun StatisticsScreen(
                 "Day" -> { DayTabContent(allSessions = allSessions) }
                 "Week" -> { WeekTabContent(allSessions = allSessions) }
                 "Month" -> { MonthTabContent(allSessions = allSessions) }
-                "Trend" -> { TrendTabContent(allSessions = allSessions) }
             }
             Spacer(modifier = Modifier.height(40.dp))
         }
@@ -502,42 +514,9 @@ fun StatisticsScreen(
                 comparisonPeriod = newComparison
                 showCompareDialog = false
             },
-            onOpenDatePicker = { target ->
-                datePickerTargetPeriod = target
-            },
             onDismiss = { showCompareDialog = false }
         )
     }
-
-    // Date Range Picker Dialog
-    if (datePickerTargetPeriod != null) {
-        val target = datePickerTargetPeriod!!
-        val initialStart = if (target == 1) primaryPeriod.startMillis else comparisonPeriod.startMillis
-        val initialEnd = if (target == 1) primaryPeriod.endMillis else comparisonPeriod.endMillis
-
-        CustomDateRangePickerDialog(
-            initialStartMillis = initialStart,
-            initialEndMillis = initialEnd,
-            targetColor = if (target == 1) StatBlue else StatGreen,
-            onDateRangeSelected = { start, end ->
-                val newPeriod = PeriodInfo(
-                    title = "Select period",
-                    startMillis = start,
-                    endMillis = end,
-                    isCustom = true
-                )
-                if (target == 1) {
-                    primaryPeriod = newPeriod
-                } else {
-                    comparisonPeriod = newPeriod
-                }
-                datePickerTargetPeriod = null
-            },
-            onDismiss = { datePickerTargetPeriod = null }
-        )
-    }
-
-
 }
 }
 @Composable
@@ -925,23 +904,27 @@ fun CompareDialog(
     currentPrimary: PeriodInfo,
     currentComparison: PeriodInfo,
     onApply: (PeriodInfo, PeriodInfo) -> Unit,
-    onOpenDatePicker: (Int) -> Unit, // 1 for primary, 2 for comparison
     onDismiss: () -> Unit
 ) {
-    var selectedPrimaryType by remember { mutableStateOf(currentPrimary.title) }
-    var selectedComparisonType by remember { mutableStateOf(currentComparison.title) }
+    val presetOptions = listOf(
+        "Last 7 days",
+        "Last 14 days",
+        "Last 28 days",
+        "Last 30 days",
+        "Last 90 days",
+        "This Month",
+        "Last Month",
+        "Last 12 months",
+        "Select period"
+    )
+
+    var selectedPrimaryType by remember { mutableStateOf(if (currentPrimary.isCustom || currentPrimary.title !in presetOptions) "Select period" else currentPrimary.title) }
+    var selectedComparisonType by remember { mutableStateOf(if (currentComparison.isCustom || currentComparison.title !in presetOptions) "Select period" else currentComparison.title) }
 
     var tempPrimary by remember { mutableStateOf(currentPrimary) }
     var tempComparison by remember { mutableStateOf(currentComparison) }
 
-    val presetOptions = listOf(
-        "Select period",
-        "Last 7 days",
-        "Last 28 days",
-        "Last 90 days",
-        "This Month",
-        "Last 12 months"
-    )
+    var datePickerTargetPeriod by remember { mutableStateOf<Int?>(null) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -984,101 +967,102 @@ fun CompareDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Columns for Primary and Comparison
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    // Primary Period Column (StatBlue)
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(10.dp).background(StatBlue, RoundedCornerShape(2.dp)))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Primary", color = StatBlue, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
-                        }
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        presetOptions.forEach { opt ->
-                            val isSelected = selectedPrimaryType == opt
-                            val subtitle = if (opt == "Select period") {
-                                tempPrimary.shortRange
-                            } else {
-                                calculatePeriodPreset(opt).shortRange
+                Box(modifier = Modifier.weight(1f, fill = false).heightIn(max = 420.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                        // Primary Period Column (StatBlue)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(10.dp).background(StatBlue, RoundedCornerShape(2.dp)))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Primary", color = StatBlue, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
                             }
+                            Spacer(modifier = Modifier.height(10.dp))
 
-                            CompareOptionCard(
-                                title = opt,
-                                subtitle = subtitle,
-                                isSelected = isSelected,
-                                activeColor = StatBlue,
-                                isCustomOption = opt == "Select period",
-                                onCardClick = {
-                                    selectedPrimaryType = opt
-                                    if (opt == "Select period") {
-                                        onOpenDatePicker(1)
-                                    } else {
-                                        tempPrimary = calculatePeriodPreset(opt)
-                                    }
-                                },
-                                onPickDatesClick = {
-                                    selectedPrimaryType = "Select period"
-                                    onOpenDatePicker(1)
+                            presetOptions.forEach { opt ->
+                                val isSelected = selectedPrimaryType == opt
+                                val subtitle = if (opt == "Select period") {
+                                    tempPrimary.shortRange
+                                } else {
+                                    calculatePeriodPreset(opt).shortRange
                                 }
-                            )
-                        }
-                    }
 
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    // Comparison Period Column (StatGreen)
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(10.dp).background(if (compareModeEnabled) StatGreen else FocusTextSecondary.copy(alpha = 0.5f), RoundedCornerShape(2.dp)))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                "Compare",
-                                color = if (compareModeEnabled) StatGreen else FocusTextSecondary.copy(alpha = 0.5f),
-                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        presetOptions.forEach { opt ->
-                            val isSelected = compareModeEnabled && selectedComparisonType == opt
-                            val subtitle = if (opt == "Select period") {
-                                tempComparison.shortRange
-                            } else {
-                                calculatePeriodPreset(opt).shortRange
-                            }
-
-                            CompareOptionCard(
-                                title = opt,
-                                subtitle = subtitle,
-                                isSelected = isSelected,
-                                activeColor = StatGreen,
-                                enabled = compareModeEnabled,
-                                isCustomOption = opt == "Select period",
-                                onCardClick = {
-                                    if (compareModeEnabled) {
-                                        selectedComparisonType = opt
+                                CompareOptionCard(
+                                    title = opt,
+                                    subtitle = subtitle,
+                                    isSelected = isSelected,
+                                    activeColor = StatBlue,
+                                    isCustomOption = opt == "Select period",
+                                    onCardClick = {
+                                        selectedPrimaryType = opt
                                         if (opt == "Select period") {
-                                            onOpenDatePicker(2)
+                                            datePickerTargetPeriod = 1
                                         } else {
-                                            tempComparison = calculatePeriodPreset(opt)
+                                            tempPrimary = calculatePeriodPreset(opt)
+                                        }
+                                    },
+                                    onPickDatesClick = {
+                                        selectedPrimaryType = "Select period"
+                                        datePickerTargetPeriod = 1
+                                    }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        // Comparison Period Column (StatGreen)
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(10.dp).background(if (compareModeEnabled) StatGreen else FocusTextSecondary.copy(alpha = 0.5f), RoundedCornerShape(2.dp)))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Compare",
+                                    color = if (compareModeEnabled) StatGreen else FocusTextSecondary.copy(alpha = 0.5f),
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            presetOptions.forEach { opt ->
+                                val isSelected = compareModeEnabled && selectedComparisonType == opt
+                                val subtitle = if (opt == "Select period") {
+                                    tempComparison.shortRange
+                                } else {
+                                    calculatePeriodPreset(opt).shortRange
+                                }
+
+                                CompareOptionCard(
+                                    title = opt,
+                                    subtitle = subtitle,
+                                    isSelected = isSelected,
+                                    activeColor = StatGreen,
+                                    enabled = compareModeEnabled,
+                                    isCustomOption = opt == "Select period",
+                                    onCardClick = {
+                                        if (compareModeEnabled) {
+                                            selectedComparisonType = opt
+                                            if (opt == "Select period") {
+                                                datePickerTargetPeriod = 2
+                                            } else {
+                                                tempComparison = calculatePeriodPreset(opt)
+                                            }
+                                        }
+                                    },
+                                    onPickDatesClick = {
+                                        if (compareModeEnabled) {
+                                            selectedComparisonType = "Select period"
+                                            datePickerTargetPeriod = 2
                                         }
                                     }
-                                },
-                                onPickDatesClick = {
-                                    if (compareModeEnabled) {
-                                        selectedComparisonType = "Select period"
-                                        onOpenDatePicker(2)
-                                    }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Actions
                 Row(
@@ -1103,6 +1087,35 @@ fun CompareDialog(
                 }
             }
         }
+    }
+
+    if (datePickerTargetPeriod != null) {
+        val target = datePickerTargetPeriod!!
+        val initialStart = if (target == 1) tempPrimary.startMillis else tempComparison.startMillis
+        val initialEnd = if (target == 1) tempPrimary.endMillis else tempComparison.endMillis
+
+        CustomDateRangePickerDialog(
+            initialStartMillis = initialStart,
+            initialEndMillis = initialEnd,
+            targetColor = if (target == 1) StatBlue else StatGreen,
+            onDateRangeSelected = { start, end ->
+                val newPeriod = PeriodInfo(
+                    title = "Select period",
+                    startMillis = start,
+                    endMillis = end,
+                    isCustom = true
+                )
+                if (target == 1) {
+                    tempPrimary = newPeriod
+                    selectedPrimaryType = "Select period"
+                } else {
+                    tempComparison = newPeriod
+                    selectedComparisonType = "Select period"
+                }
+                datePickerTargetPeriod = null
+            },
+            onDismiss = { datePickerTargetPeriod = null }
+        )
     }
 }
 
@@ -1620,42 +1633,6 @@ fun MonthTabContent(allSessions: List<FocusSession>) {
         }
     }
 }
-
-@Composable
-fun TrendTabContent(allSessions: List<FocusSession>) {
-    val totalSeconds = allSessions.sumOf { it.completedDurationSeconds }
-    val totalDistractions = allSessions.sumOf { it.distractionAttempts }
-    val completedCount = allSessions.count { it.completedDurationSeconds > 0 }
-
-    Card(
-        colors = CardDefaults.cardColors(containerColor = FocusSurface),
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("Focus Quality & Trends", color = Color.White, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-            
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Total Focus", color = FocusTextSecondary, style = MaterialTheme.typography.labelSmall)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(formatSecondsToReadable(totalSeconds), color = StatBlue, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Sessions Done", color = FocusTextSecondary, style = MaterialTheme.typography.labelSmall)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("$completedCount", color = Color.White, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Distractions", color = FocusTextSecondary, style = MaterialTheme.typography.labelSmall)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("$totalDistractions", color = if (totalDistractions == 0) StatGreen else FocusWarning, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
-                }
-            }
-        }
-    }
-}
-
 
 @Composable
 fun TabButton(text: String, isSelected: Boolean, onClick: () -> Unit) {

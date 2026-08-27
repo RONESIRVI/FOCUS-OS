@@ -99,6 +99,7 @@ fun ScheduleCreateScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
+    var showReminderDialog by remember { mutableStateOf(false) }
 
     @OptIn(ExperimentalMaterial3Api::class)
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedCalendar.timeInMillis)
@@ -238,35 +239,7 @@ fun ScheduleCreateScreen(
 
                     Button(
                         onClick = {
-                            val finalSubject = if (subjectName.isNotBlank()) subjectName.trim() else "Study Session"
-                            val finalSession = if (sessionName.isNotBlank()) sessionName.trim() else finalSubject
-
-                            // If user typed a custom subject not yet saved, save it to custom subjects database
-                            if (subjectName.isNotBlank() && userSubjects.none { it.name.equals(subjectName.trim(), ignoreCase = true) }) {
-                                viewModel.addCustomSubject(subjectName.trim(), "#0284C7")
-                            }
-
-                            // Update setup state in VM
-                            viewModel.updateSetup(
-                                sessionName = finalSession,
-                                subjectName = finalSubject,
-                                durationMinutes = calculatedDurationMinutes,
-                                lockMode = selectedLockMode,
-                                soundType = selectedSound,
-                                requiresPhoto = requiresPhoto,
-                                requiresSelfie = requiresSelfie
-                            )
-
-                            // Schedule in AlarmManager & Room
-                            viewModel.scheduleFocusSession(
-                                hour = startHour,
-                                minute = startMinute,
-                                targetYear = selectedCalendar.get(Calendar.YEAR),
-                                targetMonth = selectedCalendar.get(Calendar.MONTH),
-                                targetDayOfMonth = selectedCalendar.get(Calendar.DAY_OF_MONTH)
-                            )
-
-                            onScheduleCreated()
+                            showReminderDialog = true
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1254,6 +1227,215 @@ fun ScheduleCreateScreen(
                     }
                 }
             )
+        }
+
+        if (showReminderDialog) {
+            SetReminderDialog(
+                onDismiss = { showReminderDialog = false },
+                onSaveReminders = { selectedReminderMinutes ->
+                    val finalSubject = if (subjectName.isNotBlank()) subjectName.trim() else "Study Session"
+                    val finalSession = if (sessionName.isNotBlank()) sessionName.trim() else finalSubject
+
+                    if (subjectName.isNotBlank() && userSubjects.none { it.name.equals(subjectName.trim(), ignoreCase = true) }) {
+                        viewModel.addCustomSubject(subjectName.trim(), "#0284C7")
+                    }
+
+                    viewModel.updateSetup(
+                        sessionName = finalSession,
+                        subjectName = finalSubject,
+                        durationMinutes = calculatedDurationMinutes,
+                        lockMode = selectedLockMode,
+                        soundType = selectedSound,
+                        requiresPhoto = requiresPhoto,
+                        requiresSelfie = requiresSelfie
+                    )
+
+                    viewModel.scheduleFocusSession(
+                        hour = startHour,
+                        minute = startMinute,
+                        targetYear = selectedCalendar.get(Calendar.YEAR),
+                        targetMonth = selectedCalendar.get(Calendar.MONTH),
+                        targetDayOfMonth = selectedCalendar.get(Calendar.DAY_OF_MONTH),
+                        reminderMinutesList = selectedReminderMinutes
+                    )
+
+                    showReminderDialog = false
+                    onScheduleCreated()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun SetReminderDialog(
+    onDismiss: () -> Unit,
+    onSaveReminders: (List<Int>) -> Unit
+) {
+    val options = remember {
+        listOf(
+            1 to "1 minutes before",
+            15 to "15 minutes before",
+            30 to "30 minutes before",
+            90 to "1.5 hour before",
+            120 to "2 hour before"
+        )
+    }
+
+    var selectedOffsets by remember { mutableStateOf(setOf(15, 30)) }
+
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = Color.White,
+            shadowElevation = 16.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = "Set Reminder",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp
+                    ),
+                    color = Color(0xFF0F172A)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "How long in advance do you want to be notified? (Select all that apply)",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                    color = Color(0xFF475569)
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    options.forEach { (minutes, label) ->
+                        val isSelected = selectedOffsets.contains(minutes)
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isSelected) Color(0xFFEFF6FF) else Color.White,
+                            border = BorderStroke(
+                                1.5.dp,
+                                if (isSelected) Color(0xFF2563EB) else Color(0xFFE2E8F0)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedOffsets = if (isSelected) {
+                                        selectedOffsets - minutes
+                                    } else {
+                                        selectedOffsets + minutes
+                                    }
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (isSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF10B981)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(CircleShape)
+                                            .border(2.dp, Color(0xFF94A3B8), CircleShape)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(14.dp))
+
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                        fontSize = 15.sp
+                                    ),
+                                    color = Color(0xFF1E293B)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Cancel button
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = CircleShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE2E8F0),
+                            contentColor = Color(0xFF475569)
+                        )
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        )
+                    }
+
+                    // Save button
+                    Button(
+                        onClick = {
+                            val selectedList = selectedOffsets.toList().sorted()
+                            onSaveReminders(if (selectedList.isEmpty()) listOf(15) else selectedList)
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = CircleShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF2563EB),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text(
+                            text = "Save",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        )
+                    }
+                }
+            }
         }
     }
 }

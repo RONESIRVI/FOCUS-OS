@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 
 enum class LockMode(val title: String, val description: String) {
     NORMAL("Normal", "Standard Pomodoro countdown. Switch apps freely."),
-    SOFT_LOCK("Mindful Mode", "Warning toast alerts you when attempting to switch apps."),
+    SOFT_LOCK("Mindful Mode", "Gentle warning alert appears only when attempting to open blocked apps."),
     MAXIMUM_LOCK("Deep Work Mode", "Kiosk lockdown mode. Emergency exit requires 300s delay penalty.")
 }
 

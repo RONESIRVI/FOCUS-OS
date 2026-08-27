@@ -29,15 +29,41 @@ class FocusScheduleReceiver : BroadcastReceiver() {
         }
         
         if (action == "ACTION_PRE_SCHEDULE") {
+            val minutesBefore = intent.getIntExtra("MINUTES_BEFORE", 15)
+            val timeText = when (minutesBefore) {
+                1 -> "1 minute"
+                90 -> "1.5 hours"
+                120 -> "2 hours"
+                60 -> "1 hour"
+                1440 -> "1 day"
+                else -> "$minutesBefore minutes"
+            }
             val notification = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("Upcoming Focus Session")
-                .setContentText("Your scheduled session '$sessionName' starts in 2 minutes. Get ready!")
+                .setContentTitle("⏰ Upcoming Focus Reminder")
+                .setContentText("Your scheduled session '$sessionName' starts in $timeText. Get ready!")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .build()
-            notificationManager.notify((sessionId * 10).toInt() + 1, notification)
+            notificationManager.notify((sessionId * 100).toInt() + minutesBefore, notification)
         } else if (action == "ACTION_EXACT_SCHEDULE") {
+            com.example.util.FocusLockManager.setPendingSchedule(sessionId, sessionName)
+            
+            try {
+                val serviceIntent = Intent(context, com.example.services.FocusTimerService::class.java).apply {
+                    this.action = "ACTION_START_PENDING_MONITOR"
+                    putExtra("SESSION_ID", sessionId)
+                    putExtra("SESSION_NAME", sessionName)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(serviceIntent)
+                } else {
+                    context.startService(serviceIntent)
+                }
+            } catch (e: Exception) {
+                Log.e("FocusSchedule", "Failed to start pending monitor service", e)
+            }
+
             val launchIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 putExtra("START_SESSION_ID", sessionId)

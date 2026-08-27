@@ -78,6 +78,20 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     val allSubjects: StateFlow<List<SubjectTask>> = repository.allSubjects
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    init {
+        viewModelScope.launch {
+            scheduledSessions.collect { list ->
+                val now = System.currentTimeMillis()
+                val pending = list.find { it.status == "SCHEDULED" && it.scheduledStartTime != null && it.scheduledStartTime <= now }
+                if (pending != null && !com.example.util.FocusLockManager.isFocusActive) {
+                    com.example.util.FocusLockManager.setPendingSchedule(pending.id, pending.sessionName)
+                } else if (pending == null && com.example.util.FocusLockManager.hasPendingSchedule() && !com.example.util.FocusLockManager.isFocusActive) {
+                    com.example.util.FocusLockManager.clearPendingSchedule()
+                }
+            }
+        }
+    }
+
     private val _setupState = MutableStateFlow(UiSessionSetup())
     
     private val _dismissedNotificationIds = MutableStateFlow<Set<String>>(emptySet())
@@ -329,7 +343,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         minute: Int,
         targetYear: Int? = null,
         targetMonth: Int? = null,
-        targetDayOfMonth: Int? = null
+        targetDayOfMonth: Int? = null,
+        reminderMinutesList: List<Int> = listOf(15, 60)
     ) {
         val setup = _setupState.value
         val context = getApplication<Application>()
@@ -372,25 +387,43 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         
         viewModelScope.launch(Dispatchers.IO) {
             val sessionId = repository.saveSession(session)
-            // Save fixed allowed apps for this schedule
+            // Save fixed allowed apps & reminder offsets for this schedule
             val currentAllowed = if (setup.lockMode == LockMode.MAXIMUM_LOCK) whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName } else whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
-            context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE).edit().putString("scheduled_apps_$sessionId", currentAllowed.joinToString(",")).apply()
+            val reminderString = reminderMinutesList.joinToString(",")
+            context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE).edit()
+                .putString("scheduled_apps_$sessionId", currentAllowed.joinToString(","))
+                .putString("reminder_offsets_$sessionId", reminderString)
+                .apply()
             
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
             
-            // Alarm 1: 2 minutes early notification
-            val earlyIntent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
-                action = "ACTION_PRE_SCHEDULE"
-                putExtra("SESSION_ID", sessionId)
-                putExtra("SESSION_NAME", sessionTitle)
+            // Schedule selected reminder alarms
+            reminderMinutesList.forEachIndexed { index, minsBefore ->
+                val reminderTime = scheduledStartTime - (minsBefore * 60 * 1000L)
+                if (reminderTime > System.currentTimeMillis()) {
+                    val earlyIntent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
+                        action = "ACTION_PRE_SCHEDULE"
+                        putExtra("SESSION_ID", sessionId)
+                        putExtra("SESSION_NAME", sessionTitle)
+                        putExtra("MINUTES_BEFORE", minsBefore)
+                    }
+                    val earlyPendingIntent = android.app.PendingIntent.getBroadcast(
+                        context,
+                        (sessionId * 100).toInt() + index + 1,
+                        earlyIntent,
+                        android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+                    )
+                    try {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+                            alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, reminderTime, earlyPendingIntent)
+                        } else {
+                            alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, reminderTime, earlyPendingIntent)
+                        }
+                    } catch (e: Exception) {
+                        alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, reminderTime, earlyPendingIntent)
+                    }
+                }
             }
-            val earlyPendingIntent = android.app.PendingIntent.getBroadcast(
-                context,
-                (sessionId * 10).toInt() + 1,
-                earlyIntent,
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-            )
-            val earlyTime = scheduledStartTime - (2 * 60 * 1000)
             
             // Alarm 2: Exact start time notification
             val exactIntent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
@@ -407,20 +440,11 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             
             try {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
-                    if (earlyTime > System.currentTimeMillis()) {
-                        alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, earlyTime, earlyPendingIntent)
-                    }
                     alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, scheduledStartTime, exactPendingIntent)
                 } else {
-                    if (earlyTime > System.currentTimeMillis()) {
-                        alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, earlyTime, earlyPendingIntent)
-                    }
                     alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, scheduledStartTime, exactPendingIntent)
                 }
             } catch (e: Exception) {
-                if (earlyTime > System.currentTimeMillis()) {
-                    alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, earlyTime, earlyPendingIntent)
-                }
                 alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, scheduledStartTime, exactPendingIntent)
             }
             
