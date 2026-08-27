@@ -22,6 +22,7 @@ class FocusScheduleReceiver : BroadcastReceiver() {
 
         val prefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
         val notifPrefix = prefs.getString("NOTIF_CUSTOM_PREFIX", "FOCUS OS") ?: "FOCUS OS"
+        val scheduleSoundKey = prefs.getString("NOTIF_SCHEDULE_SOUND", "PRIME_ZEN") ?: "PRIME_ZEN"
         val vibratePatternKey = prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
         val vibrateArray = when (vibratePatternKey) {
             "DOUBLE_PULSE" -> longArrayOf(0, 150, 100, 150)
@@ -30,7 +31,7 @@ class FocusScheduleReceiver : BroadcastReceiver() {
             else -> longArrayOf(0, 250, 250, 250)
         }
 
-        val soundUri = com.example.util.NotificationSoundVibrationHelper.getNotificationSoundUri(context)
+        val soundUri = com.example.util.NotificationSoundVibrationHelper.getNotificationSoundUri(context, scheduleSoundKey)
         
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "schedule_channel"
@@ -48,7 +49,7 @@ class FocusScheduleReceiver : BroadcastReceiver() {
             notificationManager.createNotificationChannel(channel)
         }
         
-        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context)
+        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, scheduleSoundKey)
         
         if (action == "ACTION_PRE_SCHEDULE") {
             val minutesBefore = intent.getIntExtra("MINUTES_BEFORE", 15)

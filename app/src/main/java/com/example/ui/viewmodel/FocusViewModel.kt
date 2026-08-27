@@ -518,7 +518,11 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             if (showSoftModal) {
                 _showSoftLockOverlay.value = true
             }
-            com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(getApplication())
+            val context = getApplication<Application>()
+            val prefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+            val soundEnabled = prefs.getBoolean("NOTIF_SOFTLOCK_ENABLED", true)
+            val soundKey = if (soundEnabled) prefs.getString("NOTIF_SOFTLOCK_SOUND", "PRIME_STROBE") ?: "PRIME_STROBE" else "SILENT"
+            com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, soundKey)
         }
     }
 
@@ -529,7 +533,11 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         _pendingSessionNameOverlay.value = sessionName
         _pendingSessionIdOverlay.value = sessionId
         _showPendingLockOverlay.value = true
-        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(getApplication())
+        val context = getApplication<Application>()
+        val prefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+        val soundEnabled = prefs.getBoolean("NOTIF_SOFTLOCK_ENABLED", true)
+        val soundKey = if (soundEnabled) prefs.getString("NOTIF_SOFTLOCK_SOUND", "PRIME_STROBE") ?: "PRIME_STROBE" else "SILENT"
+        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, soundKey)
     }
 
     fun getAppDisplayName(packageName: String): String {

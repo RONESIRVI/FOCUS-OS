@@ -58,11 +58,18 @@ fun SettingsScreen(
     val sharedPrefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
 
     var notifCustomPrefix by remember { mutableStateOf(sharedPrefs.getString("NOTIF_CUSTOM_PREFIX", "FOCUS OS") ?: "FOCUS OS") }
-    var notifSoundTone by remember { mutableStateOf(sharedPrefs.getString("NOTIF_SOUND_TONE", "CLASSIC_BELL") ?: "CLASSIC_BELL") }
     var notifVibratePattern by remember { mutableStateOf(sharedPrefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE") }
     var notifDesignTheme by remember { mutableStateOf(sharedPrefs.getString("NOTIF_DESIGN_THEME", "DEEP_DARK") ?: "DEEP_DARK") }
 
-    var showNotifSoundDialog by remember { mutableStateOf(false) }
+    var notifScheduleSound by remember { mutableStateOf(sharedPrefs.getString("NOTIF_SCHEDULE_SOUND", "PRIME_ZEN") ?: "PRIME_ZEN") }
+    var notifWarningSound by remember { mutableStateOf(sharedPrefs.getString("NOTIF_WARNING_SOUND", "PRIME_SIREN") ?: "PRIME_SIREN") }
+    var notifCompleteSound by remember { mutableStateOf(sharedPrefs.getString("NOTIF_COMPLETE_SOUND", "PRIME_QUANTUM") ?: "PRIME_QUANTUM") }
+    var notifSoftlockSound by remember { mutableStateOf(sharedPrefs.getString("NOTIF_SOFTLOCK_SOUND", "PRIME_STROBE") ?: "PRIME_STROBE") }
+
+    var notifWarningEnabled by remember { mutableStateOf(sharedPrefs.getBoolean("NOTIF_WARNING_ENABLED", true)) }
+    var notifSoftlockEnabled by remember { mutableStateOf(sharedPrefs.getBoolean("NOTIF_SOFTLOCK_ENABLED", true)) }
+
+    var activeSoundCategoryTarget by remember { mutableStateOf<String?>(null) }
     var showNotifThemeDialog by remember { mutableStateOf(false) }
     var showNotifVibrateDialog by remember { mutableStateOf(false) }
     var showNotifTitleDialog by remember { mutableStateOf(false) }
@@ -522,9 +529,9 @@ fun SettingsScreen(
             }
         }
 
-        // Notification Sound & Design Customization
+        // Notification Sound & Design Customization Master Hub Card
         item {
-            SettingsSectionTitle("🔔 NOTIFICATION SOUND & DESIGN")
+            SettingsSectionTitle("🔊 SOUND & ALERT NOTIFICATIONS MASTER HUB")
             SettingsCard {
                 // Live Interactive Notification Card Preview
                 val themeAccent = when(notifDesignTheme) {
@@ -574,7 +581,7 @@ fun SettingsScreen(
                                 color = themeAccent.copy(alpha = 0.2f)
                             ) {
                                 Text(
-                                    text = "LIVE PREVIEW",
+                                    text = "PRIME SOUNDS ACTIVE",
                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
                                     color = themeAccent,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -607,31 +614,71 @@ fun SettingsScreen(
 
                 Divider(color = FocusSurfaceVariant)
 
-                // 1. Notification App Header
+                // 1. Scheduled Session Alert
                 SettingsClickableItem(
-                    icon = Icons.Default.Badge,
-                    title = "Notification App Title",
-                    subtitle = "Header: $notifCustomPrefix",
-                    onClick = { showNotifTitleDialog = true }
+                    icon = Icons.Default.Event,
+                    title = "1. Scheduled Focus Session Alert",
+                    subtitle = "Alert Tone: ${getSoundLabel(notifScheduleSound)} • Tap to test/change",
+                    onClick = { activeSoundCategoryTarget = "SCHEDULE" }
                 )
 
                 Divider(color = FocusSurfaceVariant)
 
-                // 2. Sound Tone Selector
-                val soundToneLabel = when(notifSoundTone) {
-                    "SILENT" -> "🔇 Silent (Vibrate Only)"
-                    else -> "📢 Exclusive Attached Audio (Siren Alert)"
+                // 2. Security Distraction Siren Warning
+                SettingsToggleItem(
+                    icon = Icons.Default.Warning,
+                    title = "2. Security Distraction Siren Warning",
+                    subtitle = if (notifWarningEnabled) "Warning Sound Enabled: ${getSoundLabel(notifWarningSound)}" else "🔇 Security Warning Sound Disabled (Mute)",
+                    defaultChecked = notifWarningEnabled,
+                    onCheckedChange = { isChecked ->
+                        notifWarningEnabled = isChecked
+                        sharedPrefs.edit().putBoolean("NOTIF_WARNING_ENABLED", isChecked).apply()
+                    }
+                )
+                if (notifWarningEnabled) {
+                    SettingsClickableItem(
+                        icon = Icons.Default.MusicNote,
+                        title = "   └ Select Security Siren Sound",
+                        subtitle = "Current: ${getSoundLabel(notifWarningSound)} • Tap to change",
+                        onClick = { activeSoundCategoryTarget = "WARNING" }
+                    )
                 }
+
+                Divider(color = FocusSurfaceVariant)
+
+                // 3. Session Complete Finish Alarm
                 SettingsClickableItem(
-                    icon = Icons.Default.VolumeUp,
-                    title = "Notification Sound Tone",
-                    subtitle = soundToneLabel,
-                    onClick = { showNotifSoundDialog = true }
+                    icon = Icons.Default.CheckCircle,
+                    title = "3. Session Completion Alarm",
+                    subtitle = "Completion Sound: ${getSoundLabel(notifCompleteSound)} • Tap to test/change",
+                    onClick = { activeSoundCategoryTarget = "COMPLETE" }
                 )
 
                 Divider(color = FocusSurfaceVariant)
 
-                // 3. Mobile Vibration System
+                // 4. Soft Lock Warning Tone
+                SettingsToggleItem(
+                    icon = Icons.Default.Lock,
+                    title = "4. Soft Lock Warning Alert",
+                    subtitle = if (notifSoftlockEnabled) "Soft Lock Warning Tone: ${getSoundLabel(notifSoftlockSound)}" else "🔇 Soft Lock Sound Muted",
+                    defaultChecked = notifSoftlockEnabled,
+                    onCheckedChange = { isChecked ->
+                        notifSoftlockEnabled = isChecked
+                        sharedPrefs.edit().putBoolean("NOTIF_SOFTLOCK_ENABLED", isChecked).apply()
+                    }
+                )
+                if (notifSoftlockEnabled) {
+                    SettingsClickableItem(
+                        icon = Icons.Default.MusicNote,
+                        title = "   └ Select Soft Lock Warning Sound",
+                        subtitle = "Current: ${getSoundLabel(notifSoftlockSound)} • Tap to change",
+                        onClick = { activeSoundCategoryTarget = "SOFTLOCK" }
+                    )
+                }
+
+                Divider(color = FocusSurfaceVariant)
+
+                // 5. Mobile Hardware Vibration System
                 val vibrateLabel = when(notifVibratePattern) {
                     "DOUBLE_PULSE" -> "⚡ Double Pulse Vibration Active"
                     "RHYTHM" -> "🥁 Rhythmic Pulse Vibration Active"
@@ -640,14 +687,24 @@ fun SettingsScreen(
                 }
                 SettingsClickableItem(
                     icon = Icons.Default.Vibration,
-                    title = "Mobile Vibration System",
+                    title = "5. Mobile Hardware Vibration System",
                     subtitle = "$vibrateLabel • Tap to test",
                     onClick = { showNotifVibrateDialog = true }
                 )
 
                 Divider(color = FocusSurfaceVariant)
 
-                // 4. Design Theme
+                // 6. Notification App Title Header
+                SettingsClickableItem(
+                    icon = Icons.Default.Badge,
+                    title = "6. Notification App Title Header",
+                    subtitle = "Header: $notifCustomPrefix • Tap to edit",
+                    onClick = { showNotifTitleDialog = true }
+                )
+
+                Divider(color = FocusSurfaceVariant)
+
+                // 7. Notification Design Theme
                 val themeLabel = when(notifDesignTheme) {
                     "CYBER_NEON" -> "⚡ Cyber Neon (Purple & Cyan)"
                     "WARM_SUNSET" -> "🌅 Warm Sunset (Amber & Orange)"
@@ -656,7 +713,7 @@ fun SettingsScreen(
                 }
                 SettingsClickableItem(
                     icon = Icons.Default.Palette,
-                    title = "Notification Design Theme",
+                    title = "7. Notification Visual Design Theme",
                     subtitle = themeLabel,
                     onClick = { showNotifThemeDialog = true }
                 )
@@ -919,50 +976,102 @@ fun SettingsScreen(
         )
     }
 
-    if (showNotifSoundDialog) {
-        val tones = listOf(
-            "ATTACHED_AUDIO" to "📢 Exclusive Attached Audio (Siren Sound)",
-            "SILENT" to "🔇 Silent (No Sound)"
+    if (activeSoundCategoryTarget != null) {
+        val targetCat = activeSoundCategoryTarget!!
+        val catTitle = when (targetCat) {
+            "SCHEDULE" -> "📅 Scheduled Session Alert Sound"
+            "WARNING" -> "🚨 Security Distraction Warning Sound"
+            "COMPLETE" -> "🏁 Session Completion Alarm Sound"
+            "SOFTLOCK" -> "🔒 Soft Lock Warning Sound"
+            else -> "Notification Sound"
+        }
+
+        val prefKey = when (targetCat) {
+            "SCHEDULE" -> "NOTIF_SCHEDULE_SOUND"
+            "WARNING" -> "NOTIF_WARNING_SOUND"
+            "COMPLETE" -> "NOTIF_COMPLETE_SOUND"
+            "SOFTLOCK" -> "NOTIF_SOFTLOCK_SOUND"
+            else -> "NOTIF_SCHEDULE_SOUND"
+        }
+
+        val currentSelectedKey = when (targetCat) {
+            "SCHEDULE" -> notifScheduleSound
+            "WARNING" -> notifWarningSound
+            "COMPLETE" -> notifCompleteSound
+            "SOFTLOCK" -> notifSoftlockSound
+            else -> "PRIME_SIREN"
+        }
+
+        val primeSounds = listOf(
+            "PRIME_SIREN" to "📢 Prime Dual Frequency Siren Alert",
+            "PRIME_QUANTUM" to "⚡ Prime Quantum Pulse Chime",
+            "PRIME_ZEN" to "🔮 Prime Zen Solfeggio 528Hz Bell",
+            "PRIME_STROBE" to "🚨 Prime High Strobe Warning Beep",
+            "SILENT" to "🔇 Silent (Mute Sound / Vibrate Only)"
         )
+
         AlertDialog(
-            onDismissRequest = { showNotifSoundDialog = false },
-            title = { Text("Select Notification Alert Sound", color = Color.White, fontWeight = FontWeight.Bold) },
+            onDismissRequest = {
+                com.example.util.NotificationSoundVibrationHelper.stopCurrentSound()
+                activeSoundCategoryTarget = null
+            },
+            title = {
+                Column {
+                    Text(text = catTitle, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(text = "Choose Prime Sound • Live Audio Test on Select", color = FocusPrimary, fontSize = 11.sp)
+                }
+            },
             text = {
                 Column {
-                    tones.forEach { (key, label) ->
-                        val isSelected = notifSoundTone == key || (key == "ATTACHED_AUDIO" && notifSoundTone != "SILENT")
+                    primeSounds.forEach { (key, label) ->
+                        val isSelected = currentSelectedKey == key
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    notifSoundTone = key
-                                    sharedPrefs.edit().putString("NOTIF_SOUND_TONE", key).apply()
-                                    if (key != "SILENT") {
-                                        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context)
+                                    when (targetCat) {
+                                        "SCHEDULE" -> notifScheduleSound = key
+                                        "WARNING" -> notifWarningSound = key
+                                        "COMPLETE" -> notifCompleteSound = key
+                                        "SOFTLOCK" -> notifSoftlockSound = key
                                     }
+                                    sharedPrefs.edit().putString(prefKey, key).apply()
+                                    com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, key)
                                 }
-                                .padding(vertical = 10.dp),
+                                .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
                                 selected = isSelected,
                                 onClick = {
-                                    notifSoundTone = key
-                                    sharedPrefs.edit().putString("NOTIF_SOUND_TONE", key).apply()
-                                    if (key != "SILENT") {
-                                        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context)
+                                    when (targetCat) {
+                                        "SCHEDULE" -> notifScheduleSound = key
+                                        "WARNING" -> notifWarningSound = key
+                                        "COMPLETE" -> notifCompleteSound = key
+                                        "SOFTLOCK" -> notifSoftlockSound = key
                                     }
+                                    sharedPrefs.edit().putString(prefKey, key).apply()
+                                    com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, key)
                                 },
                                 colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(text = label, color = if (isSelected) FocusPrimary else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = label,
+                                color = if (isSelected) FocusPrimary else Color.White,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showNotifSoundDialog = false }) {
+                TextButton(onClick = {
+                    com.example.util.NotificationSoundVibrationHelper.stopCurrentSound()
+                    activeSoundCategoryTarget = null
+                }) {
                     Text("Done", color = FocusPrimary, fontWeight = FontWeight.Bold)
                 }
             },
@@ -1175,6 +1284,17 @@ fun PermissionRowItem(
     }
 }
 
+fun getSoundLabel(key: String): String {
+    return when (key) {
+        "PRIME_SIREN" -> "📢 Prime Dual Siren Alert"
+        "PRIME_QUANTUM" -> "⚡ Prime Quantum Pulse"
+        "PRIME_ZEN" -> "🔮 Prime Zen Crystal Bell"
+        "PRIME_STROBE" -> "🚨 Prime High Strobe Warning"
+        "SILENT" -> "🔇 Silent (No Sound)"
+        else -> "📢 Prime Dual Siren Alert"
+    }
+}
+
 @Composable
 fun SettingsSectionTitle(title: String) {
     Text(
@@ -1267,9 +1387,10 @@ fun SettingsToggleItem(
     icon: ImageVector,
     title: String,
     subtitle: String? = null,
-    defaultChecked: Boolean = false
+    defaultChecked: Boolean = false,
+    onCheckedChange: ((Boolean) -> Unit)? = null
 ) {
-    var checked by remember { mutableStateOf(defaultChecked) }
+    var checked by remember(defaultChecked) { mutableStateOf(defaultChecked) }
     
     Row(
         modifier = Modifier
@@ -1290,7 +1411,10 @@ fun SettingsToggleItem(
         }
         Switch(
             checked = checked,
-            onCheckedChange = { checked = it },
+            onCheckedChange = {
+                checked = it
+                onCheckedChange?.invoke(it)
+            },
             colors = SwitchDefaults.colors(
                 checkedThumbColor = FocusBackground,
                 checkedTrackColor = FocusPrimary,
