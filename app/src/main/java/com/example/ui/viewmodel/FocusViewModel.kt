@@ -395,58 +395,13 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                 .putString("reminder_offsets_$sessionId", reminderString)
                 .apply()
             
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-            
-            // Schedule selected reminder alarms
-            reminderMinutesList.forEachIndexed { index, minsBefore ->
-                val reminderTime = scheduledStartTime - (minsBefore * 60 * 1000L)
-                if (reminderTime > System.currentTimeMillis()) {
-                    val earlyIntent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
-                        action = "ACTION_PRE_SCHEDULE"
-                        putExtra("SESSION_ID", sessionId)
-                        putExtra("SESSION_NAME", sessionTitle)
-                        putExtra("MINUTES_BEFORE", minsBefore)
-                    }
-                    val earlyPendingIntent = android.app.PendingIntent.getBroadcast(
-                        context,
-                        (sessionId * 100).toInt() + index + 1,
-                        earlyIntent,
-                        android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-                    )
-                    try {
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
-                            alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, reminderTime, earlyPendingIntent)
-                        } else {
-                            alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, reminderTime, earlyPendingIntent)
-                        }
-                    } catch (e: Exception) {
-                        alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, reminderTime, earlyPendingIntent)
-                    }
-                }
-            }
-            
-            // Alarm 2: Exact start time notification
-            val exactIntent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
-                action = "ACTION_EXACT_SCHEDULE"
-                putExtra("SESSION_ID", sessionId)
-                putExtra("SESSION_NAME", sessionTitle)
-            }
-            val exactPendingIntent = android.app.PendingIntent.getBroadcast(
-                context,
-                (sessionId * 10).toInt() + 2,
-                exactIntent,
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            com.example.util.AlarmScheduler.scheduleSessionAlarms(
+                context = context,
+                sessionId = sessionId,
+                sessionTitle = sessionTitle,
+                scheduledStartTime = scheduledStartTime,
+                reminderMinutesList = reminderMinutesList
             )
-            
-            try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
-                    alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, scheduledStartTime, exactPendingIntent)
-                } else {
-                    alarmManager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, scheduledStartTime, exactPendingIntent)
-                }
-            } catch (e: Exception) {
-                alarmManager.set(android.app.AlarmManager.RTC_WAKEUP, scheduledStartTime, exactPendingIntent)
-            }
             
             launch(Dispatchers.Main) {
                 val formatter = java.text.SimpleDateFormat("EEE, d MMM • h:mm a", java.util.Locale.getDefault())
@@ -462,36 +417,15 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteScheduledSession(session: FocusSession) {
         viewModelScope.launch(Dispatchers.IO) {
             val context = getApplication<Application>()
-        val sharedPrefs = context.getSharedPreferences("schedule_prefs", android.content.Context.MODE_PRIVATE)
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? android.app.AlarmManager
+            val sharedPrefs = context.getSharedPreferences("schedule_prefs", android.content.Context.MODE_PRIVATE)
+            val offsetsStr = sharedPrefs.getString("reminder_offsets_${session.id}", "15") ?: "15"
+            val offsets = offsetsStr.split(",").mapNotNull { it.trim().toIntOrNull() }
             
-            if (alarmManager != null) {
-                val earlyIntent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
-                    action = "ACTION_PRE_SCHEDULE"
-                }
-                val earlyPendingIntent = android.app.PendingIntent.getBroadcast(
-                    context,
-                    (session.id * 10).toInt() + 1,
-                    earlyIntent,
-                    android.app.PendingIntent.FLAG_NO_CREATE or android.app.PendingIntent.FLAG_IMMUTABLE
-                )
-                if (earlyPendingIntent != null) {
-                    alarmManager.cancel(earlyPendingIntent)
-                }
-
-                val exactIntent = Intent(context, com.example.receivers.FocusScheduleReceiver::class.java).apply {
-                    action = "ACTION_EXACT_SCHEDULE"
-                }
-                val exactPendingIntent = android.app.PendingIntent.getBroadcast(
-                    context,
-                    (session.id * 10).toInt() + 2,
-                    exactIntent,
-                    android.app.PendingIntent.FLAG_NO_CREATE or android.app.PendingIntent.FLAG_IMMUTABLE
-                )
-                if (exactPendingIntent != null) {
-                    alarmManager.cancel(exactPendingIntent)
-                }
-            }
+            com.example.util.AlarmScheduler.cancelSessionAlarms(
+                context = context,
+                sessionId = session.id,
+                reminderMinutesList = offsets
+            )
 
             if (session.status == "COMPLETED" || session.completedDurationSeconds > 0) {
                 repository.updateSession(session.copy(status = "ARCHIVED"))

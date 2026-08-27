@@ -46,7 +46,6 @@ object FocusLockOverlayManager {
             try {
                 if (isShowing.get() && overlayView != null) {
                     updateOverlayContent(context, blockedPackage, remainingSeconds, subjectName, allowedPackages)
-                    if (isSoftLock) scheduleSoftLockDismiss()
                     return@post
                 }
 
@@ -73,7 +72,6 @@ object FocusLockOverlayManager {
                 }
 
                 val view = createOverlayView(context, blockedPackage, remainingSeconds, subjectName, allowedPackages, isSoftLock)
-                if (isSoftLock) scheduleSoftLockDismiss()
                 windowManager?.addView(view, params)
                 overlayView = view
                 isShowing.set(true)
@@ -86,8 +84,6 @@ object FocusLockOverlayManager {
     }
 
     fun dismissOverlay() {
-        softLockRunnable?.let { mainHandler.removeCallbacks(it) }
-        softLockRunnable = null
         mainHandler.post {
             try {
                 if (isShowing.get() && overlayView != null && windowManager != null) {
@@ -143,7 +139,6 @@ object FocusLockOverlayManager {
                 }
 
                 val view = createPendingScheduleOverlayView(context, blockedPackage, sessionName, sessionId)
-                scheduleSoftLockDismiss()
                 windowManager?.addView(view, params)
                 overlayView = view
                 isShowing.set(true)
@@ -239,17 +234,11 @@ object FocusLockOverlayManager {
 
         // Primary Action: Return to Focus Timer
         val returnBtn = Button(context).apply {
-            if (isSoftLock) {
-                text = "WAITING 30 SECONDS..."
-                isEnabled = false
-                setBackgroundColor(android.graphics.Color.parseColor("#475569")) // Slate 600
-            } else {
-                text = "RETURN TO FOCUS TIMER"
-                setBackgroundColor(android.graphics.Color.parseColor("#0284C7")) // Primary blue
-                setOnClickListener {
-                    dismissOverlay()
-                    bringAppToFront(context, blockedPackage)
-                }
+            text = if (isSoftLock) "RETURN TO STUDY APP" else "RETURN TO FOCUS TIMER"
+            setBackgroundColor(android.graphics.Color.parseColor("#0284C7")) // Primary blue
+            setOnClickListener {
+                dismissOverlay()
+                bringAppToFront(context, blockedPackage)
             }
             textSize = 15f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -356,31 +345,7 @@ object FocusLockOverlayManager {
         }
         rootLayout.addView(startBtn)
 
-        // Secondary Action: Dismiss warning for 30s
-        val dismissBtn = Button(context).apply {
-            text = "SNOOZE WARNING (30s)"
-            setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            textSize = 13f
-            setTextColor(android.graphics.Color.parseColor("#94A3B8"))
-            setOnClickListener {
-                dismissOverlay()
-            }
-        }
-        rootLayout.addView(dismissBtn)
-
         return rootLayout
-    }
-
-    
-    private var softLockRunnable: Runnable? = null
-    
-    private fun scheduleSoftLockDismiss() {
-        softLockRunnable?.let { mainHandler.removeCallbacks(it) }
-        val r = Runnable { 
-            dismissOverlay()
-        }
-        softLockRunnable = r
-        mainHandler.postDelayed(r, 30000L) // 30 seconds
     }
 
     private fun updateOverlayContent(
