@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -53,8 +55,8 @@ class MainActivity : ComponentActivity() {
         var startDestination = FocusRoutes.HOME
         val startSessionId = intent.getLongExtra("START_SESSION_ID", -1L)
         if (startSessionId != -1L) {
-            viewModel.loadScheduledSession(startSessionId)
-            startDestination = FocusRoutes.CAMERA_START
+            viewModel.triggerStartSession(startSessionId)
+            intent.removeExtra("START_SESSION_ID")
         }
         
         enableEdgeToEdge()
@@ -65,6 +67,15 @@ class MainActivity : ComponentActivity() {
                 val currentRoute = navBackStackEntry?.destination?.route
                 val showBottomBar = currentRoute in listOf(FocusRoutes.HOME, FocusRoutes.SCHEDULE_MAIN, FocusRoutes.STATS, FocusRoutes.SETTINGS)
 
+                val startSessionEvent by viewModel.startSessionEvent.collectAsState()
+                LaunchedEffect(startSessionEvent) {
+                    startSessionEvent?.let { sessionId ->
+                        navController.navigate("${FocusRoutes.SESSION_START_ROUTER}/$sessionId") {
+                            popUpTo(FocusRoutes.HOME)
+                        }
+                        viewModel.clearStartSessionEvent()
+                    }
+                }
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = {
@@ -100,11 +111,22 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         val startSessionId = intent.getLongExtra("START_SESSION_ID", -1L)
         if (startSessionId != -1L) {
-            viewModel.loadScheduledSession(startSessionId)
+            viewModel.triggerStartSession(startSessionId)
+            intent.removeExtra("START_SESSION_ID")
         }
         val blockedPkg = intent.getStringExtra("BLOCKED_PACKAGE_EVENT")
         if (blockedPkg != null) {
             viewModel.triggerDistractionWarning(blockedPkg, showRedModal = true)
+        }
+        val blockedPkgSoft = intent.getStringExtra("BLOCKED_PACKAGE_EVENT_SOFT")
+        if (blockedPkgSoft != null) {
+            viewModel.triggerDistractionWarning(blockedPkgSoft, showSoftModal = true)
+        }
+        val blockedPkgPending = intent.getStringExtra("BLOCKED_PACKAGE_EVENT_PENDING")
+        if (blockedPkgPending != null) {
+            val pName = intent.getStringExtra("PENDING_SESSION_NAME") ?: "Scheduled Focus"
+            val pId = intent.getLongExtra("PENDING_SESSION_ID", -1L)
+            viewModel.triggerPendingDistractionWarning(blockedPkgPending, pName, pId)
         }
     }
 
@@ -128,6 +150,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun enforceFocusLock() {
+        if (FocusLockManager.isCameraVerificationActive) {
+            Log.d("MainActivity", "Camera verification active, skipping enforceFocusLock")
+            return
+        }
         val timerState = viewModel.timerState.value
         if ((timerState.isRunning && timerState.lockMode != LockMode.NORMAL) || FocusLockManager.hasPendingSchedule()) {
             try {

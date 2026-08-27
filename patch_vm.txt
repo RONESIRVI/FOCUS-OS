@@ -1,0 +1,32 @@
+--- app/src/main/java/com/example/ui/viewmodel/FocusViewModel.kt
++++ app/src/main/java/com/example/ui/viewmodel/FocusViewModel.kt
+@@ -265,6 +265,28 @@
+         }
+     }
+ 
++    fun loadAndStartScheduledSession(sessionId: Long, onReady: (requiresPhoto: Boolean) -> Unit) {
++        _activeScheduledSessionId.value = sessionId
++        viewModelScope.launch {
++            val sessions = repository.allSessions.first()
++            val session = sessions.find { it.id == sessionId }
++            if (session != null) {
++                _setupState.value = _setupState.value.copy(
++                    sessionName = session.sessionName,
++                    subjectName = session.subjectName,
++                    durationMinutes = session.targetDurationMinutes,
++                    lockMode = try { LockMode.valueOf(session.lockMode) } catch (e: Exception) { LockMode.MAXIMUM_LOCK },
++                    scheduledStartTime = session.scheduledStartTime,
++                    scheduledEndTime = session.scheduledEndTime,
++                    requiresPhoto = session.requiresPhoto,
++                    requiresSelfie = session.requiresSelfie
++                )
++            }
++            withContext(kotlinx.coroutines.Dispatchers.Main) {
++                onReady(_setupState.value.requiresPhoto)
++            }
++        }
++    }
++
+     fun updateSetup(
+         sessionName: String? = null,
+         subjectName: String? = null,

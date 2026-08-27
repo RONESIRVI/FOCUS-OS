@@ -25,6 +25,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.FocusSession
 import com.example.ui.dialogs.AppGuideDialog
 import com.example.ui.dialogs.NotificationCenterDialog
@@ -46,11 +48,17 @@ fun HomeScreen(
     onNavigateToScheduleMain: () -> Unit,
     onNavigateToAppSelector: () -> Unit,
     onNavigateToStats: () -> Unit,
-    onNavigateToTimer: () -> Unit
+    onNavigateToTimer: () -> Unit,
+    onNavigateToCameraStart: () -> Unit,
+    onNavigateToSessionRouter: (Long) -> Unit
 ) {
     val stats by viewModel.summaryStats.collectAsState()
     val scheduledSessions by viewModel.scheduledSessions.collectAsState()
     val allSessions by viewModel.allSessions.collectAsState()
+    val showPendingLockOverlay by viewModel.showPendingLockOverlay.collectAsState()
+    val pendingSessionNameOverlay by viewModel.pendingSessionNameOverlay.collectAsState()
+    val pendingSessionIdOverlay by viewModel.pendingSessionIdOverlay.collectAsState()
+    val lastBlockedPackage by viewModel.lastBlockedPackage.collectAsState()
 
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
@@ -94,17 +102,100 @@ fun HomeScreen(
             },
             onDismiss = { showNotifications = false },
             onStartScheduledSession = { session ->
-                viewModel.loadScheduledSession(session.id)
-                if (session.requiresPhoto) {
-                    onNavigateToTimer() // Will route through flow
-                } else {
-                    viewModel.startFocusSession()
-                    onNavigateToTimer()
-                }
+                onNavigateToSessionRouter(session.id)
             },
             onOpenShield = onNavigateToSetup,
             onOpenSchedule = onNavigateToScheduleMain
         )
+    }
+
+    if (showPendingLockOverlay) {
+        val blockedAppName = lastBlockedPackage?.let { viewModel.getAppDisplayName(it) } ?: "Distraction App"
+        Dialog(
+            onDismissRequest = { /* Modal lock */ },
+            properties = DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false,
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF0F172A)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "🛡️ STRICT FOCUS LOCK ACTIVE",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFFF59E0B),
+                        modifier = Modifier
+                            .background(Color(0xFFF59E0B).copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 24.dp, vertical = 12.dp)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(32.dp))
+                    
+                    Text(
+                        text = "⚠️ '$blockedAppName' is BLOCKED!",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "You have a pending scheduled session:",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color(0xFF94A3B8),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    
+                    Text(
+                        text = pendingSessionNameOverlay.ifBlank { "Scheduled Focus" },
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = FocusPrimary,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(32.dp))
+                    
+                    Text(
+                        text = "Please start your session to continue.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White
+                    )
+                    
+                    Spacer(modifier = Modifier.height(48.dp))
+                    
+                    Button(
+                        onClick = { 
+                            viewModel.dismissLockOverlay() 
+                            if (pendingSessionIdOverlay != -1L) {
+                                onNavigateToSessionRouter(pendingSessionIdOverlay)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF0284C7),
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("START SESSION", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                    }
+                }
+            }
+        }
     }
 
     LazyColumn(
@@ -348,9 +439,7 @@ fun HomeScreen(
 
                         Button(
                             onClick = {
-                                viewModel.loadScheduledSession(nearestSession.id)
-                                viewModel.startFocusSession()
-                                onNavigateToTimer()
+                                onNavigateToSessionRouter(nearestSession.id)
                             },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = FocusWarning,
@@ -665,8 +754,7 @@ fun HomeScreen(
 
                                     FilledTonalButton(
                                         onClick = {
-                                            viewModel.loadScheduledSession(session.id)
-                                            onNavigateToTimer()
+                                            onNavigateToSessionRouter(session.id)
                                         },
                                         shape = RoundedCornerShape(10.dp),
                                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),

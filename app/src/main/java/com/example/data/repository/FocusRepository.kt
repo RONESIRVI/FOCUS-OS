@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 class FocusRepository(private val focusDao: FocusDao) {
 
     val allSessions: Flow<List<FocusSession>> = focusDao.getAllSessions()
+    suspend fun getSessionById(sessionId: Long): FocusSession? = focusDao.getSessionById(sessionId)
     val scheduledSessions: Flow<List<FocusSession>> = focusDao.getScheduledSessions()
     fun allowedApps(profile: String = "MANUAL"): Flow<List<AllowedApp>> = focusDao.getAllowedApps(profile)
     fun whitelistedApps(profile: String = "MANUAL"): Flow<List<AllowedApp>> = focusDao.getWhitelistedApps(profile)

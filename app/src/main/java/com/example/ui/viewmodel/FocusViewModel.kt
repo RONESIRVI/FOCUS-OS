@@ -108,6 +108,29 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     private val _showLockOverlay = MutableStateFlow(false)
     val showLockOverlay: StateFlow<Boolean> = _showLockOverlay.asStateFlow()
 
+    private val _showSoftLockOverlay = MutableStateFlow(false)
+    val showSoftLockOverlay: StateFlow<Boolean> = _showSoftLockOverlay.asStateFlow()
+
+    private val _showPendingLockOverlay = MutableStateFlow(false)
+    val showPendingLockOverlay: StateFlow<Boolean> = _showPendingLockOverlay.asStateFlow()
+
+    private val _startSessionEvent = MutableStateFlow<Long?>(null)
+    val startSessionEvent: StateFlow<Long?> = _startSessionEvent
+
+    fun triggerStartSession(sessionId: Long) {
+        _startSessionEvent.value = sessionId
+    }
+
+    fun clearStartSessionEvent() {
+        _startSessionEvent.value = null
+    }
+
+    private val _pendingSessionNameOverlay = MutableStateFlow("")
+    val pendingSessionNameOverlay: StateFlow<String> = _pendingSessionNameOverlay.asStateFlow()
+
+    private val _pendingSessionIdOverlay = MutableStateFlow(-1L)
+    val pendingSessionIdOverlay: StateFlow<Long> = _pendingSessionIdOverlay.asStateFlow()
+
     private val _lastBlockedPackage = MutableStateFlow<String?>(null)
     val lastBlockedPackage: StateFlow<String?> = _lastBlockedPackage.asStateFlow()
 
@@ -252,6 +275,29 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun loadAndStartScheduledSession(sessionId: Long, onReady: (requiresPhoto: Boolean) -> Unit) {
+        _activeScheduledSessionId.value = sessionId
+        viewModelScope.launch(Dispatchers.IO) {
+            val session = repository.getSessionById(sessionId)
+            val reqPhoto = session?.requiresPhoto ?: _setupState.value.requiresPhoto
+            if (session != null) {
+                _setupState.value = UiSessionSetup(
+                    sessionName = session.sessionName,
+                    subjectName = session.subjectName,
+                    durationMinutes = session.targetDurationMinutes,
+                    lockMode = try { LockMode.valueOf(session.lockMode) } catch (e: Exception) { LockMode.MAXIMUM_LOCK },
+                    scheduledStartTime = session.scheduledStartTime,
+                    scheduledEndTime = session.scheduledEndTime,
+                    requiresPhoto = session.requiresPhoto,
+                    requiresSelfie = session.requiresSelfie
+                )
+            }
+            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                onReady(reqPhoto)
+            }
+        }
+    }
+
     fun updateSetup(
         sessionName: String? = null,
         subjectName: String? = null,
@@ -292,7 +338,6 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         val setup = _setupState.value
         val context = getApplication<Application>()
         val sharedPrefs = context.getSharedPreferences("schedule_prefs", android.content.Context.MODE_PRIVATE)
-        val intent = Intent(context, FocusTimerService::class.java)
 
         val scheduledId = _activeScheduledSessionId.value
         
@@ -320,22 +365,24 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             allowedPackageNames = allowedList
         )
 
+        val name = if (setup.sessionName.isNotBlank()) setup.sessionName else "Deep Focus"
+        val subject = if (setup.subjectName.isNotBlank()) setup.subjectName else name
+
+        val intent = Intent(context, FocusTimerService::class.java).apply {
+            action = "ACTION_START_TIMER"
+            putExtra("DURATION", setup.durationMinutes)
+            putExtra("SESSION_NAME", name)
+            putExtra("SUBJECT_NAME", subject)
+            putExtra("LOCK_MODE", setup.lockMode.name)
+            putExtra("SOUND_TYPE", setup.selectedSound.name)
+            putExtra("REQUIRES_SELFIE", setup.requiresSelfie)
+        }
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             context.startForegroundService(intent)
         } else {
             context.startService(intent)
         }
-
-        val name = if (setup.sessionName.isNotBlank()) setup.sessionName else "Deep Focus"
-        val subject = if (setup.subjectName.isNotBlank()) setup.subjectName else name
-
-        timerService?.startTimer(
-            durationMinutes = setup.durationMinutes,
-            sessionName = name,
-            subjectName = subject,
-            lockMode = setup.lockMode,
-            soundType = setup.selectedSound
-        )
     }
 
     fun scheduleFocusSession(
@@ -443,7 +490,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         timerService?.resumeTimer()
     }
 
-    fun triggerDistractionWarning(blockedPackage: String = "", showRedModal: Boolean = false) {
+    fun triggerDistractionWarning(blockedPackage: String = "", showRedModal: Boolean = false, showSoftModal: Boolean = false) {
         if (_serviceTimerState.value.isRunning) {
             if (blockedPackage.isNotBlank()) {
                 _lastBlockedPackage.value = blockedPackage
@@ -451,7 +498,19 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             if (showRedModal) {
                 _showLockOverlay.value = true
             }
+            if (showSoftModal) {
+                _showSoftLockOverlay.value = true
+            }
         }
+    }
+
+    fun triggerPendingDistractionWarning(blockedPackage: String, sessionName: String, sessionId: Long) {
+        if (blockedPackage.isNotBlank()) {
+            _lastBlockedPackage.value = blockedPackage
+        }
+        _pendingSessionNameOverlay.value = sessionName
+        _pendingSessionIdOverlay.value = sessionId
+        _showPendingLockOverlay.value = true
     }
 
     fun getAppDisplayName(packageName: String): String {
@@ -466,6 +525,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissLockOverlay() {
         _showLockOverlay.value = false
+        _showSoftLockOverlay.value = false
+        _showPendingLockOverlay.value = false
     }
 
     fun addPenaltyTime(seconds: Int) {
@@ -527,7 +588,15 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             }
             _activeScheduledSessionId.value = null
             timerService?.stopTimer()
+            val context = getApplication<android.app.Application>()
+            val intent = android.content.Intent(context, FocusTimerService::class.java).apply {
+                action = "com.example.services.ACTION_STOP"
+            }
+            context.startService(intent)
+            
             _showLockOverlay.value = false
+            _showSoftLockOverlay.value = false
+            _showPendingLockOverlay.value = false
             FocusLockManager.updateFocusState(false, LockMode.NORMAL, emptyList())
         }
     }

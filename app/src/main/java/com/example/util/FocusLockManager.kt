@@ -102,6 +102,28 @@ object FocusLockManager {
     }
 
     @Volatile
+    var isCameraVerificationActive: Boolean = false
+        private set
+
+    fun setCameraVerificationActive(active: Boolean) {
+        isCameraVerificationActive = active
+        Log.d(TAG, "setCameraVerificationActive: $active")
+    }
+
+    fun isCameraPackage(packageName: String): Boolean {
+        val lower = packageName.lowercase()
+        return lower.contains("camera") ||
+                lower.contains("cam") ||
+                packageName == "com.android.camera" ||
+                packageName == "com.google.android.GoogleCamera" ||
+                packageName == "com.sec.android.app.camera" ||
+                packageName == "com.miui.camera" ||
+                packageName == "com.oneplus.camera" ||
+                packageName == "com.oppo.camera" ||
+                packageName == "com.huawei.camera"
+    }
+
+    @Volatile
     var pendingSessionId: Long? = null
         private set
 
@@ -147,6 +169,11 @@ object FocusLockManager {
 
     fun isPackageAllowed(context: Context?, packageName: String, ourPackageName: String): Boolean {
         if (packageName.isBlank() || packageName == ourPackageName) {
+            return true
+        }
+
+        // Camera capture in progress during photo verification -> always allowed!
+        if (isCameraVerificationActive && isCameraPackage(packageName)) {
             return true
         }
 
@@ -207,60 +234,44 @@ object FocusLockManager {
             FocusLockOverlayManager.dismissOverlay()
             return
         }
-
         Log.w(TAG, "BLOCKED APP DETECTED: $blockedPackageName. Initiating lock enforcement...")
-        
-        val hasOverlayPerm = android.provider.Settings.canDrawOverlays(context)
-        
+                
         if (!isFocusActive && hasPendingSchedule()) {
             val pId = pendingSessionId
             val pName = pendingSessionName ?: "Scheduled Focus"
-            if (hasOverlayPerm) {
-                FocusLockOverlayManager.showPendingScheduleOverlay(
-                    context = context,
-                    blockedPackage = blockedPackageName,
-                    sessionName = pName,
-                    sessionId = pId
-                )
-            }
+                        
+            FocusLockOverlayManager.showPendingScheduleOverlay(
+                context = context,
+                blockedPackage = blockedPackageName,
+                sessionName = pName,
+                sessionId = pId
+            )
             return
         }
 
         when (currentLockMode) {
             LockMode.SOFT_LOCK -> {
                 onDistractionListener?.invoke(blockedPackageName, false)
-                if (hasOverlayPerm) {
-                    FocusLockOverlayManager.showBlockedOverlay(
-                        context = context,
-                        blockedPackage = blockedPackageName,
-                        remainingSeconds = remainingSeconds,
-                        subjectName = subjectName,
-                        isSoftLock = true
-                    )
-                } else {
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
-                        android.widget.Toast.makeText(
-                            context, 
-                            "⚠️ Focus Reminder: You are leaving your study session!", 
-                            android.widget.Toast.LENGTH_LONG
-                        ).show()
-                    }
-                }
+                FocusLockOverlayManager.showBlockedOverlay(
+                    context = context,
+                    blockedPackage = blockedPackageName,
+                    remainingSeconds = remainingSeconds,
+                    subjectName = subjectName,
+                    allowedPackages = emptyList(),
+                    isSoftLock = true
+                )
             }
-            
+                        
             LockMode.MAXIMUM_LOCK -> {
-                // Instantly yank back to app with RED warning modal
                 onDistractionListener?.invoke(blockedPackageName, true)
-                val redirectIntent = Intent(context, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    putExtra("BLOCKED_PACKAGE_EVENT", blockedPackageName)
-                }
-                try {
-                    context.startActivity(redirectIntent)
-                } catch (e: Exception) {}
+                FocusLockOverlayManager.showBlockedOverlay(
+                    context = context,
+                    blockedPackage = blockedPackageName,
+                    remainingSeconds = remainingSeconds,
+                    subjectName = subjectName,
+                    allowedPackages = emptyList(),
+                    isSoftLock = false
+                )
             }
             else -> {}
         }

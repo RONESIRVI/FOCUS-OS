@@ -13,6 +13,9 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface FocusDao {
     // Focus Sessions
+    @Query("SELECT * FROM focus_sessions WHERE id = :sessionId LIMIT 1")
+    suspend fun getSessionById(sessionId: Long): FocusSession?
+
     @Query("SELECT * FROM focus_sessions ORDER BY timestamp DESC")
     fun getAllSessions(): Flow<List<FocusSession>>
 

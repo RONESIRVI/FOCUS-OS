@@ -359,8 +359,11 @@ fun FocusSetupScreen(
                             Spacer(modifier = Modifier.height(8.dp))
 
                             // Large Digital Timer Display e.g. "45:00"
+                            val displayHrs = setup.durationMinutes / 60
+                            val displayMins = setup.durationMinutes % 60
+                            val displayTime = if (displayHrs > 0) String.format("%02d:%02d:00", displayHrs, displayMins) else String.format("%02d:00", displayMins)
                             Text(
-                                text = "${setup.durationMinutes}:00",
+                                text = displayTime,
                                 style = MaterialTheme.typography.displayMedium.copy(
                                     fontWeight = FontWeight.ExtraBold,
                                     letterSpacing = 2.sp

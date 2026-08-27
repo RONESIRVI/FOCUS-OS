@@ -19,12 +19,32 @@ class FocusScheduleReceiver : BroadcastReceiver() {
         val action = intent.action
         
         Log.d("FocusSchedule", "Alarm triggered for session $sessionId, action: $action")
+
+        val prefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+        val notifPrefix = prefs.getString("NOTIF_CUSTOM_PREFIX", "FOCUS OS") ?: "FOCUS OS"
+        val vibratePatternKey = prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
+        val vibrateArray = when (vibratePatternKey) {
+            "DOUBLE_PULSE" -> longArrayOf(0, 150, 100, 150)
+            "RHYTHM" -> longArrayOf(0, 80, 80, 80, 80, 80)
+            "OFF" -> longArrayOf(0, 0)
+            else -> longArrayOf(0, 250, 250, 250)
+        }
+
+        val soundUri = when (prefs.getString("NOTIF_SOUND_TONE", "CLASSIC_BELL")) {
+            "ZEN_CHIME" -> android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
+            "FOCUS_PULSE" -> android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE)
+            "SOFT_BREEZE", "CLASSIC_BELL" -> android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+            else -> null
+        }
         
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "schedule_channel"
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "Scheduled Sessions", NotificationManager.IMPORTANCE_HIGH)
+            val channel = NotificationChannel(channelId, "Scheduled Sessions", NotificationManager.IMPORTANCE_HIGH).apply {
+                enableVibration(vibratePatternKey != "OFF")
+                vibrationPattern = vibrateArray
+            }
             notificationManager.createNotificationChannel(channel)
         }
         
@@ -38,14 +58,19 @@ class FocusScheduleReceiver : BroadcastReceiver() {
                 1440 -> "1 day"
                 else -> "$minutesBefore minutes"
             }
-            val notification = NotificationCompat.Builder(context, channelId)
+            val builder = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("⏰ Upcoming Focus Reminder")
+                .setContentTitle("⏰ $notifPrefix • Upcoming Focus Reminder")
                 .setContentText("Your scheduled session '$sessionName' starts in $timeText. Get ready!")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setVibrate(vibrateArray)
                 .setAutoCancel(true)
-                .build()
-            notificationManager.notify((sessionId * 100).toInt() + minutesBefore, notification)
+
+            if (soundUri != null) {
+                builder.setSound(soundUri)
+            }
+
+            notificationManager.notify((sessionId * 100).toInt() + minutesBefore, builder.build())
         } else if (action == "ACTION_EXACT_SCHEDULE") {
             com.example.util.FocusLockManager.setPendingSchedule(sessionId, sessionName)
             

@@ -50,8 +50,7 @@ import com.example.ui.viewmodel.FocusViewModel
 @Composable
 fun SessionCompleteScreen(
     viewModel: FocusViewModel,
-    onNavigateHome: () -> Unit,
-    onNavigateStats: () -> Unit
+    onNavigateHome: () -> Unit
 ) {
     val stats by viewModel.summaryStats.collectAsState()
 
@@ -176,24 +175,13 @@ fun SessionCompleteScreen(
                 onClick = onNavigateHome,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
-                    .testTag("start_another_session_btn"),
+                    .height(52.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black)
             ) {
-                Text("START ANOTHER SESSION", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                Text("DONE", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
             }
 
-            OutlinedButton(
-                onClick = onNavigateStats,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-            ) {
-                Text("VIEW DETAILED STUDY ANALYTICS")
-            }
         }
     }
 }

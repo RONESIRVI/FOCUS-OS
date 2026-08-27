@@ -124,7 +124,14 @@ object PhotoStorageHelper {
             val pfd = context.contentResolver.openFileDescriptor(uri, "r")
             val size = pfd?.statSize ?: 0L
             pfd?.close()
-            size > 1024 // Greater than 1 KB
+            if (size > 1024) return true
+
+            // Fallback: check if we can decode bounds (in case statSize fails for FileProvider)
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(uri)?.use { 
+                BitmapFactory.decodeStream(it, null, options)
+            }
+            options.outWidth > 0 && options.outHeight > 0
         } catch (e: Exception) {
             false
         }

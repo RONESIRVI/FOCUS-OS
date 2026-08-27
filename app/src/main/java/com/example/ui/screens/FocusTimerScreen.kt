@@ -107,6 +107,7 @@ fun FocusTimerScreen(
 ) {
     val timerState by viewModel.timerState.collectAsState()
     val showLockOverlay by viewModel.showLockOverlay.collectAsState()
+    val showSoftLockOverlay by viewModel.showSoftLockOverlay.collectAsState()
     val lastBlockedPackage by viewModel.lastBlockedPackage.collectAsState()
     val context = LocalContext.current
 
@@ -141,9 +142,9 @@ fun FocusTimerScreen(
         }
     }
 
-    // Auto navigate when timer reaches zero
-    LaunchedEffect(timerState.isRunning, timerState.remainingSeconds) {
-        if (!timerState.isRunning && timerState.remainingSeconds <= 0 && timerState.totalSeconds > 0) {
+    // Auto navigate when timer reaches zero or is waiting for verification
+    LaunchedEffect(timerState.isRunning, timerState.isWaitingVerification, timerState.remainingSeconds) {
+        if ((!timerState.isRunning || timerState.isWaitingVerification) && timerState.remainingSeconds <= 0 && timerState.totalSeconds > 0) {
             onSessionComplete()
         }
     }
@@ -1106,6 +1107,86 @@ fun FocusTimerScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("OPEN ALLOWED STUDY APP", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showSoftLockOverlay) {
+            val blockedAppName = lastBlockedPackage?.let { viewModel.getAppDisplayName(it) } ?: "Distraction App"
+            Dialog(
+                onDismissRequest = { /* Modal lock */ },
+                properties = DialogProperties(
+                    dismissOnBackPress = false,
+                    dismissOnClickOutside = false,
+                    usePlatformDefaultWidth = false
+                )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF0F172A)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(28.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "🛡️ STRICT FOCUS LOCK ACTIVE",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = Color(0xFFF59E0B),
+                            modifier = Modifier
+                                .background(Color(0xFFF59E0B).copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 24.dp, vertical = 12.dp)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(32.dp))
+                        
+                        Text(
+                            text = "⚠️ '$blockedAppName' is BLOCKED!",
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White,
+                            textAlign = TextAlign.Center
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text(
+                            text = "Subject: ${timerState.subjectName.ifBlank { "Deep Study" }}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color(0xFF94A3B8)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(32.dp))
+                        
+                        val mins = timerState.remainingSeconds / 60
+                        val secs = timerState.remainingSeconds % 60
+                        val timeStr = String.format("%02d:%02d", mins, secs)
+                        
+                        Text(
+                            text = "⏱️ $timeStr REMAINING",
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White
+                        )
+                        
+                        Spacer(modifier = Modifier.height(48.dp))
+                        
+                        Button(
+                            onClick = { viewModel.dismissLockOverlay() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF0284C7),
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("RETURN TO STUDY APP", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                         }
                     }
                 }

@@ -12,6 +12,7 @@ import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.SessionCompleteScreen
 import com.example.ui.screens.StatisticsScreen
 import com.example.ui.screens.CameraVerificationScreen
+import com.example.ui.screens.SessionStartRouterScreen
 import com.example.ui.viewmodel.FocusViewModel
 
 object FocusRoutes {
@@ -26,6 +27,7 @@ object FocusRoutes {
     const val CAMERA_END = "camera_end"
     const val SESSION_COMPLETE = "session_complete"
     const val STATS = "stats"
+    const val SESSION_START_ROUTER = "session_start_router"
 }
 
 @Composable
@@ -46,7 +48,9 @@ fun FocusNavGraph(
                 onNavigateToScheduleMain = { navController.navigate(FocusRoutes.SCHEDULE_MAIN) },
                 onNavigateToAppSelector = { navController.navigate(FocusRoutes.APP_SELECTOR) },
                 onNavigateToStats = { navController.navigate(FocusRoutes.STATS) },
-                onNavigateToTimer = { navController.navigate(FocusRoutes.TIMER) }
+                onNavigateToTimer = { navController.navigate(FocusRoutes.TIMER) },
+                onNavigateToCameraStart = { navController.navigate(FocusRoutes.CAMERA_START) },
+                onNavigateToSessionRouter = { sessionId -> navController.navigate("${FocusRoutes.SESSION_START_ROUTER}/$sessionId") }
             )
         }
                 
@@ -54,14 +58,8 @@ fun FocusNavGraph(
             com.example.ui.screens.ScheduleMainScreen(
                 viewModel = viewModel,
                 onNavigateToCreate = { navController.navigate(FocusRoutes.SCHEDULE_CREATE) },
-                onStartScheduled = { _ ->
-                    if (viewModel.setupState.value.requiresPhoto) {
-                        navController.navigate(FocusRoutes.CAMERA_START)
-                    } else {
-                        viewModel.startFocusSession()
-                        navController.navigate(FocusRoutes.TIMER)
-                    }
-                }
+                onStartScheduled = { _ -> },
+                onNavigateToSessionRouter = { sessionId -> navController.navigate("${FocusRoutes.SESSION_START_ROUTER}/$sessionId") }
             )
         }
 
@@ -121,6 +119,27 @@ fun FocusNavGraph(
             )
         }
 
+                composable(
+            route = "${FocusRoutes.SESSION_START_ROUTER}/{sessionId}",
+            arguments = listOf(androidx.navigation.navArgument("sessionId") { type = androidx.navigation.NavType.LongType })
+        ) { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getLong("sessionId") ?: -1L
+            SessionStartRouterScreen(
+                sessionId = sessionId,
+                viewModel = viewModel,
+                onNavigateToCamera = { 
+                    navController.navigate(FocusRoutes.CAMERA_START) {
+                        popUpTo(FocusRoutes.HOME)
+                    }
+                },
+                onNavigateToTimer = { 
+                    navController.navigate(FocusRoutes.TIMER) {
+                        popUpTo(FocusRoutes.HOME)
+                    }
+                }
+            )
+        }
+
         composable(FocusRoutes.TIMER) {
             FocusTimerScreen(
                 viewModel = viewModel,
@@ -138,7 +157,7 @@ fun FocusNavGraph(
                                 popUpTo(FocusRoutes.TIMER) { inclusive = true }
                             }
                         } else {
-                            navController.navigate(FocusRoutes.SESSION_COMPLETE) {
+                            navController.navigate(FocusRoutes.HOME) {
                                 popUpTo(FocusRoutes.TIMER) { inclusive = true }
                             }
                         }
@@ -156,10 +175,15 @@ fun FocusNavGraph(
                     viewModel.completeFocusSession() // Save end photo
                     if (wasScheduled) {
                         android.widget.Toast.makeText(navController.context, "SCHEDULE History Save Ho चुकी है", android.widget.Toast.LENGTH_LONG).show()
-                    }
-                    navController.navigate(FocusRoutes.HOME) {
-                        popUpTo(FocusRoutes.TIMER) { inclusive = true }
-                        popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
+                        navController.navigate(FocusRoutes.SCHEDULE_MAIN) {
+                            popUpTo(FocusRoutes.TIMER) { inclusive = true }
+                            popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate(FocusRoutes.HOME) {
+                            popUpTo(FocusRoutes.TIMER) { inclusive = true }
+                            popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
+                        }
                     }
                 },
                 onCancel = { /* No cancel allowed at end */ }
@@ -173,8 +197,7 @@ fun FocusNavGraph(
                     navController.navigate(FocusRoutes.HOME) {
                         popUpTo(FocusRoutes.HOME) { inclusive = true }
                     }
-                },
-                onNavigateStats = { navController.navigate(FocusRoutes.STATS) }
+                }
             )
         }
 

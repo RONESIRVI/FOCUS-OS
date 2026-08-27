@@ -56,6 +56,16 @@ fun SettingsScreen(
     
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+
+    var notifCustomPrefix by remember { mutableStateOf(sharedPrefs.getString("NOTIF_CUSTOM_PREFIX", "FOCUS OS") ?: "FOCUS OS") }
+    var notifSoundTone by remember { mutableStateOf(sharedPrefs.getString("NOTIF_SOUND_TONE", "CLASSIC_BELL") ?: "CLASSIC_BELL") }
+    var notifVibratePattern by remember { mutableStateOf(sharedPrefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE") }
+    var notifDesignTheme by remember { mutableStateOf(sharedPrefs.getString("NOTIF_DESIGN_THEME", "DEEP_DARK") ?: "DEEP_DARK") }
+
+    var showNotifSoundDialog by remember { mutableStateOf(false) }
+    var showNotifThemeDialog by remember { mutableStateOf(false) }
+    var showNotifVibrateDialog by remember { mutableStateOf(false) }
+    var showNotifTitleDialog by remember { mutableStateOf(false) }
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri: Uri? ->
@@ -512,6 +522,150 @@ fun SettingsScreen(
             }
         }
 
+        // Notification Sound & Design Customization
+        item {
+            SettingsSectionTitle("🔔 NOTIFICATION SOUND & DESIGN")
+            SettingsCard {
+                // Live Interactive Notification Card Preview
+                val themeAccent = when(notifDesignTheme) {
+                    "CYBER_NEON" -> Color(0xFFB388FF)
+                    "WARM_SUNSET" -> Color(0xFFFFAB40)
+                    "ICE_BLUE" -> Color(0xFF40C4FF)
+                    else -> FocusPrimary
+                }
+                val themeBg = when(notifDesignTheme) {
+                    "CYBER_NEON" -> Color(0xFF1F1135)
+                    "WARM_SUNSET" -> Color(0xFF331D0A)
+                    "ICE_BLUE" -> Color(0xFF0A2233)
+                    else -> Color(0xFF131F19)
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(themeBg)
+                        .border(1.dp, themeAccent.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(14.dp)
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.NotificationsActive,
+                                    contentDescription = null,
+                                    tint = themeAccent,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = notifCustomPrefix.uppercase(),
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = themeAccent
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = themeAccent.copy(alpha = 0.2f)
+                            ) {
+                                Text(
+                                    text = "LIVE PREVIEW",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                                    color = themeAccent,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "📚 Physics • Chapter 4 Deep Study",
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White
+                        )
+                        Text(
+                            text = "⏱️ 25:00 Remaining (100%)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = FocusTextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        LinearProgressIndicator(
+                            progress = { 1.0f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp)),
+                            color = themeAccent,
+                            trackColor = FocusSurfaceVariant
+                        )
+                    }
+                }
+
+                Divider(color = FocusSurfaceVariant)
+
+                // 1. Notification App Header
+                SettingsClickableItem(
+                    icon = Icons.Default.Badge,
+                    title = "Notification App Title",
+                    subtitle = "Header: $notifCustomPrefix",
+                    onClick = { showNotifTitleDialog = true }
+                )
+
+                Divider(color = FocusSurfaceVariant)
+
+                // 2. Sound Tone Selector
+                val soundToneLabel = when(notifSoundTone) {
+                    "ZEN_CHIME" -> "🎶 Zen Meditation Chime"
+                    "FOCUS_PULSE" -> "⚡ High Focus Pulse"
+                    "SOFT_BREEZE" -> "🌬️ Soft Breeze Alert"
+                    "SILENT" -> "🔇 Silent (Vibrate Only)"
+                    else -> "🔔 Classic Bell Tone"
+                }
+                SettingsClickableItem(
+                    icon = Icons.Default.VolumeUp,
+                    title = "Notification Sound Tone",
+                    subtitle = soundToneLabel,
+                    onClick = { showNotifSoundDialog = true }
+                )
+
+                Divider(color = FocusSurfaceVariant)
+
+                // 3. Vibration Pattern
+                val vibrateLabel = when(notifVibratePattern) {
+                    "DOUBLE_PULSE" -> "⚡ Double Pulse Alert"
+                    "RHYTHM" -> "🥁 Rhythmic Pulse"
+                    "OFF" -> "🔕 Vibration Disabled"
+                    else -> "📳 Gentle Single Pulse"
+                }
+                SettingsClickableItem(
+                    icon = Icons.Default.Vibration,
+                    title = "Vibration Pattern",
+                    subtitle = vibrateLabel,
+                    onClick = { showNotifVibrateDialog = true }
+                )
+
+                Divider(color = FocusSurfaceVariant)
+
+                // 4. Design Theme
+                val themeLabel = when(notifDesignTheme) {
+                    "CYBER_NEON" -> "⚡ Cyber Neon (Purple & Cyan)"
+                    "WARM_SUNSET" -> "🌅 Warm Sunset (Amber & Orange)"
+                    "ICE_BLUE" -> "🧊 Ice Blue (Electric Blue)"
+                    else -> "🌌 Deep Dark (Emerald Accent)"
+                }
+                SettingsClickableItem(
+                    icon = Icons.Default.Palette,
+                    title = "Notification Design Theme",
+                    subtitle = themeLabel,
+                    onClick = { showNotifThemeDialog = true }
+                )
+            }
+        }
+
 
         // Appearance
         item {
@@ -720,6 +874,218 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = { showPrivacyPolicyDialog = false }) {
                     Text("Close", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = FocusSurface
+        )
+    }
+
+    if (showNotifTitleDialog) {
+        var tempTitle by remember { mutableStateOf(notifCustomPrefix) }
+        AlertDialog(
+            onDismissRequest = { showNotifTitleDialog = false },
+            title = { Text("Custom Notification Title Header", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("Enter the header title displayed on focus notifications:", style = MaterialTheme.typography.bodySmall, color = FocusTextSecondary)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = tempTitle,
+                        onValueChange = { if (it.length <= 20) tempTitle = it },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = FocusPrimary
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (tempTitle.isNotBlank()) {
+                        notifCustomPrefix = tempTitle
+                        sharedPrefs.edit().putString("NOTIF_CUSTOM_PREFIX", tempTitle).apply()
+                    }
+                    showNotifTitleDialog = false
+                }) {
+                    Text("Save Header", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNotifTitleDialog = false }) {
+                    Text("Cancel", color = FocusTextSecondary)
+                }
+            },
+            containerColor = FocusSurface
+        )
+    }
+
+    if (showNotifSoundDialog) {
+        val tones = listOf(
+            "CLASSIC_BELL" to "🔔 Classic Bell Tone",
+            "ZEN_CHIME" to "🎶 Zen Meditation Chime",
+            "FOCUS_PULSE" to "⚡ High Focus Pulse",
+            "SOFT_BREEZE" to "🌬️ Soft Breeze Alert",
+            "SILENT" to "🔇 Silent (No Sound)"
+        )
+        AlertDialog(
+            onDismissRequest = { showNotifSoundDialog = false },
+            title = { Text("Select Notification Alert Sound", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    tones.forEach { (key, label) ->
+                        val isSelected = notifSoundTone == key
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    notifSoundTone = key
+                                    sharedPrefs.edit().putString("NOTIF_SOUND_TONE", key).apply()
+                                    try {
+                                        val uri = when (key) {
+                                            "ZEN_CHIME" -> android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
+                                            "FOCUS_PULSE" -> android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE)
+                                            "SOFT_BREEZE", "CLASSIC_BELL" -> android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+                                            else -> null
+                                        }
+                                        uri?.let {
+                                            val r = android.media.RingtoneManager.getRingtone(context, it)
+                                            r?.play()
+                                        }
+                                    } catch (e: Exception) { e.printStackTrace() }
+                                }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = {
+                                    notifSoundTone = key
+                                    sharedPrefs.edit().putString("NOTIF_SOUND_TONE", key).apply()
+                                },
+                                colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(text = label, color = if (isSelected) FocusPrimary else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showNotifSoundDialog = false }) {
+                    Text("Done", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = FocusSurface
+        )
+    }
+
+    if (showNotifVibrateDialog) {
+        val patterns = listOf(
+            "PULSE" to "📳 Gentle Single Pulse",
+            "DOUBLE_PULSE" to "⚡ Double Pulse Alert",
+            "RHYTHM" to "🥁 Rhythmic Pulse",
+            "OFF" to "🔕 Vibration Disabled"
+        )
+        AlertDialog(
+            onDismissRequest = { showNotifVibrateDialog = false },
+            title = { Text("Select Vibration Pattern", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    patterns.forEach { (key, label) ->
+                        val isSelected = notifVibratePattern == key
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    notifVibratePattern = key
+                                    sharedPrefs.edit().putString("NOTIF_VIBRATE_PATTERN", key).apply()
+                                    try {
+                                        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                                        if (android.os.Build.VERSION.SDK_INT >= 26) {
+                                            val effect = when (key) {
+                                                "DOUBLE_PULSE" -> android.os.VibrationEffect.createWaveform(longArrayOf(0, 150, 100, 150), -1)
+                                                "RHYTHM" -> android.os.VibrationEffect.createWaveform(longArrayOf(0, 80, 80, 80, 80, 80), -1)
+                                                "OFF" -> null
+                                                else -> android.os.VibrationEffect.createOneShot(200, android.os.VibrationEffect.DEFAULT_AMPLITUDE)
+                                            }
+                                            if (effect != null) {
+                                                vibrator?.vibrate(effect)
+                                            }
+                                        } else {
+                                            if (key != "OFF") vibrator?.vibrate(200)
+                                        }
+                                    } catch (e: Exception) { e.printStackTrace() }
+                                }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = {
+                                    notifVibratePattern = key
+                                    sharedPrefs.edit().putString("NOTIF_VIBRATE_PATTERN", key).apply()
+                                },
+                                colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(text = label, color = if (isSelected) FocusPrimary else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showNotifVibrateDialog = false }) {
+                    Text("Done", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = FocusSurface
+        )
+    }
+
+    if (showNotifThemeDialog) {
+        val themes = listOf(
+            "DEEP_DARK" to "🌌 Deep Dark Emerald (Classic)",
+            "CYBER_NEON" to "⚡ Cyber Neon (Purple & Cyan)",
+            "WARM_SUNSET" to "🌅 Warm Sunset (Amber & Orange)",
+            "ICE_BLUE" to "🧊 Ice Blue (Electric Blue)"
+        )
+        AlertDialog(
+            onDismissRequest = { showNotifThemeDialog = false },
+            title = { Text("Notification Design Theme", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    themes.forEach { (key, label) ->
+                        val isSelected = notifDesignTheme == key
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    notifDesignTheme = key
+                                    sharedPrefs.edit().putString("NOTIF_DESIGN_THEME", key).apply()
+                                }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = {
+                                    notifDesignTheme = key
+                                    sharedPrefs.edit().putString("NOTIF_DESIGN_THEME", key).apply()
+                                },
+                                colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(text = label, color = if (isSelected) FocusPrimary else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showNotifThemeDialog = false }) {
+                    Text("Apply Theme", color = FocusPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             containerColor = FocusSurface

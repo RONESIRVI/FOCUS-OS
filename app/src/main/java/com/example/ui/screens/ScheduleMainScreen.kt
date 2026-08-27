@@ -40,7 +40,8 @@ import java.util.Locale
 fun ScheduleMainScreen(
     viewModel: FocusViewModel,
     onNavigateToCreate: () -> Unit,
-    onStartScheduled: (FocusSession) -> Unit
+    onStartScheduled: (FocusSession) -> Unit,
+    onNavigateToSessionRouter: (Long) -> Unit
 ) {
     val scheduledSessions by viewModel.scheduledSessions.collectAsState(initial = emptyList())
     val allSessions by viewModel.allSessions.collectAsState(initial = emptyList())
@@ -128,8 +129,7 @@ fun ScheduleMainScreen(
                                 session = session,
                                 isHistory = false,
                                 onStart = {
-                                    viewModel.loadScheduledSession(session.id)
-                                    onStartScheduled(session)
+                                    onNavigateToSessionRouter(session.id)
                                 },
                                 onDelete = { viewModel.deleteScheduledSession(session) }
                             )

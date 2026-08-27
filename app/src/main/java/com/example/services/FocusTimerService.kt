@@ -30,6 +30,8 @@ import kotlinx.coroutines.launch
 data class TimerState(
     val isRunning: Boolean = false,
     val isPaused: Boolean = false,
+    val isWaitingVerification: Boolean = false,
+    val requiresSelfie: Boolean = false,
     val remainingSeconds: Int = 0,
     val totalSeconds: Int = 0,
     val sessionName: String = "Study Session",
@@ -65,6 +67,15 @@ class FocusTimerService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
+            "ACTION_START_TIMER" -> {
+                val duration = intent.getIntExtra("DURATION", 25)
+                val sessionName = intent.getStringExtra("SESSION_NAME") ?: "Focus Session"
+                val subjectName = intent.getStringExtra("SUBJECT_NAME") ?: "Study"
+                val lockMode = try { LockMode.valueOf(intent.getStringExtra("LOCK_MODE") ?: "") } catch(e: Exception) { LockMode.MAXIMUM_LOCK }
+                val soundType = try { SoundType.valueOf(intent.getStringExtra("SOUND_TYPE") ?: "") } catch(e: Exception) { SoundType.NONE }
+                val requiresSelfie = intent.getBooleanExtra("REQUIRES_SELFIE", false)
+                startTimer(duration, sessionName, subjectName, lockMode, soundType, requiresSelfie)
+            }
             "ACTION_START_PENDING_MONITOR" -> {
                 val sessionId = intent.getLongExtra("SESSION_ID", -1L)
                 val sessionName = intent.getStringExtra("SESSION_NAME") ?: "Focus Session"
@@ -91,7 +102,11 @@ class FocusTimerService : Service() {
     fun startPendingMonitor(sessionId: Long, sessionName: String) {
         if (_timerState.value.isRunning) return
         FocusLockManager.setPendingSchedule(sessionId, sessionName)
-        startForeground(NOTIFICATION_ID, buildPendingNotification(sessionName, sessionId))
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            startForeground(NOTIFICATION_ID, buildPendingNotification(sessionName, sessionId), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        } else {
+            startForeground(NOTIFICATION_ID, buildPendingNotification(sessionName, sessionId))
+        }
         startPendingAppLockMonitoring()
     }
 
@@ -154,15 +169,17 @@ class FocusTimerService : Service() {
                         }
                     }
 
-                    if (lastEventPackage != null && !FocusLockManager.isPackageAllowed(this@FocusTimerService, lastEventPackage, packageName)) {
-                        FocusLockManager.handleBlockedAppOpened(
-                            context = this@FocusTimerService,
-                            blockedPackageName = lastEventPackage,
-                            remainingSeconds = 0,
-                            subjectName = FocusLockManager.pendingSessionName ?: "Scheduled Focus"
-                        )
-                    } else {
-                        FocusLockOverlayManager.dismissOverlay()
+                    if (lastEventPackage != null) {
+                        if (!FocusLockManager.isPackageAllowed(this@FocusTimerService, lastEventPackage, packageName)) {
+                            FocusLockManager.handleBlockedAppOpened(
+                                context = this@FocusTimerService,
+                                blockedPackageName = lastEventPackage,
+                                remainingSeconds = 0,
+                                subjectName = FocusLockManager.pendingSessionName ?: "Scheduled Focus"
+                            )
+                        } else {
+                            FocusLockOverlayManager.dismissOverlay()
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e("FocusTimerService", "Error in pending app monitor loop", e)
@@ -177,13 +194,16 @@ class FocusTimerService : Service() {
         sessionName: String,
         subjectName: String,
         lockMode: LockMode,
-        soundType: SoundType
+        soundType: SoundType,
+        requiresSelfie: Boolean = false
     ) {
         FocusLockManager.clearPendingSchedule()
         val totalSecs = durationMinutes * 60
         _timerState.value = TimerState(
             isRunning = true,
             isPaused = false,
+            isWaitingVerification = false,
+            requiresSelfie = requiresSelfie,
             remainingSeconds = totalSecs,
             totalSeconds = totalSecs,
             sessionName = sessionName,
@@ -197,7 +217,11 @@ class FocusTimerService : Service() {
         wakeLock?.acquire()
 
         audioEngine.startSound(soundType, scope)
-        startForeground(NOTIFICATION_ID, buildNotification())
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            startForeground(NOTIFICATION_ID, buildNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        } else {
+            startForeground(NOTIFICATION_ID, buildNotification())
+        }
         runCountdown()
         startAppLockMonitoring()
     }
@@ -241,17 +265,19 @@ class FocusTimerService : Service() {
                             }
                         }
 
-                        if (lastEventPackage != null && !FocusLockManager.isPackageAllowed(this@FocusTimerService, lastEventPackage, packageName)) {
-                            recordDistractionAttempt()
-                            FocusLockManager.handleBlockedAppOpened(
-                                context = this@FocusTimerService,
-                                blockedPackageName = lastEventPackage,
-                                remainingSeconds = _timerState.value.remainingSeconds,
-                                subjectName = _timerState.value.subjectName
-                            )
-                        } else {
-                            // Returned to our app or moved to allowed utility (Home Launcher, Call, SMS) -> dismiss overlay
-                            FocusLockOverlayManager.dismissOverlay()
+                        if (lastEventPackage != null) {
+                            if (!FocusLockManager.isPackageAllowed(this@FocusTimerService, lastEventPackage, packageName)) {
+                                recordDistractionAttempt()
+                                FocusLockManager.handleBlockedAppOpened(
+                                    context = this@FocusTimerService,
+                                    blockedPackageName = lastEventPackage,
+                                    remainingSeconds = _timerState.value.remainingSeconds,
+                                    subjectName = _timerState.value.subjectName
+                                )
+                            } else {
+                                // Returned to our app or moved to allowed utility (Home Launcher, Call, SMS) -> dismiss overlay
+                                FocusLockOverlayManager.dismissOverlay()
+                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -277,12 +303,19 @@ class FocusTimerService : Service() {
             }
             if (_timerState.value.remainingSeconds <= 0 && _timerState.value.isRunning) {
                 // Timer complete
-                _timerState.value = _timerState.value.copy(isRunning = false)
                 audioEngine.stopSound()
-                appMonitorJob?.cancel()
-                FocusLockOverlayManager.dismissOverlay()
-                wakeLock?.takeIf { it.isHeld }?.release()
-                stopForeground(STOP_FOREGROUND_REMOVE)
+                if (_timerState.value.requiresSelfie) {
+                    _timerState.value = _timerState.value.copy(
+                        isWaitingVerification = true
+                    )
+                    updateNotification()
+                } else {
+                    _timerState.value = _timerState.value.copy(isRunning = false)
+                    appMonitorJob?.cancel()
+                    FocusLockOverlayManager.dismissOverlay()
+                    wakeLock?.takeIf { it.isHeld }?.release()
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                }
             }
         }
     }
@@ -346,6 +379,9 @@ class FocusTimerService : Service() {
     }
 
     private fun buildNotification(): android.app.Notification {
+        val prefs = getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+        val notifTitle = prefs.getString("NOTIF_CUSTOM_PREFIX", "FOCUS OS") ?: "FOCUS OS"
+
         val state = _timerState.value
         val formattedTime = formatTimeText(state.remainingSeconds)
         val totalSec = if (state.totalSeconds > 0) state.totalSeconds else 1
@@ -357,14 +393,18 @@ class FocusTimerService : Service() {
 
         // 1. Collapsed Notification View
         val collapsedView = RemoteViews(packageName, R.layout.notification_focus_collapsed).apply {
-            setTextViewText(R.id.notif_title, "FOCUS OS")
+            setTextViewText(R.id.notif_title, notifTitle.uppercase())
             setTextViewText(R.id.notif_mode_badge, state.lockMode.title.uppercase())
             setTextViewText(R.id.notif_subject_text, "$subjectTitle • $sessionTitle")
-            setTextViewText(
-                R.id.notif_timer_text,
-                if (state.isPaused) "⏸️ PAUSED • $formattedTime" else "⏱️ $formattedTime Remaining ($progressPercent%)"
-            )
-            setProgressBar(R.id.notif_progress_bar, 100, progressPercent, false)
+            
+            val timerText = when {
+                state.isWaitingVerification -> "📸 Waiting for Selfie Verification"
+                state.isPaused -> "⏸️ PAUSED • $formattedTime"
+                else -> "⏱️ $formattedTime Remaining ($progressPercent%)"
+            }
+            setTextViewText(R.id.notif_timer_text, timerText)
+            
+            setProgressBar(R.id.notif_progress_bar, 100, if(state.isWaitingVerification) 100 else progressPercent, false)
             
             // Toggle icon
             setImageViewResource(
@@ -379,17 +419,23 @@ class FocusTimerService : Service() {
 
         // 2. Expanded Rich Notification View
         val expandedView = RemoteViews(packageName, R.layout.notification_focus_expanded).apply {
-            setTextViewText(R.id.notif_exp_app_title, "FOCUS OS")
+            setTextViewText(R.id.notif_exp_app_title, notifTitle.uppercase())
             setTextViewText(R.id.notif_exp_mode_badge, state.lockMode.title.uppercase())
             setTextViewText(R.id.notif_exp_distraction_badge, "🛡️ ${state.distractionAttempts} Blocked")
             setTextViewText(R.id.notif_exp_subject, "📚 $subjectTitle • $sessionTitle")
-            setTextViewText(R.id.notif_exp_timer, formattedTime)
-            setTextViewText(
-                R.id.notif_exp_status_label,
-                if (state.isPaused) "PAUSED • TAP RESUME" else "REMAINING FOCUS TIME"
-            )
-            setProgressBar(R.id.notif_exp_progress_bar, 100, progressPercent, false)
-            setTextViewText(R.id.notif_exp_progress_percent, "$progressPercent% Completed")
+            
+            setTextViewText(R.id.notif_exp_timer, if(state.isWaitingVerification) "00:00" else formattedTime)
+            
+            val statusLabel = when {
+                state.isWaitingVerification -> "📸 PLEASE TAKE SELFIE TO UNLOCK"
+                state.isPaused -> "PAUSED • TAP RESUME"
+                else -> "REMAINING FOCUS TIME"
+            }
+            setTextViewText(R.id.notif_exp_status_label, statusLabel)
+            
+            setProgressBar(R.id.notif_exp_progress_bar, 100, if(state.isWaitingVerification) 100 else progressPercent, false)
+            setTextViewText(R.id.notif_exp_progress_percent, if(state.isWaitingVerification) "100% Completed" else "$progressPercent% Completed")
+
 
             val soundTitle = if (state.selectedSound != SoundType.NONE) state.selectedSound.label else "Silent Mode"
             setTextViewText(R.id.notif_exp_sound_info, "🎵 $soundTitle")

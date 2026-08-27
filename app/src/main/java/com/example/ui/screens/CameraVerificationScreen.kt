@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,10 +52,20 @@ fun CameraVerificationScreen(
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
-    var photoUri by remember { mutableStateOf<Uri?>(null) }
-    var tempCaptureUri by remember { mutableStateOf<Uri?>(null) }
-    var tempPhotoFile by remember { mutableStateOf<File?>(null) }
+
+    DisposableEffect(Unit) {
+        com.example.util.FocusLockManager.setCameraVerificationActive(true)
+        onDispose {
+            com.example.util.FocusLockManager.setCameraVerificationActive(false)
+        }
+    }
+
+    var photoUriString by rememberSaveable { mutableStateOf<String?>(null) }
+    var tempCaptureUriString by rememberSaveable { mutableStateOf<String?>(null) }
     var isSavingToGallery by remember { mutableStateOf(false) }
+    
+    val photoUri = photoUriString?.let { Uri.parse(it) }
+    val tempCaptureUri = tempCaptureUriString?.let { Uri.parse(it) }
 
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         val uri = tempCaptureUri
@@ -62,7 +73,7 @@ fun CameraVerificationScreen(
             isSavingToGallery = true
             // Save to device gallery in background thread
             val savedGalleryUri = PhotoStorageHelper.savePhotoToDeviceGallery(context, uri) ?: uri
-            photoUri = savedGalleryUri
+            photoUriString = savedGalleryUri.toString()
             isSavingToGallery = false
 
             if (isStart) {
@@ -83,8 +94,7 @@ fun CameraVerificationScreen(
         if (granted) {
             val capturePair = PhotoStorageHelper.createCaptureUri(context)
             if (capturePair != null) {
-                tempCaptureUri = capturePair.first
-                tempPhotoFile = capturePair.second
+                tempCaptureUriString = capturePair.first.toString()
                 cameraLauncher.launch(capturePair.first)
             } else {
                 Toast.makeText(context, "Failed to initialize camera storage", Toast.LENGTH_SHORT).show()
@@ -103,8 +113,7 @@ fun CameraVerificationScreen(
         if (hasPermission) {
             val capturePair = PhotoStorageHelper.createCaptureUri(context)
             if (capturePair != null) {
-                tempCaptureUri = capturePair.first
-                tempPhotoFile = capturePair.second
+                tempCaptureUriString = capturePair.first.toString()
                 cameraLauncher.launch(capturePair.first)
             } else {
                 Toast.makeText(context, "Unable to create storage for photo", Toast.LENGTH_SHORT).show()
