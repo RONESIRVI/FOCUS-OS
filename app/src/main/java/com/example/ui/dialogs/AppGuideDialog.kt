@@ -101,12 +101,14 @@ fun AppGuideDialog(
                 summaryHi = "रोजाना का टाइमटेबल सेट करें। तय समय पर अलार्म बजेगा और सेशन लॉक हो जाएगा।",
                 detailsEn = listOf(
                     "Set exact start and end times for your study sessions in advance.",
-                    "Pre-Alert: Receives a heads-up notification 2 minutes before the session starts.",
+                    "System Alarm & Pop-Up Alert: Receives a high-priority Heads-Up Banner and Home Screen Overlay when a session is pending.",
+                    "Strict Pending Block: If you try to open blocked apps while a session is pending, a persistent Mindful Warning Overlay will block access without any bypass.",
                     "Auto-Boot Restoration: Scheduled alarms are automatically restored even if the phone is rebooted."
                 ),
                 detailsHi = listOf(
                     "अपनी पढ़ाई के लिए पहले से ही निश्चित समय (जैसे शाम 4 से 6 बजे) सेट करें।",
-                    "प्री-अलर्ट: सेशन शुरू होने से 2 मिनट पहले नोटिफिकेशन मिलेगा ताकि आप तैयार हो सकें।",
+                    "सिस्टम अलार्म और पॉप-अप अलर्ट: सेशन पेंडिंग होने पर होम स्क्रीन पर हाई-प्रायोरिटी पॉप-अप अलर्ट आएगा।",
+                    "पेंडिंग सेशन लॉक: सेशन शुरू होने से पहले कोई ब्लॉक ऐप खोलने पर एक सख्त वार्निंग ओवरले आएगा जिसे बायपास नहीं किया जा सकता।",
                     "फोन रीस्टार्ट होने पर भी सारे शेड्यूल्ड अलार्म अपने आप वापस एक्टिव हो जाते हैं।"
                 ),
                 tag = "SCHEDULE"
@@ -120,15 +122,15 @@ fun AppGuideDialog(
                 summaryHi = "अपनी जरूरत के हिसाब से लॉक की सख्ती चुनें।",
                 detailsEn = listOf(
                     "NORMAL MODE: Basic study timer without app blocking. Ideal for light revision.",
-                    "SOFT LOCK (Level 1): Displays a warning full-screen overlay if you attempt to leave FOCUS OS.",
-                    "STRICT LOCK (Level 2): Usage Access Monitor + Overlay Shield. Automatically detects and blocks any unwhitelisted app (Instagram, YouTube, Games, WhatsApp).",
-                    "MAXIMUM LOCK (Level 3 - Kiosk): Enforces strict kiosk mode with a 200-second emergency penalty timer before exit."
+                    "MINDFUL MODE (Soft Lock): Persistent Warning Overlay if you open distracted apps. No 30-second snooze—you must return to the study app.",
+                    "DEEP WORK (Maximum Lock): Instant yank-back & red warning modal if you open blocked apps. Enforces strict kiosk mode with early exit penalty warning.",
+                    "STRICT LOCK: Usage Access Monitor + Overlay Shield for blocking unwhitelisted apps."
                 ),
                 detailsHi = listOf(
                     "नॉर्मल मोड: बिना ऐप ब्लॉकिंग के सामान्य टाइमर।",
-                    "सॉफ्ट लॉक (लेवल 1): ऐप से बाहर निकलने पर स्क्रीन पर चेतावनी दिखाई देगी।",
-                    "स्ट्रिक्ट लॉक (लेवल 2): यूसेज एक्सेस मॉनिटर + शील्ड ओवरले। प्रतिबंधित ऐप (इंस्टाग्राम, यूट्यूब आदि) खुलते ही तुरंत ब्लॉक हो जाएंगे।",
-                    "मैक्सिमम लॉक (लेवल 3 - कियोस्क): फुल फोन लॉकडाउन। इमरजेंसी में बाहर निकलने के लिए 200 सेकंड की पेनल्टी लगेगी।"
+                    "माइंडफुल मोड (सॉफ्ट लॉक): ब्लॉक ऐप खोलने पर सख्त वार्निंग ओवरले आएगा। 30 सेकंड का कोई स्नूज़ नहीं मिलेगा, आपको पढ़ाई पर वापस आना ही होगा।",
+                    "डीप वर्क (मैक्सिमम लॉक): ब्लॉक ऐप खुलते ही सिस्टम तुरंत खींचकर वापस ले आएगा (Instant Yank-Back) और लाल वार्निंग देगा। समय से पहले बंद करने पर पेनल्टी लगेगी।",
+                    "स्ट्रिक्ट लॉक: यूसेज एक्सेस मॉनिटर + शील्ड ओवरले। प्रतिबंधित ऐप खुलते ही तुरंत ब्लॉक हो जाएंगे।"
                 ),
                 tag = "SECURITY"
             ),
