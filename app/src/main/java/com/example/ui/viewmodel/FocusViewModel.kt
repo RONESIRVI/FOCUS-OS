@@ -575,9 +575,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun emergencyExitSession() {
-        timerService?.stopTimer()
-        _showLockOverlay.value = false
-        FocusLockManager.updateFocusState(false, LockMode.NORMAL, emptyList())
+        completeFocusSession()
     }
 
     fun toggleAppAllowed(packageName: String, isAllowed: Boolean, profile: String = "MANUAL") {
