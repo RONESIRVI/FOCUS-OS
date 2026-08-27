@@ -252,24 +252,20 @@ object FocusLockManager {
         when (currentLockMode) {
             LockMode.SOFT_LOCK -> {
                 onDistractionListener?.invoke(blockedPackageName, false)
-                FocusLockOverlayManager.showBlockedOverlay(
+                FocusLockOverlayManager.dismissOverlay()
+                FocusLockOverlayManager.bringAppToFront(
                     context = context,
                     blockedPackage = blockedPackageName,
-                    remainingSeconds = remainingSeconds,
-                    subjectName = subjectName,
-                    allowedPackages = emptyList(),
                     isSoftLock = true
                 )
             }
                         
             LockMode.MAXIMUM_LOCK -> {
                 onDistractionListener?.invoke(blockedPackageName, true)
-                FocusLockOverlayManager.showBlockedOverlay(
+                FocusLockOverlayManager.dismissOverlay()
+                FocusLockOverlayManager.bringAppToFront(
                     context = context,
                     blockedPackage = blockedPackageName,
-                    remainingSeconds = remainingSeconds,
-                    subjectName = subjectName,
-                    allowedPackages = emptyList(),
                     isSoftLock = false
                 )
             }

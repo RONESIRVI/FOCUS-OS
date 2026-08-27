@@ -150,13 +150,25 @@ object FocusLockOverlayManager {
         }
     }
 
-    private fun bringAppToFront(context: Context, blockedPackage: String, sessionId: Long? = null) {
+    fun bringAppToFront(
+        context: Context,
+        blockedPackage: String? = null,
+        sessionId: Long? = null,
+        isSoftLock: Boolean = false
+    ) {
         try {
             val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
                         Intent.FLAG_ACTIVITY_SINGLE_TOP or
                         Intent.FLAG_ACTIVITY_CLEAR_TOP
+                if (!blockedPackage.isNullOrEmpty()) {
+                    if (isSoftLock) {
+                        putExtra("BLOCKED_PACKAGE_EVENT_SOFT", blockedPackage)
+                    } else {
+                        putExtra("BLOCKED_PACKAGE_EVENT", blockedPackage)
+                    }
+                }
                 if (sessionId != null) {
                     putExtra("START_SESSION_ID", sessionId)
                 }

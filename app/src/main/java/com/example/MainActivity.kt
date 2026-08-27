@@ -43,7 +43,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         FocusLockManager.onDistractionListener = { blockedPkg, showRedModal ->
             runOnUiThread {
-                viewModel.triggerDistractionWarning(blockedPkg, showRedModal = showRedModal)
+                if (showRedModal) {
+                    viewModel.triggerDistractionWarning(blockedPkg, showRedModal = true)
+                } else {
+                    viewModel.triggerDistractionWarning(blockedPkg, showSoftModal = true)
+                }
             }
         }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
@@ -58,6 +62,16 @@ class MainActivity : ComponentActivity() {
             viewModel.triggerStartSession(startSessionId)
             intent.removeExtra("START_SESSION_ID")
         }
+        val blockedPkgOnCreate = intent.getStringExtra("BLOCKED_PACKAGE_EVENT")
+        if (blockedPkgOnCreate != null) {
+            viewModel.triggerDistractionWarning(blockedPkgOnCreate, showRedModal = true)
+            intent.removeExtra("BLOCKED_PACKAGE_EVENT")
+        }
+        val blockedPkgSoftOnCreate = intent.getStringExtra("BLOCKED_PACKAGE_EVENT_SOFT")
+        if (blockedPkgSoftOnCreate != null) {
+            viewModel.triggerDistractionWarning(blockedPkgSoftOnCreate, showSoftModal = true)
+            intent.removeExtra("BLOCKED_PACKAGE_EVENT_SOFT")
+        }
         
         enableEdgeToEdge()
         setContent {
@@ -66,6 +80,19 @@ class MainActivity : ComponentActivity() {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
                 val showBottomBar = currentRoute in listOf(FocusRoutes.HOME, FocusRoutes.SCHEDULE_MAIN, FocusRoutes.STATS, FocusRoutes.SETTINGS)
+
+                val timerState by viewModel.timerState.collectAsState()
+                val showLockOverlay by viewModel.showLockOverlay.collectAsState()
+                val showSoftLockOverlay by viewModel.showSoftLockOverlay.collectAsState()
+
+                LaunchedEffect(showLockOverlay, showSoftLockOverlay) {
+                    if ((showLockOverlay || showSoftLockOverlay) && timerState.isRunning && currentRoute != FocusRoutes.TIMER) {
+                        navController.navigate(FocusRoutes.TIMER) {
+                            popUpTo(FocusRoutes.HOME)
+                            launchSingleTop = true
+                        }
+                    }
+                }
 
                 val startSessionEvent by viewModel.startSessionEvent.collectAsState()
                 LaunchedEffect(startSessionEvent) {
@@ -117,16 +144,19 @@ class MainActivity : ComponentActivity() {
         val blockedPkg = intent.getStringExtra("BLOCKED_PACKAGE_EVENT")
         if (blockedPkg != null) {
             viewModel.triggerDistractionWarning(blockedPkg, showRedModal = true)
+            intent.removeExtra("BLOCKED_PACKAGE_EVENT")
         }
         val blockedPkgSoft = intent.getStringExtra("BLOCKED_PACKAGE_EVENT_SOFT")
         if (blockedPkgSoft != null) {
             viewModel.triggerDistractionWarning(blockedPkgSoft, showSoftModal = true)
+            intent.removeExtra("BLOCKED_PACKAGE_EVENT_SOFT")
         }
         val blockedPkgPending = intent.getStringExtra("BLOCKED_PACKAGE_EVENT_PENDING")
         if (blockedPkgPending != null) {
             val pName = intent.getStringExtra("PENDING_SESSION_NAME") ?: "Scheduled Focus"
             val pId = intent.getLongExtra("PENDING_SESSION_ID", -1L)
             viewModel.triggerPendingDistractionWarning(blockedPkgPending, pName, pId)
+            intent.removeExtra("BLOCKED_PACKAGE_EVENT_PENDING")
         }
     }
 
