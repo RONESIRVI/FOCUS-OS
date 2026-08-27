@@ -462,6 +462,13 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteScheduledSession(session: FocusSession) {
+        if (session.status != "COMPLETED" && session.completedDurationSeconds <= 0) {
+            viewModelScope.launch(Dispatchers.Main) {
+                val context = getApplication<Application>()
+                android.widget.Toast.makeText(context, "🔒 Schedule Sessions cannot be cancelled or deleted! Complete the session first.", android.widget.Toast.LENGTH_LONG).show()
+            }
+            return
+        }
         viewModelScope.launch(Dispatchers.IO) {
             val context = getApplication<Application>()
             val sharedPrefs = context.getSharedPreferences("schedule_prefs", android.content.Context.MODE_PRIVATE)
@@ -478,6 +485,16 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                 repository.updateSession(session.copy(status = "ARCHIVED"))
             } else {
                 repository.deleteSession(session)
+            }
+        }
+    }
+
+    fun updateEndSelfieForLatestSession(uri: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val sessions = repository.allSessions.first()
+            val latestCompleted = sessions.filter { it.status == "COMPLETED" }.maxByOrNull { it.timestamp }
+            if (latestCompleted != null) {
+                repository.updateSession(latestCompleted.copy(endSelfieUri = uri))
             }
         }
     }
@@ -501,6 +518,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             if (showSoftModal) {
                 _showSoftLockOverlay.value = true
             }
+            com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(getApplication())
         }
     }
 
@@ -511,6 +529,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         _pendingSessionNameOverlay.value = sessionName
         _pendingSessionIdOverlay.value = sessionId
         _showPendingLockOverlay.value = true
+        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(getApplication())
     }
 
     fun getAppDisplayName(packageName: String): String {

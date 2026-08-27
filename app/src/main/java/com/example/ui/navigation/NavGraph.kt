@@ -144,15 +144,16 @@ fun FocusNavGraph(
             FocusTimerScreen(
                 viewModel = viewModel,
                 onSessionComplete = { 
+                    val wasScheduled = viewModel.activeScheduledSessionId.value != null
+                    // ALWAYS save completed study stats to DB immediately when timer ends
+                    viewModel.completeFocusSession()
                     if (viewModel.setupState.value.requiresSelfie) {
                         navController.navigate(FocusRoutes.CAMERA_END) {
                             popUpTo(FocusRoutes.TIMER) { inclusive = true }
                         }
                     } else {
-                        val wasScheduled = viewModel.activeScheduledSessionId.value != null
-                        viewModel.completeFocusSession()
                         if (wasScheduled) {
-                            android.widget.Toast.makeText(navController.context, "SCHEDULE History Save Ho चुकी है", android.widget.Toast.LENGTH_LONG).show()
+                            android.widget.Toast.makeText(navController.context, "✅ Schedule Session Completed & Saved", android.widget.Toast.LENGTH_LONG).show()
                             navController.navigate(FocusRoutes.SCHEDULE_MAIN) {
                                 popUpTo(FocusRoutes.TIMER) { inclusive = true }
                             }
@@ -172,9 +173,12 @@ fun FocusNavGraph(
                 isStart = false,
                 onVerificationComplete = {
                     val wasScheduled = viewModel.activeScheduledSessionId.value != null
-                    viewModel.completeFocusSession() // Save end photo
+                    // Update latest session with end selfie photo
+                    viewModel.setupState.value.endSelfieUri?.let { uri ->
+                        viewModel.updateEndSelfieForLatestSession(uri)
+                    }
                     if (wasScheduled) {
-                        android.widget.Toast.makeText(navController.context, "SCHEDULE History Save Ho चुकी है", android.widget.Toast.LENGTH_LONG).show()
+                        android.widget.Toast.makeText(navController.context, "✅ Schedule Session Completed & Saved", android.widget.Toast.LENGTH_LONG).show()
                         navController.navigate(FocusRoutes.SCHEDULE_MAIN) {
                             popUpTo(FocusRoutes.TIMER) { inclusive = true }
                             popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
@@ -186,7 +190,21 @@ fun FocusNavGraph(
                         }
                     }
                 },
-                onCancel = { /* No cancel allowed at end */ }
+                onCancel = {
+                    val wasScheduled = viewModel.activeScheduledSessionId.value != null
+                    android.widget.Toast.makeText(navController.context, "✅ Study Statistics Saved to History", android.widget.Toast.LENGTH_SHORT).show()
+                    if (wasScheduled) {
+                        navController.navigate(FocusRoutes.SCHEDULE_MAIN) {
+                            popUpTo(FocusRoutes.TIMER) { inclusive = true }
+                            popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate(FocusRoutes.HOME) {
+                            popUpTo(FocusRoutes.TIMER) { inclusive = true }
+                            popUpTo(FocusRoutes.CAMERA_END) { inclusive = true }
+                        }
+                    }
+                }
             )
         }
 

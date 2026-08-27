@@ -343,6 +343,7 @@ class FocusTimerService : Service() {
     fun recordDistractionAttempt() {
         val current = _timerState.value.distractionAttempts
         _timerState.value = _timerState.value.copy(distractionAttempts = current + 1)
+        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(this)
         updateNotification()
     }
 

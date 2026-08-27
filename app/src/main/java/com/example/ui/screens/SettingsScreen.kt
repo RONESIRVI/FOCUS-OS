@@ -619,11 +619,8 @@ fun SettingsScreen(
 
                 // 2. Sound Tone Selector
                 val soundToneLabel = when(notifSoundTone) {
-                    "ZEN_CHIME" -> "🎶 Zen Meditation Chime"
-                    "FOCUS_PULSE" -> "⚡ High Focus Pulse"
-                    "SOFT_BREEZE" -> "🌬️ Soft Breeze Alert"
                     "SILENT" -> "🔇 Silent (Vibrate Only)"
-                    else -> "🔔 Classic Bell Tone"
+                    else -> "📢 Exclusive Attached Audio (Siren Alert)"
                 }
                 SettingsClickableItem(
                     icon = Icons.Default.VolumeUp,
@@ -634,17 +631,17 @@ fun SettingsScreen(
 
                 Divider(color = FocusSurfaceVariant)
 
-                // 3. Vibration Pattern
+                // 3. Mobile Vibration System
                 val vibrateLabel = when(notifVibratePattern) {
-                    "DOUBLE_PULSE" -> "⚡ Double Pulse Alert"
-                    "RHYTHM" -> "🥁 Rhythmic Pulse"
-                    "OFF" -> "🔕 Vibration Disabled"
-                    else -> "📳 Gentle Single Pulse"
+                    "DOUBLE_PULSE" -> "⚡ Double Pulse Vibration Active"
+                    "RHYTHM" -> "🥁 Rhythmic Pulse Vibration Active"
+                    "OFF" -> "🔕 Mobile Vibration Disabled"
+                    else -> "📳 Mobile Hardware Vibration System Active"
                 }
                 SettingsClickableItem(
                     icon = Icons.Default.Vibration,
-                    title = "Vibration Pattern",
-                    subtitle = vibrateLabel,
+                    title = "Mobile Vibration System",
+                    subtitle = "$vibrateLabel • Tap to test",
                     onClick = { showNotifVibrateDialog = true }
                 )
 
@@ -924,10 +921,7 @@ fun SettingsScreen(
 
     if (showNotifSoundDialog) {
         val tones = listOf(
-            "CLASSIC_BELL" to "🔔 Classic Bell Tone",
-            "ZEN_CHIME" to "🎶 Zen Meditation Chime",
-            "FOCUS_PULSE" to "⚡ High Focus Pulse",
-            "SOFT_BREEZE" to "🌬️ Soft Breeze Alert",
+            "ATTACHED_AUDIO" to "📢 Exclusive Attached Audio (Siren Sound)",
             "SILENT" to "🔇 Silent (No Sound)"
         )
         AlertDialog(
@@ -936,25 +930,16 @@ fun SettingsScreen(
             text = {
                 Column {
                     tones.forEach { (key, label) ->
-                        val isSelected = notifSoundTone == key
+                        val isSelected = notifSoundTone == key || (key == "ATTACHED_AUDIO" && notifSoundTone != "SILENT")
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
                                     notifSoundTone = key
                                     sharedPrefs.edit().putString("NOTIF_SOUND_TONE", key).apply()
-                                    try {
-                                        val uri = when (key) {
-                                            "ZEN_CHIME" -> android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
-                                            "FOCUS_PULSE" -> android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE)
-                                            "SOFT_BREEZE", "CLASSIC_BELL" -> android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
-                                            else -> null
-                                        }
-                                        uri?.let {
-                                            val r = android.media.RingtoneManager.getRingtone(context, it)
-                                            r?.play()
-                                        }
-                                    } catch (e: Exception) { e.printStackTrace() }
+                                    if (key != "SILENT") {
+                                        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context)
+                                    }
                                 }
                                 .padding(vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -964,6 +949,9 @@ fun SettingsScreen(
                                 onClick = {
                                     notifSoundTone = key
                                     sharedPrefs.edit().putString("NOTIF_SOUND_TONE", key).apply()
+                                    if (key != "SILENT") {
+                                        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context)
+                                    }
                                 },
                                 colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
                             )
@@ -991,7 +979,7 @@ fun SettingsScreen(
         )
         AlertDialog(
             onDismissRequest = { showNotifVibrateDialog = false },
-            title = { Text("Select Vibration Pattern", color = Color.White, fontWeight = FontWeight.Bold) },
+            title = { Text("📳 Mobile Vibration System", color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     patterns.forEach { (key, label) ->
@@ -1002,22 +990,9 @@ fun SettingsScreen(
                                 .clickable {
                                     notifVibratePattern = key
                                     sharedPrefs.edit().putString("NOTIF_VIBRATE_PATTERN", key).apply()
-                                    try {
-                                        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
-                                        if (android.os.Build.VERSION.SDK_INT >= 26) {
-                                            val effect = when (key) {
-                                                "DOUBLE_PULSE" -> android.os.VibrationEffect.createWaveform(longArrayOf(0, 150, 100, 150), -1)
-                                                "RHYTHM" -> android.os.VibrationEffect.createWaveform(longArrayOf(0, 80, 80, 80, 80, 80), -1)
-                                                "OFF" -> null
-                                                else -> android.os.VibrationEffect.createOneShot(200, android.os.VibrationEffect.DEFAULT_AMPLITUDE)
-                                            }
-                                            if (effect != null) {
-                                                vibrator?.vibrate(effect)
-                                            }
-                                        } else {
-                                            if (key != "OFF") vibrator?.vibrate(200)
-                                        }
-                                    } catch (e: Exception) { e.printStackTrace() }
+                                    if (key != "OFF") {
+                                        com.example.util.NotificationSoundVibrationHelper.triggerVibration(context)
+                                    }
                                 }
                                 .padding(vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically

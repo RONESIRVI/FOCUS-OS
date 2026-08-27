@@ -53,6 +53,10 @@ fun CameraVerificationScreen(
 ) {
     val context = LocalContext.current
 
+    androidx.activity.compose.BackHandler {
+        onCancel()
+    }
+
     DisposableEffect(Unit) {
         com.example.util.FocusLockManager.setCameraVerificationActive(true)
         onDispose {
@@ -369,20 +373,16 @@ fun CameraVerificationScreen(
                     }
                 }
 
-                if (isStart) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    TextButton(
-                        onClick = onCancel,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "Cancel & Return",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = FocusTextSecondary
-                        )
-                    }
-                } else {
-                    Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(10.dp))
+                TextButton(
+                    onClick = onCancel,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = if (isStart) "Cancel & Return" else "Skip Selfie & Complete (Stats Saved)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = FocusTextSecondary
+                    )
                 }
             }
         }

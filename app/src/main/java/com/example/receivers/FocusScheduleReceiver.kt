@@ -30,23 +30,25 @@ class FocusScheduleReceiver : BroadcastReceiver() {
             else -> longArrayOf(0, 250, 250, 250)
         }
 
-        val soundUri = when (prefs.getString("NOTIF_SOUND_TONE", "CLASSIC_BELL")) {
-            "ZEN_CHIME" -> android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
-            "FOCUS_PULSE" -> android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE)
-            "SOFT_BREEZE", "CLASSIC_BELL" -> android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
-            else -> null
-        }
+        val soundUri = com.example.util.NotificationSoundVibrationHelper.getNotificationSoundUri(context)
         
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "schedule_channel"
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val audioAttr = android.media.AudioAttributes.Builder()
+                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                .build()
             val channel = NotificationChannel(channelId, "Scheduled Sessions", NotificationManager.IMPORTANCE_HIGH).apply {
-                enableVibration(vibratePatternKey != "OFF")
+                enableVibration(true)
                 vibrationPattern = vibrateArray
+                setSound(soundUri, audioAttr)
             }
             notificationManager.createNotificationChannel(channel)
         }
+        
+        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context)
         
         if (action == "ACTION_PRE_SCHEDULE") {
             val minutesBefore = intent.getIntExtra("MINUTES_BEFORE", 15)
