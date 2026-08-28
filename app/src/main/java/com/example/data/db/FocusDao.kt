@@ -50,6 +50,9 @@ interface FocusDao {
     @Query("UPDATE allowed_apps SET isAllowed = :isAllowed WHERE packageName = :packageName AND profile = :profile")
     suspend fun setAppAllowed(packageName: String, isAllowed: Boolean, profile: String = "MANUAL")
 
+    @Query("UPDATE allowed_apps SET isAllowed = :isAllowed WHERE packageName = :packageName")
+    suspend fun setAppAllowedAllProfiles(packageName: String, isAllowed: Boolean)
+
     // Subject Tasks
     @Query("SELECT * FROM subject_tasks ORDER BY name ASC")
     fun getAllSubjects(): Flow<List<SubjectTask>>

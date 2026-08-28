@@ -68,7 +68,7 @@ class FocusRepository(private val focusDao: FocusDao) {
     }
 
     suspend fun toggleAppWhitelist(packageName: String, isAllowed: Boolean, profile: String = "MANUAL") {
-        focusDao.setAppAllowed(packageName, isAllowed, profile)
+        focusDao.setAppAllowedAllProfiles(packageName, isAllowed)
     }
 
     suspend fun saveSession(session: FocusSession): Long {

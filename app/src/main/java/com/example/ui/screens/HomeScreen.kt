@@ -62,8 +62,8 @@ fun HomeScreen(
 
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
-    var userName by remember { mutableStateOf("Focus Student") }
-    var profilePhotoUri by remember { mutableStateOf<String?>(null) }
+    var userName by remember { mutableStateOf(sharedPrefs.getString("USER_NAME", "Focus Student") ?: "Focus Student") }
+    var profilePhotoUri by remember { mutableStateOf<String?>(sharedPrefs.getString("PROFILE_PHOTO_URI", null)) }
     
     var showAppGuide by remember { mutableStateOf(false) }
     var showNotifications by remember { mutableStateOf(false) }

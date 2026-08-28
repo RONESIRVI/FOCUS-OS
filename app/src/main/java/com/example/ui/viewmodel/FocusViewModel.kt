@@ -78,6 +78,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     val allSubjects: StateFlow<List<SubjectTask>> = repository.allSubjects
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _setupState = MutableStateFlow(UiSessionSetup())
+
     init {
         viewModelScope.launch {
             scheduledSessions.collect { list ->
@@ -90,9 +92,20 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
-    }
 
-    private val _setupState = MutableStateFlow(UiSessionSetup())
+        val prefs = application.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+        val savedLockModeName = prefs.getString("SAVED_LOCK_MODE", LockMode.MAXIMUM_LOCK.name) ?: LockMode.MAXIMUM_LOCK.name
+        val savedLockMode = try { LockMode.valueOf(savedLockModeName) } catch (e: Exception) { LockMode.MAXIMUM_LOCK }
+        val savedDuration = prefs.getInt("SAVED_DURATION", 25)
+        val savedSubject = prefs.getString("SAVED_SUBJECT_NAME", "") ?: ""
+        val savedSession = prefs.getString("SAVED_SESSION_NAME", "") ?: ""
+        _setupState.value = UiSessionSetup(
+            sessionName = savedSession,
+            subjectName = savedSubject,
+            durationMinutes = savedDuration,
+            lockMode = savedLockMode
+        )
+    }
     
     private val _dismissedNotificationIds = MutableStateFlow<Set<String>>(emptySet())
     val dismissedNotificationIds: StateFlow<Set<String>> = _dismissedNotificationIds
@@ -311,19 +324,35 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         startPhotoUri: String? = null,
         endSelfieUri: String? = null
     ) {
-        _setupState.value = _setupState.value.copy(
-            sessionName = sessionName ?: _setupState.value.sessionName,
-            subjectName = subjectName ?: _setupState.value.subjectName,
-            durationMinutes = durationMinutes ?: _setupState.value.durationMinutes,
-            lockMode = lockMode ?: _setupState.value.lockMode,
-            selectedSound = soundType ?: _setupState.value.selectedSound,
-            scheduledStartTime = scheduledStartTime ?: _setupState.value.scheduledStartTime,
-            scheduledEndTime = scheduledEndTime ?: _setupState.value.scheduledEndTime,
-            requiresPhoto = requiresPhoto ?: _setupState.value.requiresPhoto,
-            requiresSelfie = requiresSelfie ?: _setupState.value.requiresSelfie,
-            startPhotoUri = startPhotoUri ?: _setupState.value.startPhotoUri,
-            endSelfieUri = endSelfieUri ?: _setupState.value.endSelfieUri
+        val current = _setupState.value
+        val newLockMode = lockMode ?: current.lockMode
+        val newDuration = durationMinutes ?: current.durationMinutes
+        val newSubject = subjectName ?: current.subjectName
+        val newSession = sessionName ?: current.sessionName
+
+        _setupState.value = current.copy(
+            sessionName = newSession,
+            subjectName = newSubject,
+            durationMinutes = newDuration,
+            lockMode = newLockMode,
+            selectedSound = soundType ?: current.selectedSound,
+            scheduledStartTime = scheduledStartTime ?: current.scheduledStartTime,
+            scheduledEndTime = scheduledEndTime ?: current.scheduledEndTime,
+            requiresPhoto = requiresPhoto ?: current.requiresPhoto,
+            requiresSelfie = requiresSelfie ?: current.requiresSelfie,
+            startPhotoUri = startPhotoUri ?: current.startPhotoUri,
+            endSelfieUri = endSelfieUri ?: current.endSelfieUri
         )
+
+        val context = getApplication<Application>()
+        val prefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            putString("SAVED_LOCK_MODE", newLockMode.name)
+            putInt("SAVED_DURATION", newDuration)
+            putString("SAVED_SUBJECT_NAME", newSubject)
+            putString("SAVED_SESSION_NAME", newSession)
+            apply()
+        }
     }
 
     fun setStartPhotoUri(uri: String) {

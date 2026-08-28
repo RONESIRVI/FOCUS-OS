@@ -51,11 +51,11 @@ fun SettingsScreen(
     var showAccessibilityDisclosure by remember { mutableStateOf(false) }
     var showUsageAccessDisclosure by remember { mutableStateOf(false) }
     var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
-    var userName by remember { mutableStateOf("Focus Student") }
-    var profilePhotoUri by remember { mutableStateOf<String?>(null) }
-    
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+
+    var userName by remember { mutableStateOf(sharedPrefs.getString("USER_NAME", "Focus Student") ?: "Focus Student") }
+    var profilePhotoUri by remember { mutableStateOf<String?>(sharedPrefs.getString("PROFILE_PHOTO_URI", null)) }
 
     var notifCustomPrefix by remember { mutableStateOf(sharedPrefs.getString("NOTIF_CUSTOM_PREFIX", "FOCUS OS") ?: "FOCUS OS") }
     var notifVibratePattern by remember { mutableStateOf(sharedPrefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE") }
@@ -318,7 +318,10 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { viewModel.updateSetup(lockMode = mode) }
+                            .clickable {
+                                viewModel.updateSetup(lockMode = mode)
+                                sharedPrefs.edit().putString("SAVED_LOCK_MODE", mode.name).apply()
+                            }
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -326,7 +329,10 @@ fun SettingsScreen(
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                             RadioButton(
                                 selected = isSelected,
-                                onClick = { viewModel.updateSetup(lockMode = mode) },
+                                onClick = {
+                                    viewModel.updateSetup(lockMode = mode)
+                                    sharedPrefs.edit().putString("SAVED_LOCK_MODE", mode.name).apply()
+                                },
                                 colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
                             )
                             Spacer(modifier = Modifier.width(16.dp))
