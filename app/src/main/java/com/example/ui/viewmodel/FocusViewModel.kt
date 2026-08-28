@@ -537,7 +537,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun triggerDistractionWarning(blockedPackage: String = "", showRedModal: Boolean = false, showSoftModal: Boolean = false) {
-        if (_serviceTimerState.value.isRunning) {
+        if (_serviceTimerState.value.isRunning || com.example.util.FocusLockManager.isFocusActive || com.example.util.FocusLockManager.hasPendingSchedule()) {
             if (blockedPackage.isNotBlank()) {
                 _lastBlockedPackage.value = blockedPackage
             }
@@ -551,7 +551,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             val prefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
             val soundEnabled = prefs.getBoolean("NOTIF_SOFTLOCK_ENABLED", true)
             val soundKey = if (soundEnabled) prefs.getString("NOTIF_SOFTLOCK_SOUND", "PRIME_STROBE") ?: "PRIME_STROBE" else "SILENT"
-            com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, soundKey)
+            val vibrateKey = prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
+            com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, soundKey, vibrateKey)
         }
     }
 
@@ -566,7 +567,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         val prefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
         val soundEnabled = prefs.getBoolean("NOTIF_SOFTLOCK_ENABLED", true)
         val soundKey = if (soundEnabled) prefs.getString("NOTIF_SOFTLOCK_SOUND", "PRIME_STROBE") ?: "PRIME_STROBE" else "SILENT"
-        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, soundKey)
+        val vibrateKey = prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
+        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, soundKey, vibrateKey)
     }
 
     fun getAppDisplayName(packageName: String): String {

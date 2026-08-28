@@ -33,6 +33,12 @@ object NotificationSoundVibrationHelper {
             if (uri != Uri.EMPTY) {
                 currentRingtone = RingtoneManager.getRingtone(context.applicationContext, uri)
                 currentRingtone?.let {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        it.audioAttributes = android.media.AudioAttributes.Builder()
+                            .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    }
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         it.isLooping = false
                     }

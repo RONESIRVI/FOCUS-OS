@@ -34,7 +34,7 @@ class FocusScheduleReceiver : BroadcastReceiver() {
         val soundUri = com.example.util.NotificationSoundVibrationHelper.getNotificationSoundUri(context, scheduleSoundKey)
         
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channelId = "schedule_channel"
+        val channelId = "schedule_channel_${scheduleSoundKey}_${vibratePatternKey}"
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val audioAttr = android.media.AudioAttributes.Builder()
@@ -49,7 +49,7 @@ class FocusScheduleReceiver : BroadcastReceiver() {
             notificationManager.createNotificationChannel(channel)
         }
         
-        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, scheduleSoundKey)
+        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, scheduleSoundKey, vibratePatternKey)
         
         if (action == "ACTION_PRE_SCHEDULE") {
             val minutesBefore = intent.getIntExtra("MINUTES_BEFORE", 15)

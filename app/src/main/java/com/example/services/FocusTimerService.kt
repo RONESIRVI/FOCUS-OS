@@ -136,8 +136,17 @@ class FocusTimerService : Service() {
         appMonitorJob?.cancel()
         appMonitorJob = scope.launch {
             val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
+            var alertTicks = 0
             while (!FocusLockManager.isFocusActive && FocusLockManager.hasPendingSchedule()) {
                 try {
+                    alertTicks++
+                    if (alertTicks % 66 == 0) { // Repeat sound/vibe warning every ~20 seconds while schedule session is unstarted
+                        val prefs = getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+                        val soundKey = prefs.getString("NOTIF_SCHEDULE_SOUND", "PRIME_ZEN") ?: "PRIME_ZEN"
+                        val vibrateKey = prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
+                        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(this@FocusTimerService, soundKey, vibrateKey)
+                    }
+
                     val endTime = System.currentTimeMillis()
                     val startTime = endTime - 8000
                     var lastEventPackage: String? = null
@@ -184,7 +193,7 @@ class FocusTimerService : Service() {
                 } catch (e: Exception) {
                     Log.e("FocusTimerService", "Error in pending app monitor loop", e)
                 }
-                delay(1500)
+                delay(300)
             }
         }
     }
@@ -232,7 +241,7 @@ class FocusTimerService : Service() {
             val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
             while (_timerState.value.isRunning) {
                 try {
-                    if (FocusLockManager.isFocusActive && !_timerState.value.isPaused) {
+                    if (FocusLockManager.isFocusActive) {
                         val endTime = System.currentTimeMillis()
                         val startTime = endTime - 8000
                         var lastEventPackage: String? = null
@@ -370,10 +379,8 @@ class FocusTimerService : Service() {
         updateNotification()
     }
 
-    private fun createNotificationChannel() {
+    private fun createNotificationChannel(dynamicChannelId: String = CHANNEL_ID, vibrateKey: String = "PULSE") {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val prefs = getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
-            val vibrateKey = prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
             val vibrateArray = when (vibrateKey) {
                 "DOUBLE_PULSE" -> longArrayOf(0, 250, 100, 250, 400, 250, 100, 250)
                 "RHYTHM" -> longArrayOf(0, 120, 100, 120, 100, 120, 100, 300)
@@ -381,7 +388,7 @@ class FocusTimerService : Service() {
                 else -> longArrayOf(0, 400, 200, 400, 200, 600)
             }
             val channel = NotificationChannel(
-                CHANNEL_ID,
+                dynamicChannelId,
                 "Focus Session Active",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
@@ -403,6 +410,9 @@ class FocusTimerService : Service() {
         val prefs = getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
         val notifTitle = prefs.getString("NOTIF_CUSTOM_PREFIX", "FOCUS OS") ?: "FOCUS OS"
         val notifThemeKey = prefs.getString("NOTIF_DESIGN_THEME", "DEEP_DARK") ?: "DEEP_DARK"
+        val vibrateKey = prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
+        val dynamicChannelId = "${CHANNEL_ID}_${notifThemeKey}_${vibrateKey}"
+        createNotificationChannel(dynamicChannelId, vibrateKey)
         
         val (primaryColor, rootBgColor) = when (notifThemeKey) {
             "CYBER_NEON" -> Pair(android.graphics.Color.parseColor("#00E5FF"), android.graphics.Color.parseColor("#0A0E1A"))
@@ -499,7 +509,7 @@ class FocusTimerService : Service() {
             )
         }
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        return NotificationCompat.Builder(this, dynamicChannelId)
             .setSmallIcon(R.drawable.ic_notif_shield)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setCustomContentView(collapsedView)
