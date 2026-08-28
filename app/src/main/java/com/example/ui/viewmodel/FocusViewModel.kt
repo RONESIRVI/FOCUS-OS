@@ -29,6 +29,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 
+data class PendingAttempt(
+    val packageName: String,
+    val appName: String,
+    val timeFormatted: String,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
 data class UiSessionSetup(
     val sessionName: String = "",
     val subjectName: String = "",
@@ -146,6 +153,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _lastBlockedPackage = MutableStateFlow<String?>(null)
     val lastBlockedPackage: StateFlow<String?> = _lastBlockedPackage.asStateFlow()
+
+    private val _pendingAttemptsList = MutableStateFlow<List<PendingAttempt>>(emptyList())
+    val pendingAttemptsList: StateFlow<List<PendingAttempt>> = _pendingAttemptsList.asStateFlow()
 
     private val _currentAppSelectorProfile = MutableStateFlow("MANUAL")
     val currentAppSelectorProfile: StateFlow<String> = _currentAppSelectorProfile.asStateFlow()
@@ -540,9 +550,22 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun triggerDistractionWarning(blockedPackage: String = "", showRedModal: Boolean = false, showSoftModal: Boolean = false) {
+        val now = System.currentTimeMillis()
+        val sdf = java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
+        val formattedTime = sdf.format(java.util.Date(now))
+
         if (_serviceTimerState.value.isRunning || com.example.util.FocusLockManager.isFocusActive || com.example.util.FocusLockManager.hasPendingSchedule()) {
             if (blockedPackage.isNotBlank()) {
                 _lastBlockedPackage.value = blockedPackage
+                val appName = getAppDisplayName(blockedPackage)
+                val newAttempt = PendingAttempt(
+                    packageName = blockedPackage,
+                    appName = appName,
+                    timeFormatted = formattedTime,
+                    timestamp = now
+                )
+                val filtered = _pendingAttemptsList.value.filter { it.packageName != blockedPackage }
+                _pendingAttemptsList.value = listOf(newAttempt) + filtered
             }
             if (showRedModal) {
                 _showLockOverlay.value = true
@@ -560,8 +583,21 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun triggerPendingDistractionWarning(blockedPackage: String, sessionName: String, sessionId: Long) {
+        val now = System.currentTimeMillis()
+        val sdf = java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
+        val formattedTime = sdf.format(java.util.Date(now))
+
         if (blockedPackage.isNotBlank()) {
             _lastBlockedPackage.value = blockedPackage
+            val appName = getAppDisplayName(blockedPackage)
+            val newAttempt = PendingAttempt(
+                packageName = blockedPackage,
+                appName = appName,
+                timeFormatted = formattedTime,
+                timestamp = now
+            )
+            val filtered = _pendingAttemptsList.value.filter { it.packageName != blockedPackage }
+            _pendingAttemptsList.value = listOf(newAttempt) + filtered
         }
         _pendingSessionNameOverlay.value = sessionName
         _pendingSessionIdOverlay.value = sessionId

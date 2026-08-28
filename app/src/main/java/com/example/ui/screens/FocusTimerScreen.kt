@@ -48,6 +48,11 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.PaddingValues
+import com.example.ui.components.AppIconView
+import com.example.ui.viewmodel.PendingAttempt
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -276,6 +281,21 @@ fun FocusTimerScreen(
                                 color = FocusWarning
                             )
                         }
+                    }
+
+                    // Test Preview Block Overlay Button
+                    Button(
+                        onClick = {
+                            viewModel.triggerDistractionWarning(
+                                blockedPackage = "com.google.android.youtube",
+                                showRedModal = true
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                        modifier = Modifier.height(28.dp)
+                    ) {
+                        Text("TEST BLOCK CARD", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }
@@ -966,8 +986,32 @@ fun FocusTimerScreen(
         // ==========================================
         // 3. STRICT LOCK DISTRACTION OVERLAY DIALOG
         // ==========================================
-        if (showLockOverlay) {
-            val blockedAppName = lastBlockedPackage?.let { viewModel.getAppDisplayName(it) } ?: "Distraction App"
+        if (showLockOverlay || showSoftLockOverlay) {
+            val pendingAttempts by viewModel.pendingAttemptsList.collectAsState()
+            val primaryBlockedPkg = lastBlockedPackage ?: "com.google.android.youtube"
+            val primaryBlockedAppName = remember(primaryBlockedPkg) { viewModel.getAppDisplayName(primaryBlockedPkg) }
+            val sdfNow = remember { java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault()) }
+            val currentAttemptTime = remember { sdfNow.format(java.util.Date()) }
+
+            val attemptsToShow = if (pendingAttempts.isNotEmpty()) {
+                pendingAttempts
+            } else {
+                listOf(
+                    PendingAttempt(
+                        packageName = primaryBlockedPkg,
+                        appName = primaryBlockedAppName,
+                        timeFormatted = currentAttemptTime
+                    )
+                )
+            }
+
+            val latestAppName = attemptsToShow.firstOrNull()?.appName ?: primaryBlockedAppName
+
+            val mins = timerState.remainingSeconds / 60
+            val secs = timerState.remainingSeconds % 60
+            val timeStr = String.format("%02d:%02d", mins, secs)
+            val sessionNameText = timerState.sessionName.ifBlank { "ACTIVE FOCUS SESSION" }
+            val subjectNameText = timerState.subjectName.ifBlank { "Deep Study" }
 
             Dialog(
                 onDismissRequest = { /* Modal lock - require explicit button */ },
@@ -980,214 +1024,393 @@ fun FocusTimerScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Black, Color(0xFF4A0000), Color(0xFF1A0000))
-                            )
-                        )
-                        .border(6.dp, Color(0xFFFF1744)),
+                        .background(Color.Black.copy(alpha = 0.92f))
+                        .padding(14.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
+                    // Red Shield Frame Container
+                    Card(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .fillMaxWidth(0.96f)
+                            .border(
+                                width = 2.5.dp,
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0xFFEF4444),
+                                        Color(0xFFB91C1C),
+                                        Color(0xFF7F1D1D),
+                                        Color(0xFFEF4444)
+                                    )
+                                ),
+                                shape = RoundedCornerShape(32.dp)
+                            ),
+                        shape = RoundedCornerShape(32.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFF131722)
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 20.dp)
                     ) {
-                        Text(
-                            text = "DISTRACTION BLOCKED",
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 1.sp,
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 22.dp, vertical = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Header Alert Icon: Glowing Gradient Warning Triangle ⚠️
+                            Box(
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .background(
+                                        brush = Brush.radialGradient(
+                                            colors = listOf(
+                                                Color(0xFFF97316).copy(alpha = 0.4f),
+                                                Color(0xFFEF4444).copy(alpha = 0.15f),
+                                                Color.Transparent
+                                            )
+                                        ),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "⚠️",
+                                    style = MaterialTheme.typography.headlineLarge.copy(fontSize = 36.sp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Title: BLOCKED APP DETECTED
+                            Text(
+                                text = "BLOCKED APP DETECTED",
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 1.sp
+                                ),
+                                color = Color.White,
                                 textAlign = TextAlign.Center
-                            ),
-                            color = Color.White
-                        )
-                        
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        Box(
-                            modifier = Modifier
-                                .size(110.dp)
-                                .background(Color.Red.copy(alpha = 0.15f), CircleShape)
-                                .border(3.dp, Color.Red, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Warning,
-                                contentDescription = "Warning",
-                                tint = Color.Red,
-                                modifier = Modifier.size(54.dp)
                             )
-                        }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
 
-                        Text(
-                            text = "FOCUS SHIELD ENFORCED",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.5.sp
-                            ),
-                            color = Color.Red
-                        )
+                            // Subtitle
+                            Text(
+                                text = "Distracting apps are completely restricted during your active focus session.",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                                color = Color.White.copy(alpha = 0.75f),
+                                textAlign = TextAlign.Center
+                            )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(18.dp))
 
-                        Text(
-                            text = "⚠️ $blockedAppName is blocked during your focus session to keep you on track.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = Color.White,
-                            textAlign = TextAlign.Center
-                        )
-                        
-                        Spacer(modifier = Modifier.height(24.dp))
-                        
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
-                        
-                        Spacer(modifier = Modifier.height(20.dp))
-                        
-                        Text(
-                            text = "Current Subject: ${timerState.subjectName.ifBlank { "Deep Study" }}",
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
-                        )
-                        
-                        Spacer(modifier = Modifier.height(6.dp))
-                        
-                        val mins = timerState.remainingSeconds / 60
-                        val secs = timerState.remainingSeconds % 60
-                        val timeStr = String.format("%02d:%02d", mins, secs)
-                        
-                        Text(
-                            text = "⏱ $timeStr Remaining",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                            color = FocusPrimary
-                        )
-                        
-                        Spacer(modifier = Modifier.height(20.dp))
-                        
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
-                        
-                        Spacer(modifier = Modifier.height(32.dp))
+                            // Session Info Inset Card
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, Color(0xFF2E364A), RoundedCornerShape(16.dp)),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color(0xFF1B2130)
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    // Session Name & Subject Row
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(34.dp)
+                                                .background(Color(0xFF252D3F), RoundedCornerShape(8.dp)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(text = "📖", fontSize = 16.sp)
+                                        }
+                                        Text(
+                                            text = "${subjectNameText.uppercase()} – ${sessionNameText.uppercase()}",
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                letterSpacing = 0.5.sp
+                                            ),
+                                            color = Color.White,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
 
-                        // Return to Focus Button
-                        Button(
-                            onClick = { viewModel.dismissLockOverlay() },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(54.dp)
-                                .testTag("return_to_focus_btn"),
-                            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black),
-                            shape = RoundedCornerShape(27.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("BACK TO FOCUS TIMER", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Icon(imageVector = Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    HorizontalDivider(color = Color(0xFF2E364A), thickness = 1.dp)
+
+                                    // Time Remaining Row
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(34.dp)
+                                                .background(Color(0xFF252D3F), RoundedCornerShape(8.dp)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(text = "⏱️", fontSize = 16.sp)
+                                        }
+                                        Text(
+                                            text = "$timeStr REMAINING",
+                                            style = MaterialTheme.typography.bodyLarge.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                letterSpacing = 0.5.sp
+                                            ),
+                                            color = Color(0xFFF97316)
+                                        )
+                                    }
+                                }
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
 
-                        // Open an allowed study app button
-                        OutlinedButton(
-                            onClick = {
-                                viewModel.dismissLockOverlay()
-                                showExitAttemptDialog = true
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f)),
-                            shape = RoundedCornerShape(25.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.Apps, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("OPEN ALLOWED STUDY APP", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
+                            // STATUS Badge Row
+                            Text(
+                                text = "STATUS",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.2.sp
+                                ),
+                                color = Color.White.copy(alpha = 0.5f)
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .border(1.5.dp, Color(0xFF991B1B), RoundedCornerShape(20.dp))
+                                    .background(Color(0xFF3B1212), RoundedCornerShape(20.dp))
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .background(Color(0xFFEF4444), CircleShape)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "SESSION IN PROGRESS",
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            letterSpacing = 1.sp
+                                        ),
+                                        color = Color(0xFFEF4444)
+                                    )
+                                }
                             }
-                        }
-                    }
-                }
-            }
-        }
 
-        if (showSoftLockOverlay) {
-            val blockedAppName = lastBlockedPackage?.let { viewModel.getAppDisplayName(it) } ?: "Distraction App"
-            Dialog(
-                onDismissRequest = { /* Modal lock */ },
-                properties = DialogProperties(
-                    dismissOnBackPress = false,
-                    dismissOnClickOutside = false,
-                    usePlatformDefaultWidth = false
-                )
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFF0F172A)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "🛡️ STRICT FOCUS LOCK ACTIVE",
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFFF59E0B),
-                            modifier = Modifier
-                                .background(Color(0xFFF59E0B).copy(alpha = 0.2f), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 24.dp, vertical = 12.dp)
-                        )
-                        
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        Text(
-                            text = "⚠️ '$blockedAppName' is BLOCKED!",
-                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White,
-                            textAlign = TextAlign.Center
-                        )
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Text(
-                            text = "Subject: ${timerState.subjectName.ifBlank { "Deep Study" }}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color(0xFF94A3B8)
-                        )
-                        
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        val mins = timerState.remainingSeconds / 60
-                        val secs = timerState.remainingSeconds % 60
-                        val timeStr = String.format("%02d:%02d", mins, secs)
-                        
-                        Text(
-                            text = "⏱️ $timeStr REMAINING",
-                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
-                        )
-                        
-                        Spacer(modifier = Modifier.height(48.dp))
-                        
-                        Button(
-                            onClick = { viewModel.dismissLockOverlay() },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF0284C7),
-                                contentColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("RETURN TO STUDY APP", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            // YOU TRIED TO OPEN Section Header
+                            Text(
+                                text = "YOU TRIED TO OPEN",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 1.5.sp
+                                ),
+                                color = Color(0xFFEF4444)
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // List of Blocked Attempts
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                attemptsToShow.take(4).forEach { attempt ->
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .border(1.dp, Color(0xFF2E364A), RoundedCornerShape(14.dp)),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = Color(0xFF1B2130)
+                                        )
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                // App Icon
+                                                AppIconView(
+                                                    packageName = attempt.packageName,
+                                                    modifier = Modifier
+                                                        .size(42.dp)
+                                                        .clip(RoundedCornerShape(10.dp))
+                                                )
+
+                                                Spacer(modifier = Modifier.width(12.dp))
+
+                                                Column {
+                                                    Text(
+                                                        text = attempt.appName,
+                                                        style = MaterialTheme.typography.titleMedium.copy(
+                                                            fontWeight = FontWeight.Bold
+                                                        ),
+                                                        color = Color.White,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                    Text(
+                                                        text = attempt.packageName,
+                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                                        color = Color.White.copy(alpha = 0.5f),
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.width(8.dp))
+
+                                            // Attempt Time
+                                            Text(
+                                                text = attempt.timeFormatted,
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                                color = Color(0xFFEF4444)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            // Lock Notice Box
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, Color(0xFF374151), RoundedCornerShape(14.dp)),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color(0xFF1B2130).copy(alpha = 0.7f)
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = null,
+                                        tint = Color(0xFFEF4444),
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = "You tried to open $latestAppName. This app is restricted because your focus session is currently active.",
+                                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 17.sp),
+                                        color = Color.White.copy(alpha = 0.85f)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            // Primary Button: BACK TO FOCUS TIMER
+                            Button(
+                                onClick = {
+                                    viewModel.dismissLockOverlay()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp)
+                                    .testTag("return_to_focus_btn")
+                                    .background(
+                                        brush = Brush.horizontalGradient(
+                                            colors = listOf(
+                                                Color(0xFFF97316),
+                                                Color(0xFFEA580C),
+                                                Color(0xFFDC2626)
+                                            )
+                                        ),
+                                        shape = CircleShape
+                                    ),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Transparent,
+                                    contentColor = Color.White
+                                ),
+                                shape = CircleShape
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "BACK TO FOCUS TIMER",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            letterSpacing = 0.8.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Secondary Button: Open Allowed Study App
+                            Button(
+                                onClick = {
+                                    viewModel.dismissLockOverlay()
+                                    showExitAttemptDialog = true
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(46.dp)
+                                    .border(1.dp, Color(0xFF2E364A), CircleShape),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF1B2130),
+                                    contentColor = Color.White
+                                ),
+                                shape = CircleShape
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Apps,
+                                        contentDescription = null,
+                                        tint = Color.White.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "OPEN ALLOWED STUDY APP",
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontWeight = FontWeight.SemiBold
+                                        ),
+                                        color = Color.White.copy(alpha = 0.85f)
+                                    )
+                                }
+                            }
                         }
                     }
                 }

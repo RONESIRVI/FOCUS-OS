@@ -188,7 +188,7 @@ class FocusTimerService : Service() {
                                 remainingSeconds = 0,
                                 subjectName = FocusLockManager.pendingSessionName ?: "Scheduled Focus"
                             )
-                        } else {
+                        } else if (lastEventPackage == packageName) {
                             FocusLockOverlayManager.dismissOverlay()
                         }
                     }

@@ -34,7 +34,15 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.border
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import com.example.ui.theme.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.style.TextOverflow
+import com.example.ui.components.AppIconView
+import com.example.ui.viewmodel.PendingAttempt
 import com.example.ui.viewmodel.FocusViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -110,7 +118,48 @@ fun HomeScreen(
     }
 
     if (showPendingLockOverlay) {
-        val blockedAppName = lastBlockedPackage?.let { viewModel.getAppDisplayName(it) } ?: "Distraction App"
+        val pendingAttempts by viewModel.pendingAttemptsList.collectAsState()
+        val scheduledSessions by viewModel.scheduledSessions.collectAsState()
+        
+        val currentPendingSession = remember(pendingSessionIdOverlay, scheduledSessions) {
+            scheduledSessions.find { it.id == pendingSessionIdOverlay }
+                ?: scheduledSessions.find { it.status == "SCHEDULED" }
+        }
+        
+        val sessionTitleText = remember(currentPendingSession, pendingSessionNameOverlay) {
+            currentPendingSession?.let { session ->
+                if (session.subjectName.isNotBlank() && session.sessionName.isNotBlank()) {
+                    "${session.subjectName.uppercase()} – ${session.sessionName.uppercase()}"
+                } else if (session.subjectName.isNotBlank()) {
+                    session.subjectName.uppercase()
+                } else {
+                    session.sessionName.uppercase()
+                }
+            } ?: if (pendingSessionNameOverlay.isNotBlank()) pendingSessionNameOverlay.uppercase() else "POLITY – LAXMIKANTH"
+        }
+        
+        val timeRangeText = remember(currentPendingSession) {
+            val now = System.currentTimeMillis()
+            val sdf = java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
+            if (currentPendingSession?.scheduledStartTime != null) {
+                val startStr = sdf.format(java.util.Date(currentPendingSession.scheduledStartTime))
+                val endMillis = currentPendingSession.scheduledEndTime 
+                    ?: (currentPendingSession.scheduledStartTime + currentPendingSession.targetDurationMinutes * 60 * 1000L)
+                val endStr = sdf.format(java.util.Date(endMillis))
+                "$startStr – $endStr"
+            } else {
+                val startStr = sdf.format(java.util.Date(now))
+                val endStr = sdf.format(java.util.Date(now + 45 * 60 * 1000L))
+                "$startStr – $endStr"
+            }
+        }
+        
+        val primaryBlockedPkg = lastBlockedPackage ?: "com.google.android.youtube"
+        val primaryBlockedAppName = remember(primaryBlockedPkg) { viewModel.getAppDisplayName(primaryBlockedPkg) }
+        
+        val sdfNow = remember { java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault()) }
+        val currentAttemptTime = remember { sdfNow.format(java.util.Date()) }
+
         Dialog(
             onDismissRequest = { /* Modal lock */ },
             properties = DialogProperties(
@@ -122,76 +171,409 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFF0F172A)),
+                    .background(Color.Black.copy(alpha = 0.92f))
+                    .padding(14.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
+                // Red Shield Frame Container matching attached image
+                Card(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(28.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .fillMaxWidth(0.96f)
+                        .border(
+                            width = 2.5.dp,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFFEF4444),
+                                    Color(0xFFB91C1C),
+                                    Color(0xFF7F1D1D),
+                                    Color(0xFFEF4444)
+                                )
+                            ),
+                            shape = RoundedCornerShape(32.dp)
+                        ),
+                    shape = RoundedCornerShape(32.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF131722)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 20.dp)
                 ) {
-                    Text(
-                        text = "🛡️ STRICT FOCUS LOCK ACTIVE",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = Color(0xFFF59E0B),
-                        modifier = Modifier
-                            .background(Color(0xFFF59E0B).copy(alpha = 0.2f), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 24.dp, vertical = 12.dp)
-                    )
-                    
-                    Spacer(modifier = Modifier.height(32.dp))
-                    
-                    Text(
-                        text = "⚠️ '$blockedAppName' is BLOCKED!",
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Text(
-                        text = "You have a pending scheduled session:",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color(0xFF94A3B8),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                    
-                    Text(
-                        text = pendingSessionNameOverlay.ifBlank { "Scheduled Focus" },
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = FocusPrimary,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                    
-                    Spacer(modifier = Modifier.height(32.dp))
-                    
-                    Text(
-                        text = "Please start your session to continue.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White
-                    )
-                    
-                    Spacer(modifier = Modifier.height(48.dp))
-                    
-                    Button(
-                        onClick = { 
-                            viewModel.dismissLockOverlay() 
-                            if (pendingSessionIdOverlay != -1L) {
-                                onNavigateToSessionRouter(pendingSessionIdOverlay)
-                            }
-                        },
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF0284C7),
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(8.dp)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 22.dp, vertical = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("START SESSION", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                        // Header Alert Icon: Glowing Gradient Warning Triangle ⚠️
+                        Box(
+                            modifier = Modifier
+                                .size(60.dp)
+                                .background(
+                                    brush = Brush.radialGradient(
+                                        colors = listOf(
+                                            Color(0xFFF97316).copy(alpha = 0.4f),
+                                            Color(0xFFEF4444).copy(alpha = 0.15f),
+                                            Color.Transparent
+                                        )
+                                    ),
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "⚠️",
+                                style = MaterialTheme.typography.headlineLarge.copy(fontSize = 36.sp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Title: SESSION PENDING
+                        Text(
+                            text = "SESSION PENDING",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 1.sp
+                            ),
+                            color = Color.White,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Subtitle
+                        Text(
+                            text = "Your scheduled focus session has not been started yet.",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                            color = Color.White.copy(alpha = 0.75f),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        // Session Info Inset Card
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, Color(0xFF2E364A), RoundedCornerShape(16.dp)),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFF1B2130)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                // Session Name Row
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .background(Color(0xFF252D3F), RoundedCornerShape(8.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(text = "📖", fontSize = 16.sp)
+                                    }
+                                    Text(
+                                        text = sessionTitleText,
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 0.5.sp
+                                        ),
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                Divider(color = Color(0xFF2E364A), thickness = 1.dp)
+
+                                // Time Range Row
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .background(Color(0xFF252D3F), RoundedCornerShape(8.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(text = "🕒", fontSize = 16.sp)
+                                    }
+                                    Text(
+                                        text = timeRangeText,
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            letterSpacing = 0.5.sp
+                                        ),
+                                        color = Color(0xFFF97316)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // STATUS Badge Row
+                        Text(
+                            text = "STATUS",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.2.sp
+                            ),
+                            color = Color.White.copy(alpha = 0.5f)
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .border(1.5.dp, Color(0xFF991B1B), RoundedCornerShape(20.dp))
+                                .background(Color(0xFF3B1212), RoundedCornerShape(20.dp))
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(Color(0xFFEF4444), CircleShape)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "START REQUIRED",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        letterSpacing = 1.sp
+                                    ),
+                                    color = Color(0xFFEF4444)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        // YOU TRIED TO OPEN Section Header
+                        Text(
+                            text = "YOU TRIED TO OPEN",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 1.5.sp
+                            ),
+                            color = Color(0xFFEF4444)
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // List of Blocked Attempts
+                        val attemptsToShow = if (pendingAttempts.isNotEmpty()) {
+                            pendingAttempts
+                        } else {
+                            listOf(
+                                PendingAttempt(
+                                    packageName = primaryBlockedPkg,
+                                    appName = primaryBlockedAppName,
+                                    timeFormatted = currentAttemptTime
+                                )
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            attemptsToShow.take(4).forEach { attempt ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(1.dp, Color(0xFF2E364A), RoundedCornerShape(14.dp)),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color(0xFF1B2130)
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            // App Icon
+                                            AppIconView(
+                                                packageName = attempt.packageName,
+                                                modifier = Modifier
+                                                    .size(42.dp)
+                                                    .clip(RoundedCornerShape(10.dp))
+                                            )
+
+                                            Spacer(modifier = Modifier.width(12.dp))
+
+                                            Column {
+                                                Text(
+                                                    text = attempt.appName,
+                                                    style = MaterialTheme.typography.titleMedium.copy(
+                                                        fontWeight = FontWeight.Bold
+                                                    ),
+                                                    color = Color.White,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = attempt.packageName,
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                                    color = Color.White.copy(alpha = 0.5f),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(8.dp))
+
+                                        // Attempt Time
+                                        Text(
+                                            text = attempt.timeFormatted,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            color = Color(0xFFEF4444)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Lock Notice Box
+                        val latestAppName = attemptsToShow.firstOrNull()?.appName ?: primaryBlockedAppName
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, Color(0xFF374151), RoundedCornerShape(14.dp)),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFF1B2130).copy(alpha = 0.7f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = Color(0xFFEF4444),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = "You tried to open $latestAppName. This app is restricted because your scheduled focus session is still pending.",
+                                    style = MaterialTheme.typography.bodySmall.copy(lineHeight = 17.sp),
+                                    color = Color.White.copy(alpha = 0.85f)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // Primary Button: START SESSION NOW (Gradient Orange/Red Pill Button)
+                        Button(
+                            onClick = {
+                                viewModel.dismissLockOverlay()
+                                if (pendingSessionIdOverlay != -1L) {
+                                    onNavigateToSessionRouter(pendingSessionIdOverlay)
+                                } else if (currentPendingSession != null) {
+                                    onNavigateToSessionRouter(currentPendingSession.id)
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .background(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(
+                                            Color(0xFFF97316),
+                                            Color(0xFFEA580C),
+                                            Color(0xFFDC2626)
+                                        )
+                                    ),
+                                    shape = CircleShape
+                                ),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Transparent,
+                                contentColor = Color.White
+                            ),
+                            shape = CircleShape
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "START SESSION NOW",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        letterSpacing = 0.8.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Secondary Button: Return to Focus App (Dark Pill Button)
+                        Button(
+                            onClick = {
+                                viewModel.dismissLockOverlay()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                                .border(1.dp, Color(0xFF2E364A), CircleShape),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF1B2130),
+                                contentColor = Color.White
+                            ),
+                            shape = CircleShape
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Home,
+                                    contentDescription = null,
+                                    tint = Color.White.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Return to Focus App",
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        fontWeight = FontWeight.SemiBold
+                                    ),
+                                    color = Color.White.copy(alpha = 0.85f)
+                                )
+                            }
+                        }
                     }
                 }
             }

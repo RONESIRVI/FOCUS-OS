@@ -41,6 +41,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FocusLockOverlayManager.dismissOverlay()
         FocusLockManager.onDistractionListener = { blockedPkg, showRedModal ->
             runOnUiThread {
                 if (showRedModal) {
@@ -225,7 +226,7 @@ class MainActivity : ComponentActivity() {
                             remainingSeconds = timerState.remainingSeconds,
                             subjectName = timerState.subjectName
                         )
-                    } else {
+                    } else if (recentApp == packageName) {
                         FocusLockOverlayManager.dismissOverlay()
                     }
                 }
