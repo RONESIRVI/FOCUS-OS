@@ -247,6 +247,27 @@ fun ConditionalScaffold(
     }
 }
 
+fun savePeriodToPrefs(sharedPrefs: android.content.SharedPreferences, prefix: String, period: PeriodInfo) {
+    sharedPrefs.edit()
+        .putString("${prefix}_TITLE", period.title)
+        .putLong("${prefix}_START", period.startMillis)
+        .putLong("${prefix}_END", period.endMillis)
+        .putBoolean("${prefix}_IS_CUSTOM", period.isCustom)
+        .apply()
+}
+
+fun loadPeriodFromPrefs(sharedPrefs: android.content.SharedPreferences, prefix: String, defaultPresetTitle: String): PeriodInfo {
+    val title = sharedPrefs.getString("${prefix}_TITLE", null) ?: return calculatePeriodPreset(defaultPresetTitle)
+    val isCustom = sharedPrefs.getBoolean("${prefix}_IS_CUSTOM", false)
+    return if (isCustom) {
+        val start = sharedPrefs.getLong("${prefix}_START", 0L)
+        val end = sharedPrefs.getLong("${prefix}_END", 0L)
+        PeriodInfo(title = title, startMillis = start, endMillis = end, isCustom = true)
+    } else {
+        calculatePeriodPreset(title)
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatisticsScreen(
@@ -260,18 +281,19 @@ fun StatisticsScreen(
 ) {
     val context = LocalContext.current
     val view = androidx.compose.ui.platform.LocalView.current
+    val sharedPrefs = remember(context) { context.getSharedPreferences("FocusPrefs", android.content.Context.MODE_PRIVATE) }
     val allSessions by viewModel.allSessions.collectAsState()
 
     var selectedTab by remember { mutableStateOf(initialTab) }
     var showCompareDialog by remember { mutableStateOf(false) }
-    var compareModeEnabled by remember { mutableStateOf(initialCompareModeEnabled ?: true) }
+    var compareModeEnabled by remember { mutableStateOf(initialCompareModeEnabled ?: sharedPrefs.getBoolean("STAT_COMPARE_ENABLED", true)) }
 
-    // Period state (Default: Primary is Last 30 days / Custom, Comparison is Last 90 days)
+    // Period state (Persistent from SharedPreferences)
     var primaryPeriod by remember {
-        mutableStateOf(initialPrimaryPeriod ?: calculatePeriodPreset("Last 30 days"))
+        mutableStateOf(initialPrimaryPeriod ?: loadPeriodFromPrefs(sharedPrefs, "STAT_PRIMARY", "Last 30 days"))
     }
     var comparisonPeriod by remember {
-        mutableStateOf(initialComparisonPeriod ?: calculatePeriodPreset("Last 90 days"))
+        mutableStateOf(initialComparisonPeriod ?: loadPeriodFromPrefs(sharedPrefs, "STAT_COMP", "Last 90 days"))
     }
 
     // Calculations for Period 1
@@ -506,12 +528,18 @@ fun StatisticsScreen(
     if (showCompareDialog) {
         CompareDialog(
             compareModeEnabled = compareModeEnabled,
-            onCompareModeChanged = { compareModeEnabled = it },
+            onCompareModeChanged = { 
+                compareModeEnabled = it
+                sharedPrefs.edit().putBoolean("STAT_COMPARE_ENABLED", it).apply()
+            },
             currentPrimary = primaryPeriod,
             currentComparison = comparisonPeriod,
             onApply = { newPrimary, newComparison ->
                 primaryPeriod = newPrimary
                 comparisonPeriod = newComparison
+                savePeriodToPrefs(sharedPrefs, "STAT_PRIMARY", newPrimary)
+                savePeriodToPrefs(sharedPrefs, "STAT_COMP", newComparison)
+                sharedPrefs.edit().putBoolean("STAT_COMPARE_ENABLED", compareModeEnabled).apply()
                 showCompareDialog = false
             },
             onDismiss = { showCompareDialog = false }

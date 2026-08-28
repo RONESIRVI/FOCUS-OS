@@ -372,6 +372,14 @@ class FocusTimerService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val prefs = getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+            val vibrateKey = prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
+            val vibrateArray = when (vibrateKey) {
+                "DOUBLE_PULSE" -> longArrayOf(0, 250, 100, 250, 400, 250, 100, 250)
+                "RHYTHM" -> longArrayOf(0, 120, 100, 120, 100, 120, 100, 300)
+                "OFF" -> longArrayOf(0, 0)
+                else -> longArrayOf(0, 400, 200, 400, 200, 600)
+            }
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Focus Session Active",
@@ -379,6 +387,12 @@ class FocusTimerService : Service() {
             ).apply {
                 description = "Shows ongoing focus countdown timer, lock status and quick controls"
                 setShowBadge(false)
+                if (vibrateKey == "OFF") {
+                    enableVibration(false)
+                } else {
+                    enableVibration(true)
+                    vibrationPattern = vibrateArray
+                }
             }
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
@@ -388,6 +402,14 @@ class FocusTimerService : Service() {
     private fun buildNotification(): android.app.Notification {
         val prefs = getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
         val notifTitle = prefs.getString("NOTIF_CUSTOM_PREFIX", "FOCUS OS") ?: "FOCUS OS"
+        val notifThemeKey = prefs.getString("NOTIF_DESIGN_THEME", "DEEP_DARK") ?: "DEEP_DARK"
+        
+        val (primaryColor, rootBgColor) = when (notifThemeKey) {
+            "CYBER_NEON" -> Pair(android.graphics.Color.parseColor("#00E5FF"), android.graphics.Color.parseColor("#0A0E1A"))
+            "WARM_SUNSET" -> Pair(android.graphics.Color.parseColor("#FF9100"), android.graphics.Color.parseColor("#140D0B"))
+            "ICE_BLUE" -> Pair(android.graphics.Color.parseColor("#448AFF"), android.graphics.Color.parseColor("#09111E"))
+            else -> Pair(android.graphics.Color.parseColor("#0284C7"), android.graphics.Color.parseColor("#0F172A"))
+        }
 
         val state = _timerState.value
         val formattedTime = formatTimeText(state.remainingSeconds)
@@ -401,6 +423,8 @@ class FocusTimerService : Service() {
         // 1. Collapsed Notification View
         val collapsedView = RemoteViews(packageName, R.layout.notification_focus_collapsed).apply {
             setTextViewText(R.id.notif_title, notifTitle.uppercase())
+            setTextColor(R.id.notif_title, primaryColor)
+            setInt(R.id.notif_collapsed_root, "setBackgroundColor", rootBgColor)
             setTextViewText(R.id.notif_mode_badge, state.lockMode.title.uppercase())
             setTextViewText(R.id.notif_subject_text, "$subjectTitle • $sessionTitle")
             
@@ -427,6 +451,8 @@ class FocusTimerService : Service() {
         // 2. Expanded Rich Notification View
         val expandedView = RemoteViews(packageName, R.layout.notification_focus_expanded).apply {
             setTextViewText(R.id.notif_exp_app_title, notifTitle.uppercase())
+            setTextColor(R.id.notif_exp_app_title, primaryColor)
+            setInt(R.id.notif_expanded_root, "setBackgroundColor", rootBgColor)
             setTextViewText(R.id.notif_exp_mode_badge, state.lockMode.title.uppercase())
             setTextViewText(R.id.notif_exp_distraction_badge, "🛡️ ${state.distractionAttempts} Blocked")
             setTextViewText(R.id.notif_exp_subject, "📚 $subjectTitle • $sessionTitle")
@@ -442,7 +468,6 @@ class FocusTimerService : Service() {
             
             setProgressBar(R.id.notif_exp_progress_bar, 100, if(state.isWaitingVerification) 100 else progressPercent, false)
             setTextViewText(R.id.notif_exp_progress_percent, if(state.isWaitingVerification) "100% Completed" else "$progressPercent% Completed")
-
 
             val soundTitle = if (state.selectedSound != SoundType.NONE) state.selectedSound.label else "Silent Mode"
             setTextViewText(R.id.notif_exp_sound_info, "🎵 $soundTitle")

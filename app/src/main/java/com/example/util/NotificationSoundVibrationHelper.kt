@@ -53,20 +53,26 @@ object NotificationSoundVibrationHelper {
         }
     }
 
-    fun triggerNotificationSoundAndVibration(context: Context, soundKey: String = "PRIME_SIREN") {
+    fun triggerNotificationSoundAndVibration(context: Context, soundKey: String = "PRIME_SIREN", patternKey: String? = null) {
+        val prefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+        val vibratePatternKey = patternKey ?: prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
         if (soundKey != "SILENT") {
             playSoundKey(context, soundKey)
         }
-        triggerVibration(context)
+        triggerVibration(context, vibratePatternKey)
     }
 
-    fun triggerVibration(context: Context, patternKey: String = "PULSE") {
+    fun triggerVibration(context: Context, patternKey: String? = null) {
         try {
-            val vibratePattern = when (patternKey) {
-                "DOUBLE_PULSE" -> longArrayOf(0, 200, 100, 200)
-                "RHYTHM" -> longArrayOf(0, 100, 100, 100, 100, 200)
-                "OFF" -> return
-                else -> longArrayOf(0, 350, 150, 350, 200, 500)
+            val prefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+            val selectedKey = patternKey ?: prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
+            if (selectedKey == "OFF") return
+
+            val vibratePattern = when (selectedKey) {
+                "DOUBLE_PULSE" -> longArrayOf(0, 250, 100, 250, 400, 250, 100, 250)
+                "RHYTHM" -> longArrayOf(0, 120, 100, 120, 100, 120, 100, 300)
+                "PULSE" -> longArrayOf(0, 400, 200, 400, 200, 600)
+                else -> longArrayOf(0, 400, 200, 400)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
