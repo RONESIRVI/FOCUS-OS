@@ -75,7 +75,7 @@ class FocusScheduleReceiver : BroadcastReceiver() {
 
             notificationManager.notify((sessionId * 100).toInt() + minutesBefore, builder.build())
         } else if (action == "ACTION_EXACT_SCHEDULE") {
-            com.example.util.FocusLockManager.setPendingSchedule(sessionId, sessionName)
+            com.example.util.FocusLockManager.setPendingSchedule(sessionId, sessionName, context)
             
             try {
                 val serviceIntent = Intent(context, com.example.services.FocusTimerService::class.java).apply {

@@ -5,7 +5,11 @@ import android.content.Intent
 import android.telephony.TelephonyManager
 import android.util.Log
 import com.example.MainActivity
+import com.example.data.db.AppDatabase
 import com.example.data.model.LockMode
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.concurrent.CopyOnWriteArraySet
 
 object FocusLockManager {
@@ -131,10 +135,33 @@ object FocusLockManager {
     var pendingSessionName: String? = null
         private set
 
-    fun setPendingSchedule(sessionId: Long, sessionName: String) {
+    fun setPendingSchedule(sessionId: Long, sessionName: String, context: Context? = null) {
         pendingSessionId = sessionId
         pendingSessionName = sessionName
-        Log.d(TAG, "Pending schedule set: sessionId=$sessionId, sessionName=$sessionName")
+        if (context != null) {
+            val prefs = context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE)
+            val allowedString = prefs.getString("scheduled_apps_$sessionId", null)
+            if (!allowedString.isNullOrEmpty()) {
+                val allowedList = allowedString.split(",").filter { it.isNotBlank() }
+                whitelistedPackages.clear()
+                whitelistedPackages.addAll(allowedList)
+                Log.d(TAG, "Pending schedule set from prefs: sessionId=$sessionId, sessionName=$sessionName, allowedApps=${allowedList.size}")
+            } else {
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val dao = AppDatabase.getDatabase(context.applicationContext).focusDao()
+                        val apps = dao.getWhitelistedAppsList("STRICT").map { it.packageName }
+                        whitelistedPackages.clear()
+                        whitelistedPackages.addAll(apps)
+                        Log.d(TAG, "Pending schedule set from DB: sessionId=$sessionId, sessionName=$sessionName, allowedApps=${apps.size}")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error loading whitelisted apps from DB for pending schedule", e)
+                    }
+                }
+            }
+        } else {
+            Log.d(TAG, "Pending schedule set: sessionId=$sessionId, sessionName=$sessionName")
+        }
     }
 
     fun clearPendingSchedule() {
@@ -244,7 +271,12 @@ object FocusLockManager {
             val pId = pendingSessionId
             val pName = pendingSessionName ?: "Scheduled Focus"
                         
-            FocusLockOverlayManager.dismissOverlay()
+            FocusLockOverlayManager.showPendingScheduleOverlay(
+                context = context,
+                blockedPackage = blockedPackageName,
+                sessionName = pName,
+                sessionId = pId
+            )
             FocusLockOverlayManager.bringAppToFront(
                 context = context,
                 blockedPackage = blockedPackageName,

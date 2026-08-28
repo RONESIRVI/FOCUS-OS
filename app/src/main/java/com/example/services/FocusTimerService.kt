@@ -103,7 +103,7 @@ class FocusTimerService : Service() {
 
     fun startPendingMonitor(sessionId: Long, sessionName: String) {
         if (_timerState.value.isRunning) return
-        FocusLockManager.setPendingSchedule(sessionId, sessionName)
+        FocusLockManager.setPendingSchedule(sessionId, sessionName, this)
         if (android.os.Build.VERSION.SDK_INT >= 34) {
             startForeground(NOTIFICATION_ID, buildPendingNotification(sessionName, sessionId), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {

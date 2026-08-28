@@ -44,6 +44,9 @@ interface FocusDao {
     @Query("SELECT * FROM allowed_apps WHERE profile = :profile AND isAllowed = 1")
     fun getWhitelistedApps(profile: String = "MANUAL"): Flow<List<AllowedApp>>
 
+    @Query("SELECT * FROM allowed_apps WHERE profile = :profile AND isAllowed = 1")
+    suspend fun getWhitelistedAppsList(profile: String = "MANUAL"): List<AllowedApp>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateApps(apps: List<AllowedApp>)
 

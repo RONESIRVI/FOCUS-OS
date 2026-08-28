@@ -72,6 +72,13 @@ class MainActivity : ComponentActivity() {
             viewModel.triggerDistractionWarning(blockedPkgSoftOnCreate, showSoftModal = true)
             intent.removeExtra("BLOCKED_PACKAGE_EVENT_SOFT")
         }
+        val blockedPkgPendingOnCreate = intent.getStringExtra("BLOCKED_PACKAGE_EVENT_PENDING")
+        if (blockedPkgPendingOnCreate != null) {
+            val pName = intent.getStringExtra("PENDING_SESSION_NAME") ?: "Scheduled Focus"
+            val pId = intent.getLongExtra("PENDING_SESSION_ID", -1L)
+            viewModel.triggerPendingDistractionWarning(blockedPkgPendingOnCreate, pName, pId)
+            intent.removeExtra("BLOCKED_PACKAGE_EVENT_PENDING")
+        }
         
         enableEdgeToEdge()
         setContent {
@@ -84,10 +91,16 @@ class MainActivity : ComponentActivity() {
                 val timerState by viewModel.timerState.collectAsState()
                 val showLockOverlay by viewModel.showLockOverlay.collectAsState()
                 val showSoftLockOverlay by viewModel.showSoftLockOverlay.collectAsState()
+                val showPendingLockOverlay by viewModel.showPendingLockOverlay.collectAsState()
 
-                LaunchedEffect(showLockOverlay, showSoftLockOverlay) {
+                LaunchedEffect(showLockOverlay, showSoftLockOverlay, showPendingLockOverlay) {
                     if ((showLockOverlay || showSoftLockOverlay) && timerState.isRunning && currentRoute != FocusRoutes.TIMER) {
                         navController.navigate(FocusRoutes.TIMER) {
+                            popUpTo(FocusRoutes.HOME)
+                            launchSingleTop = true
+                        }
+                    } else if (showPendingLockOverlay && currentRoute != FocusRoutes.HOME) {
+                        navController.navigate(FocusRoutes.HOME) {
                             popUpTo(FocusRoutes.HOME)
                             launchSingleTop = true
                         }
@@ -162,7 +175,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        FocusLockOverlayManager.dismissOverlay()
+        if (!FocusLockManager.hasPendingSchedule() && !viewModel.showPendingLockOverlay.value) {
+            FocusLockOverlayManager.dismissOverlay()
+        }
     }
 
     override fun onUserLeaveHint() {
@@ -173,7 +188,9 @@ class MainActivity : ComponentActivity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
-            FocusLockOverlayManager.dismissOverlay()
+            if (!FocusLockManager.hasPendingSchedule() && !viewModel.showPendingLockOverlay.value) {
+                FocusLockOverlayManager.dismissOverlay()
+            }
         } else {
             enforceFocusLock()
         }

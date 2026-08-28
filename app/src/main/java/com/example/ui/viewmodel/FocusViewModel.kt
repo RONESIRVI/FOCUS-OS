@@ -86,7 +86,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                 val now = System.currentTimeMillis()
                 val pending = list.find { it.status == "SCHEDULED" && it.scheduledStartTime != null && it.scheduledStartTime <= now }
                 if (pending != null && !com.example.util.FocusLockManager.isFocusActive) {
-                    com.example.util.FocusLockManager.setPendingSchedule(pending.id, pending.sessionName)
+                    com.example.util.FocusLockManager.setPendingSchedule(pending.id, pending.sessionName, application)
                 } else if (pending == null && com.example.util.FocusLockManager.hasPendingSchedule() && !com.example.util.FocusLockManager.isFocusActive) {
                     com.example.util.FocusLockManager.clearPendingSchedule()
                 }
