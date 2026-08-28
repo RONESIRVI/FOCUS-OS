@@ -101,14 +101,14 @@ fun AppGuideDialog(
                 summaryHi = "रोजाना का टाइमटेबल सेट करें। तय समय पर अलार्म बजेगा और सेशन लॉक हो जाएगा।",
                 detailsEn = listOf(
                     "Set exact start and end times for your study sessions in advance.",
-                    "System Alarm & Pop-Up Alert: Receives a high-priority Heads-Up Banner and Home Screen Overlay when a session is pending.",
-                    "Strict Pending Block: If you try to open blocked apps while a session is pending, a persistent Mindful Warning Overlay will block access without any bypass.",
+                    "System Alarm & Repeating Warnings: Receives high-priority alarm notification & vibration. If session isn't started, warning sound/vibration repeats every 20 seconds.",
+                    "Strict Pending Auto-Lock & Instant Yank-Back: Opening any blocked app while a scheduled session is pending immediately yanks you back to Study App in <1 second with a SCHEDULED SESSION PENDING alert shield.",
                     "Auto-Boot Restoration: Scheduled alarms are automatically restored even if the phone is rebooted."
                 ),
                 detailsHi = listOf(
                     "अपनी पढ़ाई के लिए पहले से ही निश्चित समय (जैसे शाम 4 से 6 बजे) सेट करें।",
-                    "सिस्टम अलार्म और पॉप-अप अलर्ट: सेशन पेंडिंग होने पर होम स्क्रीन पर हाई-प्रायोरिटी पॉप-अप अलर्ट आएगा।",
-                    "पेंडिंग सेशन लॉक: सेशन शुरू होने से पहले कोई ब्लॉक ऐप खोलने पर एक सख्त वार्निंग ओवरले आएगा जिसे बायपास नहीं किया जा सकता।",
+                    "सिस्टम अलार्म व आवर्ती चेतावनी: सेशन शुरू न होने पर हर 20 सेकेंड में साउंड और वाइब्रेशन चेतावनी बजती है।",
+                    "पेंडिंग सेशन ऑटो-लॉक: शेड्यूल समय पर बिना सेशन शुरू किए ब्लॉक ऐप खोलने पर 1 सेकंड के अंदर वापस खींचकर (Instant Yank-Back) पेंडिंग सेशन अलर्ट शील्ड पर लाया जाएगा।",
                     "फोन रीस्टार्ट होने पर भी सारे शेड्यूल्ड अलार्म अपने आप वापस एक्टिव हो जाते हैं।"
                 ),
                 tag = "SCHEDULE"
@@ -122,34 +122,38 @@ fun AppGuideDialog(
                 summaryHi = "अपनी जरूरत के हिसाब से लॉक की सख्ती चुनें।",
                 detailsEn = listOf(
                     "NORMAL MODE: Basic study timer without app blocking. Ideal for light revision.",
-                    "MINDFUL MODE (Soft Lock): Persistent Warning Overlay if you open distracted apps. No 30-second snooze—you must return to the study app.",
-                    "DEEP WORK (Maximum Lock): Instant yank-back & red warning modal if you open blocked apps. Enforces strict kiosk mode with early exit penalty warning.",
-                    "STRICT LOCK: Usage Access Monitor + Overlay Shield for blocking unwhitelisted apps."
+                    "MINDFUL MODE (Bulletproof Instant Yank-Back): Opening blocked apps or switching via Recent Tasks instantly yanks you back into Study App in <1s with warning alert.",
+                    "DEEP WORK (Maximum Lock): Instant yank-back to Timer Screen + Red Border Alert Shield (\"DISTRACTION BLOCKED\"). No external blue window overlay.",
+                    "PAUSED SESSION PROTECTION: App blocking remains 100% active even when session is paused. Opening blocked apps instantly yanks you back with Red Border Alert.",
+                    "STRICT LOCK: Usage Access Monitor running at 200ms interval for zero-bypass enforcement."
                 ),
                 detailsHi = listOf(
                     "नॉर्मल मोड: बिना ऐप ब्लॉकिंग के सामान्य टाइमर।",
-                    "माइंडफुल मोड (सॉफ्ट लॉक): ब्लॉक ऐप खोलने पर सख्त वार्निंग ओवरले आएगा। 30 सेकंड का कोई स्नूज़ नहीं मिलेगा, आपको पढ़ाई पर वापस आना ही होगा।",
-                    "डीप वर्क (मैक्सिमम लॉक): ब्लॉक ऐप खुलते ही सिस्टम तुरंत खींचकर वापस ले आएगा (Instant Yank-Back) और लाल वार्निंग देगा। समय से पहले बंद करने पर पेनल्टी लगेगी।",
-                    "स्ट्रिक्ट लॉक: यूसेज एक्सेस मॉनिटर + शील्ड ओवरले। प्रतिबंधित ऐप खुलते ही तुरंत ब्लॉक हो जाएंगे।"
+                    "माइंडफुल मोड (Instant Yank-Back): ब्लॉक ऐप या रिसेंट टास्क में जाने पर 1 सेकंड के अंदर तुरंत खींचकर Study App में वापस लाया जाएगा।",
+                    "डीप वर्क (मैक्सिमम लॉक): ब्लॉक ऐप खुलते ही स्टडी ऐप के Timer Screen पर वापस खींचकर लाल बॉर्डर (Red Border Modal Alert Shield) प्रदर्शित होगा।",
+                    "पॉज़ स्थिति में सुरक्षा (100% Active): सेशन पॉज़ होने पर भी सुरक्षा 100% एक्टिव रहती है और ब्लॉक ऐप खोलने पर Instant Yank-Back तथा Red Border Alert आएगा।",
+                    "स्ट्रिक्ट लॉक: 200ms हाई-स्पीड बैकग्राउंड मॉनिटरिंग के साथ ज़ीरो बायपास सुरक्षा।"
                 ),
                 tag = "SECURITY"
             ),
             GuideSection(
                 id = "section_whitelist",
                 icon = Icons.Default.CheckCircle,
-                titleEn = "5. App Whitelist System",
-                titleHi = "5. ऐप व्हाइटलिस्ट (अनुमति सूची)",
-                summaryEn = "Allow essential study apps (PDF readers, Dictionary, Zoom) while blocking everything else.",
-                summaryHi = "केवल पढ़ाई के ऐप्स (PDF, डिक्शनरी, नोट्स) को अनुमति दें, बाकी सब ब्लॉक रहेंगे।",
+                titleEn = "5. Dual App Whitelist System",
+                titleHi = "5. पृथक ऐप व्हाइटलिस्ट (Manual Quick Focus vs Strict Schedule)",
+                summaryEn = "Separate allowed app selections for Quick Manual Focus and Strict Scheduled Study sessions.",
+                summaryHi = "मैन्युअल क्विक फोकस और स्ट्रिक्ट शेड्यूल्ड स्टडी के लिए अलग-अलग ऐप्स अनुमति सूची में चुनें।",
                 detailsEn = listOf(
-                    "By default, all distracting apps (Social Media, Video, Games, Browsers) are strictly blocked.",
-                    "You can selectively whitelist study companion apps (e.g. Acrobat Reader, Notion, Google Docs).",
-                    "Quick Profiles: Switch between 'Strict Zero-Apps' and 'Class Apps' profiles."
+                    "1. ALLOWED APPS (QUICK FOCUS): Select allowed apps exclusively for Manual Quick Focus sessions.",
+                    "2. ALLOWED APPS (STRICT SCHEDULE): Select allowed apps exclusively for Scheduled Study Focus sessions.",
+                    "By default, all distracting apps (Social Media, Video, Games, Browsers) remain strictly blocked.",
+                    "Customized per session type so apps allowed in Quick Focus do not leak into Strict Schedule sessions."
                 ),
                 detailsHi = listOf(
-                    "डिफ़ॉल्ट रूप से सभी सोशल मीडिया, गेम्स और वीडियो ऐप्स ब्लॉक रहते हैं।",
-                    "आप पढ़ाई से जुड़े जरूरी ऐप्स (जैसे PDF रीडर, नोट्स, ज़ूम) को व्हाइटलिस्ट में जोड़ सकते हैं।",
-                    "क्विक प्रोफाइल्स: 'जीरो ऐप' या 'स्टडी क्लास ऐप' प्रोफाइल में आसानी से स्विच करें।"
+                    "1. ALLOWED APPS (QUICK FOCUS): मैन्युअल क्विक फोकस के दौरान अनुमत ऐप्स चुनें।",
+                    "2. ALLOWED APPS (STRICT SCHEDULE): शेड्यूल्ड स्टडी सेशन के दौरान अनुमत ऐप्स चुनें।",
+                    "दोनों में अलग-अलग ऐप्स चुनी जा सकती हैं; जैसे क्विक फोकस में अनुमत ऐप शेड्यूल्ड स्टडी में ब्लॉक रखी जा सकती है।",
+                    "डिफ़ॉल्ट रूप से सभी सोशल मीडिया, गेम्स और वीडियो ऐप्स ब्लॉक रहते हैं।"
                 ),
                 tag = "APPS"
             ),

@@ -982,9 +982,10 @@ fun FocusTimerScreen(
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Black, Color(0xFF5C0000), Color(0xFF220000))
+                                colors = listOf(Color.Black, Color(0xFF4A0000), Color(0xFF1A0000))
                             )
-                        ),
+                        )
+                        .border(6.dp, Color(0xFFFF1744)),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(

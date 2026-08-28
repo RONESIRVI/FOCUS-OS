@@ -195,7 +195,7 @@ class FocusTimerService : Service() {
                 } catch (e: Exception) {
                     Log.e("FocusTimerService", "Error in pending app monitor loop", e)
                 }
-                delay(300)
+                delay(200)
             }
         }
     }
@@ -296,7 +296,7 @@ class FocusTimerService : Service() {
                 } catch (e: Exception) {
                     // Ignore query failures
                 }
-                delay(300)
+                delay(200)
             }
         }
     }
