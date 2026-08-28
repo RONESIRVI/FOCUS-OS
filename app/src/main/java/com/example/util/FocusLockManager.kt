@@ -214,7 +214,11 @@ object FocusLockManager {
             return whitelistedPackages.contains(packageName)
         }
 
-        // Pending schedule is active and user opens a blocked app
+        // Pending schedule is active: check if opened package is in Strict Schedule Whitelist
+        if (hasPendingSchedule()) {
+            return whitelistedPackages.contains(packageName)
+        }
+
         return false
     }
 

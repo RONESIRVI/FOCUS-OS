@@ -108,7 +108,7 @@ fun AppSelectorScreen(
             Spacer(modifier = Modifier.width(8.dp))
             Column {
                 Text(
-                    text = if (currentProfile == "STRICT") "ALLOWED STUDY APPS (STRICT)" else "ALLOWED STUDY APPS (MANUAL)",
+                    text = if (currentProfile == "STRICT") "ALLOWED APPS (STRICT SCHEDULE)" else "ALLOWED APPS (QUICK FOCUS)",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 0.5.sp
@@ -116,7 +116,7 @@ fun AppSelectorScreen(
                     color = Color.White
                 )
                 Text(
-                    text = "Apps toggled ON will remain accessible during session; all others are blocked",
+                    text = if (currentProfile == "STRICT") "Allowed apps during Scheduled Study Focus" else "Allowed apps during Manual Quick Focus",
                     style = MaterialTheme.typography.bodySmall,
                     color = FocusTextSecondary
                 )
@@ -124,6 +124,42 @@ fun AppSelectorScreen(
         }
 
         Spacer(modifier = Modifier.height(14.dp))
+
+        // Profile Switcher Tabs (Manual Whitelist vs Strict Schedule Whitelist)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(FocusSurface, RoundedCornerShape(14.dp))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            val profiles = listOf(
+                "MANUAL" to "Quick Focus Whitelist",
+                "STRICT" to "Strict Schedule Whitelist"
+            )
+            profiles.forEach { (profKey, profLabel) ->
+                val isSel = currentProfile == profKey
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(40.dp)
+                        .background(
+                            if (isSel) FocusPrimary else Color.Transparent,
+                            RoundedCornerShape(10.dp)
+                        )
+                        .clickable { viewModel.setAppSelectorProfile(profKey) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = profLabel,
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = if (isSel) Color.White else FocusTextSecondary
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Search Bar
         OutlinedTextField(

@@ -38,7 +38,8 @@ data class TimerState(
     val subjectName: String = "Deep Focus",
     val lockMode: LockMode = LockMode.MAXIMUM_LOCK,
     val distractionAttempts: Int = 0,
-    val selectedSound: SoundType = SoundType.NONE
+    val selectedSound: SoundType = SoundType.NONE,
+    val isScheduled: Boolean = false
 )
 
 class FocusTimerService : Service() {
@@ -74,7 +75,8 @@ class FocusTimerService : Service() {
                 val lockMode = try { LockMode.valueOf(intent.getStringExtra("LOCK_MODE") ?: "") } catch(e: Exception) { LockMode.MAXIMUM_LOCK }
                 val soundType = try { SoundType.valueOf(intent.getStringExtra("SOUND_TYPE") ?: "") } catch(e: Exception) { SoundType.NONE }
                 val requiresSelfie = intent.getBooleanExtra("REQUIRES_SELFIE", false)
-                startTimer(duration, sessionName, subjectName, lockMode, soundType, requiresSelfie)
+                val isScheduled = intent.getBooleanExtra("IS_SCHEDULED", false)
+                startTimer(duration, sessionName, subjectName, lockMode, soundType, requiresSelfie, isScheduled)
             }
             "ACTION_START_PENDING_MONITOR" -> {
                 val sessionId = intent.getLongExtra("SESSION_ID", -1L)
@@ -204,7 +206,8 @@ class FocusTimerService : Service() {
         subjectName: String,
         lockMode: LockMode,
         soundType: SoundType,
-        requiresSelfie: Boolean = false
+        requiresSelfie: Boolean = false,
+        isScheduled: Boolean = false
     ) {
         FocusLockManager.clearPendingSchedule()
         val totalSecs = durationMinutes * 60
@@ -218,7 +221,8 @@ class FocusTimerService : Service() {
             sessionName = sessionName,
             subjectName = subjectName,
             lockMode = lockMode,
-            selectedSound = soundType
+            selectedSound = soundType,
+            isScheduled = isScheduled
         )
 
         val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager

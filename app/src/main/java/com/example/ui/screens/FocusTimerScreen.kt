@@ -113,13 +113,13 @@ fun FocusTimerScreen(
 
     val whitelistedAppsManual by viewModel.whitelistedAppsManual.collectAsState()
     val whitelistedAppsStrict by viewModel.whitelistedAppsStrict.collectAsState()
-    val currentProfile = if (timerState.lockMode == LockMode.MAXIMUM_LOCK) "STRICT" else "MANUAL"
+    val isScheduled = viewModel.activeScheduledSessionId.collectAsState().value != null || timerState.isScheduled
+    val currentProfile = if (isScheduled) "STRICT" else "MANUAL"
     val whitelistedApps = if (currentProfile == "STRICT") whitelistedAppsStrict else whitelistedAppsManual
 
     val allAppsManual by viewModel.allowedAppsManual.collectAsState()
     val allAppsStrict by viewModel.allowedAppsStrict.collectAsState()
     val allApps = if (currentProfile == "STRICT") allAppsStrict else allAppsManual
-    val isScheduled = viewModel.activeScheduledSessionId.collectAsState().value != null
 
     var showExitAttemptDialog by remember { mutableStateOf(false) }
     var showManageWhitelistDialog by remember { mutableStateOf(false) }

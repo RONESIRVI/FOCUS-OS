@@ -253,7 +253,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun syncFocusLockState(state: TimerState) {
-        val allowedPackages = if (state.lockMode == LockMode.MAXIMUM_LOCK) {
+        val isScheduledSession = state.isScheduled || _activeScheduledSessionId.value != null
+        val allowedPackages = if (isScheduledSession) {
             whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
         } else {
             whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
@@ -381,9 +382,10 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Immediately update FocusLockManager allowed packages
+        val isScheduledSession = scheduledId != null || _activeScheduledSessionId.value != null
         val allowedList = if (scheduledId != null && sharedPrefs.getString("scheduled_apps_$scheduledId", null) != null) {
             sharedPrefs.getString("scheduled_apps_$scheduledId", "")!!.split(",").filter { it.isNotBlank() }
-        } else if (setup.lockMode == LockMode.MAXIMUM_LOCK) {
+        } else if (isScheduledSession) {
             whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
         } else {
             whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
@@ -405,6 +407,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             putExtra("LOCK_MODE", setup.lockMode.name)
             putExtra("SOUND_TYPE", setup.selectedSound.name)
             putExtra("REQUIRES_SELFIE", setup.requiresSelfie)
+            putExtra("IS_SCHEDULED", isScheduledSession)
         }
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -464,7 +467,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             val sessionId = repository.saveSession(session)
             // Save fixed allowed apps & reminder offsets for this schedule
-            val currentAllowed = if (setup.lockMode == LockMode.MAXIMUM_LOCK) whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName } else whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
+            val currentAllowed = whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
             val reminderString = reminderMinutesList.joinToString(",")
             context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE).edit()
                 .putString("scheduled_apps_$sessionId", currentAllowed.joinToString(","))
