@@ -15,6 +15,9 @@ object NotificationSoundVibrationHelper {
     private var currentRingtone: Ringtone? = null
 
     fun getNotificationSoundUri(context: Context, soundKey: String = "PRIME_SIREN"): Uri {
+        if (soundKey.startsWith("content://")) {
+            return Uri.parse(soundKey)
+        }
         val resId = when (soundKey) {
             "PRIME_QUANTUM" -> R.raw.prime_quantum_pulse
             "PRIME_ZEN" -> R.raw.prime_zen_chime

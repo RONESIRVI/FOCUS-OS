@@ -1,4 +1,5 @@
 package com.example.ui.screens
+import androidx.compose.ui.draw.scale
 
 import android.content.Context
 import androidx.compose.foundation.background
@@ -67,6 +68,9 @@ fun HomeScreen(
     val pendingSessionNameOverlay by viewModel.pendingSessionNameOverlay.collectAsState()
     val pendingSessionIdOverlay by viewModel.pendingSessionIdOverlay.collectAsState()
     val lastBlockedPackage by viewModel.lastBlockedPackage.collectAsState()
+    var showSpecialWhitelistPopup by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showQuickDurationDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var selectedSpecialWhitelist by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
 
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
@@ -117,7 +121,29 @@ fun HomeScreen(
         )
     }
 
+    if (showSpecialWhitelistPopup) {
+        AppBlockingSystemDialog(
+            onDismiss = { showSpecialWhitelistPopup = false },
+            onSelectWhitelist = { whitelist ->
+                selectedSpecialWhitelist = whitelist
+                showSpecialWhitelistPopup = false
+                showQuickDurationDialog = true
+            }
+        )
+    }
+    if (showQuickDurationDialog) {
+        QuickDurationDialog(
+            onDismissRequest = { showQuickDurationDialog = false },
+            onSubmit = { duration ->
+                showQuickDurationDialog = false
+                viewModel.startSpecialSession(duration, selectedSpecialWhitelist)
+                onNavigateToTimer()
+            }
+        )
+    }
+
     if (showPendingLockOverlay) {
+
         val pendingAttempts by viewModel.pendingAttemptsList.collectAsState()
         val scheduledSessions by viewModel.scheduledSessions.collectAsState()
         
@@ -1163,6 +1189,250 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onNavigateToScheduleMain() }
             )
         }
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showSpecialWhitelistPopup = true }
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Shield,
+                        contentDescription = "Special Whitelist",
+                        tint = FocusPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Special Whitelist Switch",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
+                    )
+                }
+                Switch(
+                    checked = false,
+                    onCheckedChange = { showSpecialWhitelistPopup = true },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = FocusPrimary,
+                        uncheckedThumbColor = Color.White,
+                        uncheckedTrackColor = FocusSurfaceVariant
+                    )
+                )
+            }
+        }
         item { Spacer(modifier = Modifier.height(60.dp)) }
+    }
+}
+
+
+@Composable
+fun AppBlockingSystemDialog(
+    onDismiss: () -> Unit,
+    onSelectWhitelist: (String) -> Unit
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.material3.Surface(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+            color = androidx.compose.ui.graphics.Color(0xFF0F172A), // Dark Navy
+            modifier = androidx.compose.ui.Modifier
+                .fillMaxWidth()
+                .aspectRatio(3f / 4f)
+        ) {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+            ) {
+                // Header
+                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.material3.Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Shield,
+                        contentDescription = "Logo",
+                        tint = androidx.compose.ui.graphics.Color(0xFF3B82F6),
+                        modifier = androidx.compose.ui.Modifier.size(24.dp)
+                    )
+                    androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.width(8.dp))
+                    androidx.compose.material3.Text(
+                        text = "Singal",
+                        color = androidx.compose.ui.graphics.Color(0xFF3B82F6),
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+                
+                androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.height(24.dp))
+                
+                androidx.compose.material3.Text(
+                    text = "APP BLOCKING SYSTEM",
+                    color = androidx.compose.ui.graphics.Color.White,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    fontSize = 20.sp,
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                
+                androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.height(24.dp))
+                
+                AppBlockingOption(
+                    title = "Manual Focus Whitelist",
+                    subtitle = "Allowed apps during Quick Focus sessions",
+                    onClick = { onSelectWhitelist("MANUAL") }
+                )
+                androidx.compose.material3.Divider(color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.1f))
+                
+                AppBlockingOption(
+                    title = "Strict Schedule Whitelist",
+                    subtitle = "Allowed apps during Strict Scheduled Focus",
+                    onClick = { onSelectWhitelist("STRICT") }
+                )
+                androidx.compose.material3.Divider(color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.1f))
+                
+                AppBlockingOption(
+                    title = "Special Whitelist",
+                    subtitle = "Special allowed apps configuration",
+                    onClick = { onSelectWhitelist("SPECIAL") }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AppBlockingOption(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    androidx.compose.foundation.layout.Row(
+        modifier = androidx.compose.ui.Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 16.dp),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+    ) {
+        androidx.compose.foundation.layout.Column(modifier = androidx.compose.ui.Modifier.weight(1f)) {
+            androidx.compose.material3.Text(
+                text = title,
+                color = androidx.compose.ui.graphics.Color.White,
+                fontSize = 14.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+            )
+            androidx.compose.material3.Text(
+                text = subtitle,
+                color = androidx.compose.ui.graphics.Color.Gray,
+                fontSize = 11.sp,
+                maxLines = 2,
+                lineHeight = 14.sp
+            )
+        }
+        androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.width(16.dp))
+        androidx.compose.material3.Icon(
+            imageVector = androidx.compose.material.icons.Icons.Default.KeyboardArrowRight,
+            contentDescription = "Select",
+            tint = androidx.compose.ui.graphics.Color.Gray,
+            modifier = androidx.compose.ui.Modifier.size(24.dp)
+        )
+    }
+}
+
+@Composable
+fun QuickDurationDialog(
+    onDismissRequest: () -> Unit,
+    onSubmit: (Int) -> Unit
+) {
+    var selectedDurationMins by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(45) }
+    
+    val durations = listOf(
+        "10 मिनट" to 10,
+        "25 मिनट" to 25,
+        "45 मिनट" to 45,
+        "1.5 Hours" to 90,
+        "2.5 Hours" to 150,
+        "3.5 Hours" to 210,
+        "4 Hours" to 240,
+        "5 Hours" to 300
+    )
+    
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismissRequest) {
+        androidx.compose.material3.Surface(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+            color = androidx.compose.ui.graphics.Color(0xFFF8FAFC),
+            shadowElevation = 12.dp,
+            modifier = androidx.compose.ui.Modifier.width(340.dp)
+        ) {
+            androidx.compose.foundation.layout.Column(
+                modifier = androidx.compose.ui.Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 24.dp),
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+            ) {
+                androidx.compose.material3.Text(
+                    text = "कितने वक़्त के लिए?",
+                    style = androidx.compose.material3.MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        color = androidx.compose.ui.graphics.Color(0xFF0F172A)
+                    )
+                )
+                androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.height(20.dp))
+                
+                val chunkedDurations = durations.chunked(3)
+                chunkedDurations.forEach { rowItems ->
+                    androidx.compose.foundation.layout.Row(
+                        modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)
+                    ) {
+                        rowItems.forEach { (label, durationMins) ->
+                            val isSelected = selectedDurationMins == durationMins
+                            androidx.compose.material3.Surface(
+                                modifier = androidx.compose.ui.Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        selectedDurationMins = durationMins
+                                    },
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+                                color = if (isSelected) androidx.compose.ui.graphics.Color(0xFF2563EB) else androidx.compose.ui.graphics.Color(0xFFE2E8F0).copy(alpha = 0.6f)
+                            ) {
+                                androidx.compose.foundation.layout.Box(
+                                    modifier = androidx.compose.ui.Modifier.padding(vertical = 12.dp),
+                                    contentAlignment = androidx.compose.ui.Alignment.Center
+                                ) {
+                                    androidx.compose.material3.Text(
+                                        text = label,
+                                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                                        color = if (isSelected) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color(0xFF334155),
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                        if (rowItems.size < 3) {
+                            repeat(3 - rowItems.size) {
+                                androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.weight(1f))
+                            }
+                        }
+                    }
+                    androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.height(10.dp))
+                }
+                
+                androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.height(20.dp))
+                
+                androidx.compose.material3.Button(
+                    onClick = { onSubmit(selectedDurationMins) },
+                    modifier = androidx.compose.ui.Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFF2563EB))
+                ) {
+                    androidx.compose.material3.Text("Submit", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 16.sp)
+                }
+            }
+        }
     }
 }

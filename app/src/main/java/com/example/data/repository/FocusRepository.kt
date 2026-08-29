@@ -23,8 +23,9 @@ class FocusRepository(private val focusDao: FocusDao) {
     suspend fun initializeDefaultDataIfEmpty(context: Context) {
         val existingAppsManual = allowedApps("MANUAL").first()
         val existingAppsStrict = allowedApps("STRICT").first()
-        
-        if (existingAppsManual.isEmpty() || existingAppsStrict.isEmpty()) {
+        val existingAppsSpecial = allowedApps("SPECIAL").first()
+
+        if (existingAppsManual.isEmpty() || existingAppsStrict.isEmpty() || existingAppsSpecial.isEmpty()) {
             val packageManager = context.packageManager
             val intent = Intent(Intent.ACTION_MAIN, null).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
@@ -57,14 +58,15 @@ class FocusRepository(private val focusDao: FocusDao) {
                 if (existingAppsStrict.isEmpty()) {
                     appsToInsert.add(AllowedApp(packageName, "STRICT", appName, category, isStudyTool))
                 }
+                if (existingAppsSpecial.isEmpty()) {
+                    appsToInsert.add(AllowedApp(packageName, "SPECIAL", appName, category, isStudyTool))
+                }
             }
             
             if (appsToInsert.isNotEmpty()) {
                 focusDao.insertOrUpdateApps(appsToInsert)
             }
         }
-
-
     }
 
     suspend fun toggleAppWhitelist(packageName: String, isAllowed: Boolean, profile: String = "MANUAL") {

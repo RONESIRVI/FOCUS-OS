@@ -286,8 +286,13 @@ fun ScheduleCard(
                     modifier = Modifier.size(14.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
+                val modeText = when (session.lockMode) {
+                    "MAXIMUM_LOCK" -> "Deep Work/Special Mode"
+                    "SOFT_LOCK" -> "Mindful Mode Enforced"
+                    else -> "${session.lockMode} Mode Enforced"
+                }
                 Text(
-                    text = "${session.lockMode} Mode Enforced",
+                    text = modeText,
                     style = MaterialTheme.typography.labelSmall,
                     color = FocusWarning
                 )

@@ -73,6 +73,37 @@ fun SettingsScreen(
     var showNotifThemeDialog by remember { mutableStateOf(false) }
     var showNotifVibrateDialog by remember { mutableStateOf(false) }
     var showNotifTitleDialog by remember { mutableStateOf(false) }
+    
+    val ringtonePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = { result ->
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                val uri: Uri? = result.data?.getParcelableExtra(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+                uri?.let {
+                    val key = it.toString()
+                    val targetCat = activeSoundCategoryTarget
+                    if (targetCat != null) {
+                        val prefKey = when (targetCat) {
+                            "SCHEDULE" -> "NOTIF_SCHEDULE_SOUND"
+                            "WARNING" -> "NOTIF_WARNING_SOUND"
+                            "COMPLETE" -> "NOTIF_COMPLETE_SOUND"
+                            "SOFTLOCK" -> "NOTIF_SOFTLOCK_SOUND"
+                            else -> "NOTIF_SCHEDULE_SOUND"
+                        }
+                        when (targetCat) {
+                            "SCHEDULE" -> notifScheduleSound = key
+                            "WARNING" -> notifWarningSound = key
+                            "COMPLETE" -> notifCompleteSound = key
+                            "SOFTLOCK" -> notifSoftlockSound = key
+                        }
+                        sharedPrefs.edit().putString(prefKey, key).apply()
+                        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, key)
+                    }
+                }
+            }
+        }
+    )
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri: Uri? ->
@@ -303,6 +334,13 @@ fun SettingsScreen(
                     title = "Strict Schedule Whitelist",
                     subtitle = "Allowed apps during Strict Scheduled Focus",
                     onClick = { onNavigateToAppSelector("STRICT") }
+                )
+                Divider(color = FocusSurfaceVariant)
+                SettingsClickableItem(
+                    icon = Icons.Default.Star,
+                    title = "Special Whitelist",
+                    subtitle = "Special allowed apps configuration",
+                    onClick = { onNavigateToAppSelector("SPECIAL") }
                 )
             }
         }
@@ -787,6 +825,32 @@ fun SettingsScreen(
                         color = FocusTextSecondary,
                         lineHeight = 18.sp
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Divider(color = FocusSurfaceVariant)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val intent = android.content.Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_NOTIFICATION)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+                                ringtonePickerLauncher.launch(intent)
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(imageVector = Icons.Default.PhoneIphone, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Pick Sound from Phone",
+                            color = FocusPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -929,6 +993,32 @@ fun SettingsScreen(
                         color = FocusTextSecondary,
                         lineHeight = 18.sp
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Divider(color = FocusSurfaceVariant)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val intent = android.content.Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_NOTIFICATION)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+                                ringtonePickerLauncher.launch(intent)
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(imageVector = Icons.Default.PhoneIphone, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Pick Sound from Phone",
+                            color = FocusPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -960,6 +1050,32 @@ fun SettingsScreen(
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Divider(color = FocusSurfaceVariant)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val intent = android.content.Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_NOTIFICATION)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+                                ringtonePickerLauncher.launch(intent)
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(imageVector = Icons.Default.PhoneIphone, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Pick Sound from Phone",
+                            color = FocusPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -1071,6 +1187,32 @@ fun SettingsScreen(
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Divider(color = FocusSurfaceVariant)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val intent = android.content.Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_NOTIFICATION)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+                                ringtonePickerLauncher.launch(intent)
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(imageVector = Icons.Default.PhoneIphone, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Pick Sound from Phone",
+                            color = FocusPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -1124,6 +1266,32 @@ fun SettingsScreen(
                             Text(text = label, color = if (isSelected) FocusPrimary else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Divider(color = FocusSurfaceVariant)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val intent = android.content.Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_NOTIFICATION)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+                                ringtonePickerLauncher.launch(intent)
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(imageVector = Icons.Default.PhoneIphone, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Pick Sound from Phone",
+                            color = FocusPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -1170,6 +1338,32 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(text = label, color = if (isSelected) FocusPrimary else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Divider(color = FocusSurfaceVariant)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val intent = android.content.Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_NOTIFICATION)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+                                ringtonePickerLauncher.launch(intent)
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(imageVector = Icons.Default.PhoneIphone, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Pick Sound from Phone",
+                            color = FocusPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
                     }
                 }
             },
@@ -1291,6 +1485,7 @@ fun PermissionRowItem(
 }
 
 fun getSoundLabel(key: String): String {
+    if (key.startsWith("content://")) return "📱 Custom Phone Ringtone"
     return when (key) {
         "PRIME_SIREN" -> "📢 Prime Dual Siren Alert"
         "PRIME_QUANTUM" -> "⚡ Prime Quantum Pulse"

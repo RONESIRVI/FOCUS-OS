@@ -68,7 +68,12 @@ fun AppSelectorScreen(
     val currentProfile by viewModel.currentAppSelectorProfile.collectAsState()
     val appsManual by viewModel.allowedAppsManual.collectAsState()
     val appsStrict by viewModel.allowedAppsStrict.collectAsState()
-    val apps = if (currentProfile == "STRICT") appsStrict else appsManual
+    val appsSpecial by viewModel.allowedAppsSpecial.collectAsState()
+    val apps = when (currentProfile) {
+        "STRICT" -> appsStrict
+        "SPECIAL" -> appsSpecial
+        else -> appsManual
+    }
 
     var searchQuery by remember { mutableStateOf("") }
     var filterTab by remember { mutableStateOf("ALL") } // "ALL", "ALLOWED", "BLOCKED"
@@ -108,7 +113,7 @@ fun AppSelectorScreen(
             Spacer(modifier = Modifier.width(8.dp))
             Column {
                 Text(
-                    text = if (currentProfile == "STRICT") "ALLOWED APPS (STRICT SCHEDULE)" else "ALLOWED APPS (QUICK FOCUS)",
+                    text = when(currentProfile) { "STRICT" -> "ALLOWED APPS (STRICT SCHEDULE)"; "SPECIAL" -> "ALLOWED APPS (SPECIAL)"; else -> "ALLOWED APPS (QUICK FOCUS)" },
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 0.5.sp
@@ -116,7 +121,7 @@ fun AppSelectorScreen(
                     color = Color.White
                 )
                 Text(
-                    text = if (currentProfile == "STRICT") "Allowed apps during Scheduled Study Focus" else "Allowed apps during Manual Quick Focus",
+                    text = when(currentProfile) { "STRICT" -> "Allowed apps during Scheduled Study Focus"; "SPECIAL" -> "Allowed apps during Special Whitelist Focus"; else -> "Allowed apps during Manual Quick Focus" },
                     style = MaterialTheme.typography.bodySmall,
                     color = FocusTextSecondary
                 )
@@ -134,8 +139,9 @@ fun AppSelectorScreen(
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             val profiles = listOf(
-                "MANUAL" to "Quick Focus Whitelist",
-                "STRICT" to "Strict Schedule Whitelist"
+                "MANUAL" to "Quick Focus",
+                "STRICT" to "Strict Schedule",
+                "SPECIAL" to "Special Whitelist"
             )
             profiles.forEach { (profKey, profLabel) ->
                 val isSel = currentProfile == profKey

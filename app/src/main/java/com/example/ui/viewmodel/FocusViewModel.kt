@@ -47,7 +47,8 @@ data class UiSessionSetup(
     val requiresPhoto: Boolean = true,
     val requiresSelfie: Boolean = true,
     val startPhotoUri: String? = null,
-    val endSelfieUri: String? = null
+    val endSelfieUri: String? = null,
+    val whitelistProfile: String = "STRICT"
 )
 
 data class StudySummaryStats(
@@ -73,10 +74,16 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     val allowedAppsManual: StateFlow<List<AllowedApp>> = repository.allowedApps("MANUAL")
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val allowedAppsSpecial: StateFlow<List<AllowedApp>> = repository.allowedApps("SPECIAL")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val allowedAppsStrict: StateFlow<List<AllowedApp>> = repository.allowedApps("STRICT")
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val whitelistedAppsManual: StateFlow<List<AllowedApp>> = repository.whitelistedApps("MANUAL")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val whitelistedAppsSpecial: StateFlow<List<AllowedApp>> = repository.whitelistedApps("SPECIAL")
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val whitelistedAppsStrict: StateFlow<List<AllowedApp>> = repository.whitelistedApps("STRICT")
@@ -333,7 +340,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         requiresPhoto: Boolean? = null,
         requiresSelfie: Boolean? = null,
         startPhotoUri: String? = null,
-        endSelfieUri: String? = null
+        endSelfieUri: String? = null,
+        whitelistProfile: String? = null
     ) {
         val current = _setupState.value
         val newLockMode = lockMode ?: current.lockMode
@@ -352,6 +360,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             requiresPhoto = requiresPhoto ?: current.requiresPhoto,
             requiresSelfie = requiresSelfie ?: current.requiresSelfie,
             startPhotoUri = startPhotoUri ?: current.startPhotoUri,
+            whitelistProfile = whitelistProfile ?: current.whitelistProfile,
             endSelfieUri = endSelfieUri ?: current.endSelfieUri
         )
 
@@ -427,6 +436,40 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun startSpecialSession(durationMinutes: Int, whitelistType: String) {
+        val context = getApplication<Application>()
+        
+        // Select allowed apps based on whitelist type
+        val allowedList = when (whitelistType) {
+            "STRICT" -> whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
+            "SPECIAL" -> whitelistedAppsSpecial.value.filter { it.isAllowed }.map { it.packageName }
+            else -> whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
+        }
+        
+        FocusLockManager.updateFocusState(
+            isActive = true,
+            lockMode = LockMode.MAXIMUM_LOCK,
+            allowedPackageNames = allowedList
+        )
+        
+        val intent = Intent(context, FocusTimerService::class.java).apply {
+            action = "ACTION_START_TIMER"
+            putExtra("DURATION", durationMinutes)
+            putExtra("SESSION_NAME", "Special Whitelist Focus")
+            putExtra("SUBJECT_NAME", "Special Focus")
+            putExtra("LOCK_MODE", LockMode.MAXIMUM_LOCK.name)
+            putExtra("SOUND_TYPE", SoundType.NONE.name)
+            putExtra("REQUIRES_SELFIE", false)
+            putExtra("IS_SPECIAL_WHITELIST_SESSION", true) // custom flag
+        }
+        
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
+    }
+
     fun scheduleFocusSession(
         hour: Int,
         minute: Int,
@@ -477,7 +520,11 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             val sessionId = repository.saveSession(session)
             // Save fixed allowed apps & reminder offsets for this schedule
-            val currentAllowed = whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
+            val currentAllowed = when (setup.whitelistProfile) {
+                "SPECIAL" -> whitelistedAppsSpecial.value.filter { it.isAllowed }.map { it.packageName }
+                "MANUAL" -> whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
+                else -> whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
+            }
             val reminderString = reminderMinutesList.joinToString(",")
             context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE).edit()
                 .putString("scheduled_apps_$sessionId", currentAllowed.joinToString(","))
@@ -636,7 +683,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         
         val setup = _setupState.value
         viewModelScope.launch(Dispatchers.IO) {
-            if (current.totalSeconds > 0) {
+            if (current.totalSeconds > 0 && !current.isSpecialSession) {
                 val completedSecs = current.totalSeconds - current.remainingSeconds
                 if (scheduledId != null) {
                     val sessions = repository.allSessions.first()

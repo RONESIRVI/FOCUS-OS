@@ -102,6 +102,7 @@ import com.example.ui.theme.FocusSurfaceVariant
 import com.example.ui.theme.FocusTextSecondary
 import com.example.ui.viewmodel.FocusViewModel
 import com.example.util.LockPermissionHelper
+import androidx.compose.ui.text.style.TextOverflow
 
 data class PresetOption(
     val minutes: Int,
@@ -696,7 +697,9 @@ fun FocusSetupScreen(
                                         unfocusedTextColor = Color.White
                                     ),
                                     shape = RoundedCornerShape(12.dp),
-                                    singleLine = true
+                                    singleLine = false,
+                                    minLines = 1,
+                                    maxLines = 5
                                 )
 
                                 // Quick pick from saved subjects
@@ -814,7 +817,9 @@ fun FocusSetupScreen(
                                         unfocusedTextColor = Color.White
                                     ),
                                     shape = RoundedCornerShape(12.dp),
-                                    singleLine = true
+                                    singleLine = false,
+                                    minLines = 1,
+                                    maxLines = 5
                                 )
                             }
                         }
@@ -842,68 +847,94 @@ fun FocusSetupScreen(
                                         color = Color.White
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    items(SoundType.entries) { st ->
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    SoundType.entries.forEach { st ->
                                         val isSel = setup.selectedSound == st
-                                        Card(
-                                            modifier = Modifier
-                                                .width(220.dp)
-                                                .clickable { viewModel.updateSetup(soundType = st) },
+                                        Surface(
                                             shape = RoundedCornerShape(16.dp),
-                                            colors = CardDefaults.cardColors(
-                                                containerColor = if (isSel) FocusPrimary.copy(alpha = 0.15f) else FocusBackground,
-                                            ),
+                                            color = if (isSel) FocusPrimary.copy(alpha = 0.1f) else FocusBackground,
                                             border = BorderStroke(
-                                                width = if (isSel) 2.dp else 1.dp,
+                                                width = if (isSel) 1.5.dp else 1.dp,
                                                 color = if (isSel) FocusPrimary else FocusSurfaceVariant
-                                            )
+                                            ),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable { viewModel.updateSetup(soundType = st) }
                                         ) {
-                                            Column(modifier = Modifier.padding(16.dp)) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    modifier = Modifier.fillMaxWidth()
+                                            Row(
+                                                modifier = Modifier.padding(14.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(46.dp)
+                                                        .background(
+                                                            if (isSel) FocusPrimary.copy(alpha = 0.2f) else FocusSurfaceVariant.copy(alpha = 0.4f),
+                                                            androidx.compose.foundation.shape.CircleShape
+                                                        ),
+                                                    contentAlignment = Alignment.Center
                                                 ) {
-                                                    Text(
-                                                        text = st.badge,
-                                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                                        color = if (isSel) FocusPrimary else FocusTextSecondary,
-                                                        modifier = Modifier
-                                                            .background(
-                                                                if (isSel) FocusPrimary.copy(alpha = 0.2f) else FocusSurfaceVariant,
-                                                                RoundedCornerShape(6.dp)
-                                                            )
-                                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    Icon(
+                                                        imageVector = if (st.isBinaural) Icons.Default.Headphones else Icons.Default.MusicNote,
+                                                        contentDescription = null,
+                                                        tint = if (isSel) FocusPrimary else FocusTextSecondary,
+                                                        modifier = Modifier.size(20.dp)
                                                     )
-                                                    if (st.isBinaural) {
-                                                        Icon(
-                                                            imageVector = Icons.Default.Headphones,
-                                                            contentDescription = "Headphones Recommended",
-                                                            tint = if (isSel) FocusPrimary else FocusTextSecondary,
-                                                            modifier = Modifier.size(14.dp)
-                                                        )
-                                                    }
                                                 }
-                                                Spacer(modifier = Modifier.height(8.dp))
-                                                Text(
-                                                    text = st.label,
-                                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                                    color = if (isSel) FocusPrimary else Color.White
-                                                )
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                Text(
-                                                    text = st.hindiTitle,
-                                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                                                    color = FocusWarning
-                                                )
-                                                Spacer(modifier = Modifier.height(8.dp))
-                                                Text(
-                                                    text = st.description,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = FocusTextSecondary,
-                                                    maxLines = 3
+
+                                                Spacer(modifier = Modifier.width(14.dp))
+
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Text(
+                                                            text = st.label,
+                                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                                            color = if (isSel) FocusPrimary else Color.White
+                                                        )
+                                                        Spacer(modifier = Modifier.width(8.dp))
+                                                        if (st.name != "NONE") {
+                                                            Text(
+                                                                text = st.badge,
+                                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                                                                color = if (isSel) FocusPrimary else FocusTextSecondary,
+                                                                modifier = Modifier
+                                                                    .background(
+                                                                        if (isSel) FocusPrimary.copy(alpha = 0.15f) else FocusSurfaceVariant,
+                                                                        RoundedCornerShape(4.dp)
+                                                                    )
+                                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                    Text(
+                                                        text = st.hindiTitle,
+                                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                                                        color = FocusWarning
+                                                    )
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                    Text(
+                                                        text = st.description,
+                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
+                                                        color = FocusTextSecondary,
+                                                        maxLines = 2,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+
+                                                Spacer(modifier = Modifier.width(10.dp))
+
+                                                RadioButton(
+                                                    selected = isSel,
+                                                    onClick = { viewModel.updateSetup(soundType = st) },
+                                                    colors = RadioButtonDefaults.colors(
+                                                        selectedColor = FocusPrimary,
+                                                        unselectedColor = FocusTextSecondary
+                                                    ),
+                                                    modifier = Modifier.size(24.dp)
                                                 )
                                             }
                                         }

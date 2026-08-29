@@ -1,0 +1,3 @@
+sed -i 's/val endSelfieUri: String? = null/val endSelfieUri: String? = null,\n    val whitelistProfile: String = "STRICT"/' app/src/main/java/com/example/ui/viewmodel/FocusViewModel.kt
+sed -i 's/endSelfieUri: String? = null/endSelfieUri: String? = null,\n        whitelistProfile: String? = null/' app/src/main/java/com/example/ui/viewmodel/FocusViewModel.kt
+sed -i 's/startPhotoUri = startPhotoUri ?: current.startPhotoUri,/startPhotoUri = startPhotoUri ?: current.startPhotoUri,\n            whitelistProfile = whitelistProfile ?: current.whitelistProfile,/' app/src/main/java/com/example/ui/viewmodel/FocusViewModel.kt

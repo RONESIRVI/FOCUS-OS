@@ -1,0 +1,1 @@
+sed -i 's/val apps = if (currentProfile == "STRICT") appsStrict else appsManual/val appsSpecial by viewModel.allowedAppsSpecial.collectAsState()\n    val apps = when (currentProfile) {\n        "STRICT" -> appsStrict\n        "SPECIAL" -> appsSpecial\n        else -> appsManual\n    }/' app/src/main/java/com/example/ui/screens/AppSelectorScreen.kt
