@@ -1,6 +1,3 @@
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 // import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
 
 plugins {
@@ -24,10 +21,6 @@ android {
     versionName = "2.2.1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    
-    val formatter = SimpleDateFormat("dd-MMM-yyyy_HH-mm-ss", Locale.getDefault())
-    val dateStr = formatter.format(Date())
-    base.archivesName.set("FocusOS_v${versionName}_${dateStr}")
   }
 
   signingConfigs {
