@@ -122,6 +122,10 @@ fun FocusSetupScreen(
     val setup by viewModel.setupState.collectAsState()
     val subjects by viewModel.allSubjects.collectAsState()
     val whitelistedApps by viewModel.whitelistedAppsManual.collectAsState()
+    val scheduledSessions by viewModel.scheduledSessions.collectAsState(initial = emptyList())
+    var showValidationDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var validationConflicts by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
+    var nextValidationSession by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<com.example.data.model.FocusSession?>(null) }
     val context = LocalContext.current
 
     var showAddSubjectDialog by remember { mutableStateOf(false) }
@@ -948,5 +952,34 @@ fun FocusSetupScreen(
                 }
             }
         }
+    }
+
+    if (showValidationDialog) {
+        val userStart = System.currentTimeMillis()
+        val userEnd = userStart + (customDuration.toInt() * 60 * 1000L)
+        ScheduleValidationDialog(
+            saveText = "START SESSION",
+            changeText = "CHANGE DURATION",
+            conflicts = validationConflicts,
+            userStart = userStart,
+            userEnd = userEnd,
+            nextSession = nextValidationSession,
+            onChangeTime = { showValidationDialog = false },
+            onSave = { 
+                showValidationDialog = false
+                val finalSubject = if (customSubject.isNotBlank()) customSubject else "Focus Session"
+                val finalGoal = if (customGoal.isNotBlank()) customGoal else "General Study"
+                if (customSubject.isNotBlank() && subjects.none { it.name.equals(customSubject.trim(), ignoreCase = true) }) {
+                    viewModel.addCustomSubject(customSubject.trim(), "#0284C7")
+                }
+                viewModel.updateSetup(
+                    sessionName = finalGoal,
+                    subjectName = finalSubject,
+                    durationMinutes = customDuration.toInt()
+                )
+                onStartSession()
+            },
+            onCancel = { showValidationDialog = false }
+        )
     }
 }

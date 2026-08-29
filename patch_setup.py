@@ -1,87 +1,64 @@
-import sys
-
-with open("app/src/main/java/com/example/ui/screens/FocusSetupScreen.kt", "r") as f:
-    lines = f.readlines()
-
-# Let's completely read and modify the file because it's messy.
 import re
 
-content = "".join(lines)
+with open("app/src/main/java/com/example/ui/screens/FocusSetupScreen.kt", "r") as f:
+    content = f.read()
 
-# Remove isScheduled variables
-content = re.sub(r'var isScheduled by remember.*?\}', '', content, count=1)
-content = re.sub(r'var scheduleHour by remember.*?\}', '', content, count=1)
-content = re.sub(r'var scheduleMinute by remember.*?\}', '', content, count=1)
+state_vars = """    val whitelistedApps by viewModel.whitelistedAppsManual.collectAsState()
+    val scheduledSessions by viewModel.scheduledSessions.collectAsState(initial = emptyList())
+    var showValidationDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var validationConflicts by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
+    var nextValidationSession by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<com.example.data.model.FocusSession?>(null) }"""
+content = content.replace("    val whitelistedApps by viewModel.whitelistedAppsManual.collectAsState()", state_vars, 1)
 
-# Modify the start button logic
-old_start_btn = """                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(64.dp)
-                                                .background(
-                                                    if (isScheduled) FocusAccentOrange else FocusGreen,
-                                                    RoundedCornerShape(18.dp)
-                                                )
-                                                .clickable {
-                                                    if (isScheduled) {
-                                                        viewModel.scheduleFocusSession(scheduleHour, scheduleMinute)
-                                                        // After scheduling, just go back
-                                                        onBack()
-                                                    } else {
-                                                        viewModel.startFocusSession()
-                                                        onStartSession()
-                                                    }
+old_btn = """                                        onClick = {
+                                            val finalSubject = if (customSubject.isNotBlank()) customSubject else "Focus Session"
+                                            val finalGoal = if (customGoal.isNotBlank()) customGoal else "General Study"
+                                            
+                                            if (customSubject.isNotBlank() && subjects.none { it.name.equals(customSubject.trim(), ignoreCase = true) }) {
+                                                viewModel.addCustomSubject(customSubject.trim(), "#0284C7")
+                                            }
+
+                                            viewModel.updateSetup(
+                                                sessionName = finalGoal,
+                                                subjectName = finalSubject,
+                                                durationMinutes = customDuration.toInt()
+                                            )
+                                            onStartSession()
+                                        }"""
+
+new_btn = """                                        onClick = {
+                                            val finalSubject = if (customSubject.isNotBlank()) customSubject else "Focus Session"
+                                            val finalGoal = if (customGoal.isNotBlank()) customGoal else "General Study"
+                                            
+                                            val duration = customDuration.toInt()
+                                            val userStart = System.currentTimeMillis()
+                                            val userEnd = userStart + (duration * 60 * 1000L)
+                                            val conflicts = scheduledSessions.filter { it.status == "SCHEDULED" }.filter { s ->
+                                                val sStart = s.scheduledStartTime ?: return@filter false
+                                                val sEnd = s.scheduledEndTime ?: return@filter false
+                                                userStart < sEnd && userEnd > sStart
+                                            }
+                                            
+                                            if (conflicts.isNotEmpty()) {
+                                                validationConflicts = conflicts
+                                                nextValidationSession = scheduledSessions.filter { it.status == "SCHEDULED" && (it.scheduledStartTime ?: 0) >= userEnd }.minByOrNull { it.scheduledStartTime ?: 0 }
+                                                showValidationDialog = true
+                                            } else {
+                                                if (customSubject.isNotBlank() && subjects.none { it.name.equals(customSubject.trim(), ignoreCase = true) }) {
+                                                    viewModel.addCustomSubject(customSubject.trim(), "#0284C7")
                                                 }
-                                                .testTag("start_session_confirm_btn"),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                if (isScheduled) {
-                                                    Icon(Icons.Default.Schedule, contentDescription = null, tint = Color.White)
-                                                    Spacer(modifier = Modifier.width(8.dp))
-                                                }
-                                                Text(
-                                                    text = if (isScheduled) "SCHEDULE SESSION" else "LAUNCH FOCUS SHIELD",
-                                                    style = MaterialTheme.typography.titleMedium.copy(
-                                                        fontWeight = FontWeight.ExtraBold,
-                                                        letterSpacing = 1.sp
-                                                    ),
-                                                    color = Color.White
+
+                                                viewModel.updateSetup(
+                                                    sessionName = finalGoal,
+                                                    subjectName = finalSubject,
+                                                    durationMinutes = duration
                                                 )
+                                                onStartSession()
                                             }
                                         }"""
-                                        
-new_start_btn = """                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(64.dp)
-                                                .background(FocusGreen, RoundedCornerShape(18.dp))
-                                                .clickable {
-                                                    viewModel.startFocusSession()
-                                                    onStartSession()
-                                                }
-                                                .testTag("start_session_confirm_btn"),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    text = "LAUNCH FOCUS SHIELD",
-                                                    style = MaterialTheme.typography.titleMedium.copy(
-                                                        fontWeight = FontWeight.ExtraBold,
-                                                        letterSpacing = 1.sp
-                                                    ),
-                                                    color = Color.White
-                                                )
-                                            }
-                                        }"""
-content = content.replace(old_start_btn, new_start_btn)
+content = content.replace(old_btn, new_btn)
 
-# Remove the schedule toggle section
-# Wait, I'll just use regex or find indices.
-schedule_toggle_start = content.find("Row(\n                                    verticalAlignment = Alignment.CenterVertically")
-schedule_toggle_end = content.find("                        // Section 2: Allowed Apps Whitelist")
-if schedule_toggle_start != -1 and schedule_toggle_end != -1:
-    content = content[:schedule_toggle_start] + "                        Spacer(modifier = Modifier.height(16.dp))\n" + content[schedule_toggle_end:]
-
-with open("app/src/main/java/com/example/ui/screens/FocusSetupScreen.kt", "w") as f:
-    f.write(content)
+# We need to insert the dialog code at the end of the composable or somewhere safe, like right before the final `}`
+# Let's find a good place. It's inside a Box or Surface?
+# Wait, `FocusSetupScreen` top level is a `Scaffold`. 
+# We can just put it at the very end of the file before `}` closing `FocusSetupScreen`?
