@@ -1633,6 +1633,9 @@ fun VerticalListPicker(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState(
+        initialFirstVisibleItemIndex = (selectedIndex - 1).coerceAtLeast(0)
+    )
     Box(
         modifier = modifier
             .height(170.dp)
@@ -1641,6 +1644,7 @@ fun VerticalListPicker(
         contentAlignment = Alignment.Center
     ) {
         androidx.compose.foundation.lazy.LazyColumn(
+            state = listState,
             horizontalAlignment = Alignment.CenterHorizontally,
             contentPadding = PaddingValues(vertical = 8.dp),
             modifier = Modifier.fillMaxWidth()
