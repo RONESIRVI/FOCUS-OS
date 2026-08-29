@@ -3,63 +3,71 @@ import re
 with open("app/src/main/java/com/example/ui/screens/SettingsScreen.kt", "r") as f:
     content = f.read()
 
-# I will recreate the items from scratch and place them in the correct order.
+target = """                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    com.example.util.NotificationSoundVibrationHelper.stopCurrentSound()
+                    activeSoundCategoryTarget = null
+                }) {
+                    Text("Done", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = FocusSurface
+        )
+    }"""
 
-lock_mode_code = """
-        // Lock & Security Status Mode Selector
-        item {
-            val setup by viewModel.setupState.collectAsState()
-            SettingsSectionTitle("LOCK MODE SHIELD")
-            SettingsCard {
-                val selectableModes = LockMode.entries.filter { it != LockMode.NORMAL }
-                selectableModes.forEachIndexed { index, mode ->
-                    val isSelected = setup.lockMode == mode
+replacement = """                }
+            },
+            confirmButton = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Divider(color = FocusSurfaceVariant)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { viewModel.updateSetup(lockMode = mode) }
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = { viewModel.updateSetup(lockMode = mode) },
-                                colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column {
-                                Text(text = mode.title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = if (isSelected) FocusPrimary else FocusTextPrimary)
-                                Text(text = mode.description, style = MaterialTheme.typography.bodySmall, color = FocusTextSecondary)
+                            .clickable {
+                                val intent = android.content.Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_NOTIFICATION)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+                                ringtonePickerLauncher.launch(intent)
                             }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(imageVector = Icons.Default.PhoneIphone, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Pick Sound from Phone",
+                            color = FocusPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+                    Divider(color = FocusSurfaceVariant)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = {
+                            com.example.util.NotificationSoundVibrationHelper.stopCurrentSound()
+                            activeSoundCategoryTarget = null
+                        }) {
+                            Text("Done", color = FocusPrimary, fontWeight = FontWeight.Bold)
                         }
                     }
-                    if (index < selectableModes.size - 1) {
-                        Divider(color = FocusSurfaceVariant)
-                    }
                 }
-            }
-        }
-"""
+            },
+            containerColor = FocusSurface
+        )
+    }"""
 
-# Let's remove the broken parts in the file
-# 1. Remove whatever is left between "Strict Focus Rules" and "Appearance"
-
-pattern_to_remove = r'(// Strict Focus Rules.*?\}\s*\}\s*\})[\s\S]*?(// Appearance)'
-match = re.search(pattern_to_remove, content)
-if match:
-    # replace the middle part with nothing
-    content = content[:match.end(1)] + "\n\n        " + match.group(2) + content[match.end(2):]
-
-# 2. Insert `lock_mode_code` between `App Blocking System` and `Section 1: Core App-Blocking`
-
-app_blocking_system_end = r'(// App Blocking System.*?\}\s*\}\s*\})'
-match2 = re.search(app_blocking_system_end, content, flags=re.DOTALL)
-if match2:
-    start_part = content[:match2.end(1)]
-    end_part = content[match2.end(1):]
-    content = start_part + "\n" + lock_mode_code + end_part
+if target in content:
+    content = content.replace(target, replacement)
+    print("Success")
+else:
+    print("Failed")
 
 with open("app/src/main/java/com/example/ui/screens/SettingsScreen.kt", "w") as f:
     f.write(content)
