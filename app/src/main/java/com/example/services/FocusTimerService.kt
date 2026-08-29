@@ -161,8 +161,7 @@ class FocusTimerService : Service() {
                         while (events.hasNextEvent()) {
                             events.getNextEvent(event)
                             if (event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED ||
-                                event.eventType == android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND
-                            ) {
+                                event.eventType == 1) { // 1 is MOVE_TO_FOREGROUND
                                 lastEventPackage = event.packageName
                             }
                         }
@@ -233,7 +232,7 @@ class FocusTimerService : Service() {
         wakeLock = powerManager.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "FocusApp::FocusTimerWakeLock")
         wakeLock?.acquire()
 
-        audioEngine.startSound(soundType, scope)
+        audioEngine.startSound(soundType, scope, this@FocusTimerService)
         if (android.os.Build.VERSION.SDK_INT >= 34) {
             startForeground(NOTIFICATION_ID, buildNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
@@ -383,7 +382,7 @@ class FocusTimerService : Service() {
 
     fun setSound(soundType: SoundType) {
         _timerState.value = _timerState.value.copy(selectedSound = soundType)
-        audioEngine.startSound(soundType, scope)
+        audioEngine.startSound(soundType, scope, this@FocusTimerService)
         updateNotification()
     }
 

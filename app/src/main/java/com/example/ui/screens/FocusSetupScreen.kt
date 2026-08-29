@@ -132,6 +132,25 @@ fun FocusSetupScreen(
     var newSubjectName by remember { mutableStateOf("") }
     var customSubject by remember { mutableStateOf(setup.subjectName) }
     var customGoal by remember { mutableStateOf(setup.sessionName) }
+    
+    val audioPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+        onResult = { uri: android.net.Uri? ->
+            if (uri != null) {
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                val prefs = context.getSharedPreferences("FocusPrefs", android.content.Context.MODE_PRIVATE)
+                prefs.edit().putString("AMBIENT_CUSTOM_AUDIO_URI", uri.toString()).apply()
+                viewModel.updateSetup(soundType = com.example.services.SoundType.CUSTOM_AUDIO)
+            }
+        }
+    )
 
     var customDuration by remember { mutableFloatStateOf(setup.durationMinutes.toFloat()) }
 
@@ -866,7 +885,13 @@ fun FocusSetupScreen(
                                             ),
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .clickable { viewModel.updateSetup(soundType = st) }
+                                                .clickable { 
+                                                    if (st == com.example.services.SoundType.CUSTOM_AUDIO) {
+                                                        audioPickerLauncher.launch(arrayOf("audio/*"))
+                                                    } else {
+                                                        viewModel.updateSetup(soundType = st) 
+                                                    }
+                                                }
                                         ) {
                                             Row(
                                                 modifier = Modifier.padding(14.dp),
@@ -898,35 +923,7 @@ fun FocusSetupScreen(
                                                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                                             color = if (isSel) FocusPrimary else Color.White
                                                         )
-                                                        Spacer(modifier = Modifier.width(8.dp))
-                                                        if (st.name != "NONE") {
-                                                            Text(
-                                                                text = st.badge,
-                                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
-                                                                color = if (isSel) FocusPrimary else FocusTextSecondary,
-                                                                modifier = Modifier
-                                                                    .background(
-                                                                        if (isSel) FocusPrimary.copy(alpha = 0.15f) else FocusSurfaceVariant,
-                                                                        RoundedCornerShape(4.dp)
-                                                                    )
-                                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                            )
-                                                        }
                                                     }
-                                                    Spacer(modifier = Modifier.height(2.dp))
-                                                    Text(
-                                                        text = st.hindiTitle,
-                                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                                                        color = FocusWarning
-                                                    )
-                                                    Spacer(modifier = Modifier.height(2.dp))
-                                                    Text(
-                                                        text = st.description,
-                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
-                                                        color = FocusTextSecondary,
-                                                        maxLines = 2,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
                                                 }
 
                                                 Spacer(modifier = Modifier.width(10.dp))

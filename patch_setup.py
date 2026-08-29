@@ -3,62 +3,39 @@ import re
 with open("app/src/main/java/com/example/ui/screens/FocusSetupScreen.kt", "r") as f:
     content = f.read()
 
-state_vars = """    val whitelistedApps by viewModel.whitelistedAppsManual.collectAsState()
-    val scheduledSessions by viewModel.scheduledSessions.collectAsState(initial = emptyList())
-    var showValidationDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    var validationConflicts by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
-    var nextValidationSession by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<com.example.data.model.FocusSession?>(null) }"""
-content = content.replace("    val whitelistedApps by viewModel.whitelistedAppsManual.collectAsState()", state_vars, 1)
+launcher_code = """    var customGoal by remember { mutableStateOf(setup.sessionName) }
+    
+    val audioPickerLauncher = androidx.compose.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+        onResult = { uri: android.net.Uri? ->
+            if (uri != null) {
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                val prefs = context.getSharedPreferences("FocusPrefs", android.content.Context.MODE_PRIVATE)
+                prefs.edit().putString("AMBIENT_CUSTOM_AUDIO_URI", uri.toString()).apply()
+                viewModel.updateSetup(soundType = com.example.services.SoundType.CUSTOM_AUDIO)
+            }
+        }
+    )"""
 
-old_btn = """                                        onClick = {
-                                            val finalSubject = if (customSubject.isNotBlank()) customSubject else "Focus Session"
-                                            val finalGoal = if (customGoal.isNotBlank()) customGoal else "General Study"
-                                            
-                                            if (customSubject.isNotBlank() && subjects.none { it.name.equals(customSubject.trim(), ignoreCase = true) }) {
-                                                viewModel.addCustomSubject(customSubject.trim(), "#0284C7")
-                                            }
+content = content.replace("    var customGoal by remember { mutableStateOf(setup.sessionName) }", launcher_code)
 
-                                            viewModel.updateSetup(
-                                                sessionName = finalGoal,
-                                                subjectName = finalSubject,
-                                                durationMinutes = customDuration.toInt()
-                                            )
-                                            onStartSession()
-                                        }"""
+old_click = """.clickable { viewModel.updateSetup(soundType = st) }"""
+new_click = """.clickable { 
+                                                    if (st == com.example.services.SoundType.CUSTOM_AUDIO) {
+                                                        audioPickerLauncher.launch(arrayOf("audio/*"))
+                                                    } else {
+                                                        viewModel.updateSetup(soundType = st) 
+                                                    }
+                                                }"""
 
-new_btn = """                                        onClick = {
-                                            val finalSubject = if (customSubject.isNotBlank()) customSubject else "Focus Session"
-                                            val finalGoal = if (customGoal.isNotBlank()) customGoal else "General Study"
-                                            
-                                            val duration = customDuration.toInt()
-                                            val userStart = System.currentTimeMillis()
-                                            val userEnd = userStart + (duration * 60 * 1000L)
-                                            val conflicts = scheduledSessions.filter { it.status == "SCHEDULED" }.filter { s ->
-                                                val sStart = s.scheduledStartTime ?: return@filter false
-                                                val sEnd = s.scheduledEndTime ?: return@filter false
-                                                userStart < sEnd && userEnd > sStart
-                                            }
-                                            
-                                            if (conflicts.isNotEmpty()) {
-                                                validationConflicts = conflicts
-                                                nextValidationSession = scheduledSessions.filter { it.status == "SCHEDULED" && (it.scheduledStartTime ?: 0) >= userEnd }.minByOrNull { it.scheduledStartTime ?: 0 }
-                                                showValidationDialog = true
-                                            } else {
-                                                if (customSubject.isNotBlank() && subjects.none { it.name.equals(customSubject.trim(), ignoreCase = true) }) {
-                                                    viewModel.addCustomSubject(customSubject.trim(), "#0284C7")
-                                                }
+content = content.replace(old_click, new_click)
 
-                                                viewModel.updateSetup(
-                                                    sessionName = finalGoal,
-                                                    subjectName = finalSubject,
-                                                    durationMinutes = duration
-                                                )
-                                                onStartSession()
-                                            }
-                                        }"""
-content = content.replace(old_btn, new_btn)
-
-# We need to insert the dialog code at the end of the composable or somewhere safe, like right before the final `}`
-# Let's find a good place. It's inside a Box or Surface?
-# Wait, `FocusSetupScreen` top level is a `Scaffold`. 
-# We can just put it at the very end of the file before `}` closing `FocusSetupScreen`?
+with open("app/src/main/java/com/example/ui/screens/FocusSetupScreen.kt", "w") as f:
+    f.write(content)

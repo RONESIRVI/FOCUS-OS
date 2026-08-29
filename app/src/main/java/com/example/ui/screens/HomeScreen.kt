@@ -64,6 +64,7 @@ fun HomeScreen(
     val stats by viewModel.summaryStats.collectAsState()
     val scheduledSessions by viewModel.scheduledSessions.collectAsState()
     val allSessions by viewModel.allSessions.collectAsState()
+    val timerState by viewModel.timerState.collectAsState()
     val showPendingLockOverlay by viewModel.showPendingLockOverlay.collectAsState()
     val pendingSessionNameOverlay by viewModel.pendingSessionNameOverlay.collectAsState()
     val pendingSessionIdOverlay by viewModel.pendingSessionIdOverlay.collectAsState()
@@ -1233,7 +1234,14 @@ fun HomeScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { showSpecialWhitelistPopup = true }
+                    .clickable { 
+                        if (!timerState.isRunning) {
+                            selectedSpecialWhitelist = "SPECIAL"
+                            showQuickDurationDialog = true 
+                        } else if (timerState.isSpecialSession) {
+                            viewModel.completeFocusSession()
+                        }
+                    }
                     .padding(vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -1252,9 +1260,17 @@ fun HomeScreen(
                         color = Color.White
                     )
                 }
+                val isSpecialRunning = timerState.isRunning && timerState.isSpecialSession
                 Switch(
-                    checked = false,
-                    onCheckedChange = { showSpecialWhitelistPopup = true },
+                    checked = isSpecialRunning,
+                    onCheckedChange = { isChecked ->
+                        if (isChecked && !timerState.isRunning) {
+                            selectedSpecialWhitelist = "SPECIAL"
+                            showQuickDurationDialog = true
+                        } else if (!isChecked && timerState.isSpecialSession) {
+                            viewModel.completeFocusSession()
+                        }
+                    },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = FocusPrimary,

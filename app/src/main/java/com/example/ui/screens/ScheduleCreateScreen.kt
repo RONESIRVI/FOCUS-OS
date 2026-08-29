@@ -137,6 +137,25 @@ fun ScheduleCreateScreen(
         )
     }
     var selectedSound by remember { mutableStateOf(setup.selectedSound) }
+    
+    val audioPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+        onResult = { uri: android.net.Uri? ->
+            if (uri != null) {
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                val prefs = context.getSharedPreferences("FocusPrefs", android.content.Context.MODE_PRIVATE)
+                prefs.edit().putString("AMBIENT_CUSTOM_AUDIO_URI", uri.toString()).apply()
+                selectedSound = com.example.services.SoundType.CUSTOM_AUDIO
+            }
+        }
+    )
     var requiresPhoto by remember { mutableStateOf(setup.requiresPhoto) }
     var requiresSelfie by remember { mutableStateOf(setup.requiresSelfie) }
 
@@ -1215,7 +1234,13 @@ fun ScheduleCreateScreen(
                                     ),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { selectedSound = sound }
+                                        .clickable { 
+                                            if (sound == com.example.services.SoundType.CUSTOM_AUDIO) {
+                                                audioPickerLauncher.launch(arrayOf("audio/*"))
+                                            } else {
+                                                selectedSound = sound 
+                                            }
+                                        }
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(14.dp),
@@ -1247,35 +1272,7 @@ fun ScheduleCreateScreen(
                                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                                     color = if (isSelected) FocusPrimary else Color.White
                                                 )
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                if (sound.name != "NONE") {
-                                                    Text(
-                                                        text = sound.badge,
-                                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
-                                                        color = if (isSelected) FocusPrimary else FocusTextSecondary,
-                                                        modifier = Modifier
-                                                            .background(
-                                                                if (isSelected) FocusPrimary.copy(alpha = 0.15f) else FocusSurfaceVariant,
-                                                                RoundedCornerShape(4.dp)
-                                                            )
-                                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                    )
-                                                }
                                             }
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = sound.hindiTitle,
-                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                                                color = FocusWarning
-                                            )
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = sound.description,
-                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
-                                                color = FocusTextSecondary,
-                                                maxLines = 2,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
                                         }
 
                                         Spacer(modifier = Modifier.width(10.dp))

@@ -312,7 +312,15 @@ object FocusLockManager {
                         
             LockMode.MAXIMUM_LOCK -> {
                 onDistractionListener?.invoke(blockedPackageName, true)
-                FocusLockOverlayManager.dismissOverlay()
+                // Use robust WindowManager overlay on top of starting Activity
+                FocusLockOverlayManager.showBlockedOverlay(
+                    context = context,
+                    blockedPackage = blockedPackageName,
+                    remainingSeconds = remainingSeconds,
+                    subjectName = subjectName,
+                    allowedPackages = emptyList(),
+                    isSoftLock = false
+                )
                 FocusLockOverlayManager.bringAppToFront(
                     context = context,
                     blockedPackage = blockedPackageName,

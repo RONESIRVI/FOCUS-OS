@@ -1,5 +1,12 @@
 package com.example.ui.screens
 
+import com.example.services.SoundType
+
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
+
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -129,6 +136,25 @@ fun FocusTimerScreen(
     var showExitAttemptDialog by remember { mutableStateOf(false) }
     var showManageWhitelistDialog by remember { mutableStateOf(false) }
     var showEmergencyConfirm by remember { mutableStateOf(false) }
+
+    val audioPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+        onResult = { uri: android.net.Uri? ->
+            if (uri != null) {
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                val prefs = context.getSharedPreferences("FocusPrefs", android.content.Context.MODE_PRIVATE)
+                prefs.edit().putString("AMBIENT_CUSTOM_AUDIO_URI", uri.toString()).apply()
+                viewModel.setSound(com.example.services.SoundType.CUSTOM_AUDIO)
+            }
+        }
+    )
     var emergencyPenaltyCountdown by remember { mutableIntStateOf(10) }
 
     // Intercept hardware Back Button: Instead of letting user exit to social media, prompt with allowed apps chooser
@@ -552,6 +578,107 @@ fun FocusTimerScreen(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Section 2: Ambient Focus Sound Generator (for Active Session)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = FocusSurface),
+                shape = RoundedCornerShape(22.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
+            ) {
+                Column(modifier = Modifier.padding(18.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = FocusPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Ambient Focus Sound",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        SoundType.entries.forEach { st ->
+                            val isSel = timerState.selectedSound == st
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (isSel) FocusPrimary.copy(alpha = 0.1f) else FocusBackground,
+                                border = BorderStroke(
+                                    width = if (isSel) 1.5.dp else 1.dp,
+                                    color = if (isSel) FocusPrimary else FocusSurfaceVariant
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { 
+                                        if (st == SoundType.CUSTOM_AUDIO) {
+                                            audioPickerLauncher.launch(arrayOf("audio/*"))
+                                        } else {
+                                            viewModel.setSound(st) 
+                                        }
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(46.dp)
+                                            .background(
+                                                if (isSel) FocusPrimary.copy(alpha = 0.2f) else FocusSurfaceVariant.copy(alpha = 0.4f),
+                                                androidx.compose.foundation.shape.CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = if (st.isBinaural) Icons.Default.Headphones else Icons.Default.MusicNote,
+                                            contentDescription = null,
+                                            tint = if (isSel) FocusPrimary else FocusTextSecondary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = st.label,
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = if (isSel) FocusPrimary else Color.White
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    RadioButton(
+                                        selected = isSel,
+                                        onClick = { 
+                                            if (st == SoundType.CUSTOM_AUDIO) {
+                                                audioPickerLauncher.launch(arrayOf("audio/*"))
+                                            } else {
+                                                viewModel.setSound(st) 
+                                            }
+                                        },
+                                        colors = RadioButtonDefaults.colors(
+                                            selectedColor = FocusPrimary,
+                                            unselectedColor = FocusTextSecondary
+                                        ),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Bottom Action Controls
             Row(
@@ -1013,21 +1140,18 @@ fun FocusTimerScreen(
             val sessionNameText = timerState.sessionName.ifBlank { "ACTIVE FOCUS SESSION" }
             val subjectNameText = timerState.subjectName.ifBlank { "Deep Study" }
 
-            Dialog(
-                onDismissRequest = { /* Modal lock - require explicit button */ },
-                properties = DialogProperties(
-                    dismissOnBackPress = false,
-                    dismissOnClickOutside = false,
-                    usePlatformDefaultWidth = false
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.96f))
+                    .padding(14.dp)
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.92f))
-                        .padding(14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
                     // Red Shield Frame Container
                     Card(
                         modifier = Modifier
@@ -1077,7 +1201,7 @@ fun FocusTimerScreen(
                                     text = "⚠️",
                                     style = MaterialTheme.typography.headlineLarge.copy(fontSize = 36.sp)
                                 )
-                            }
+                            
 
                             Spacer(modifier = Modifier.height(8.dp))
 

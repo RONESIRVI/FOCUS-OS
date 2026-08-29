@@ -13,6 +13,7 @@ import com.example.R
 object NotificationSoundVibrationHelper {
 
     private var currentRingtone: Ringtone? = null
+    private var currentMediaPlayer: android.media.MediaPlayer? = null
 
     fun getNotificationSoundUri(context: Context, soundKey: String = "PRIME_SIREN"): Uri {
         if (soundKey.startsWith("content://")) {
@@ -34,18 +35,34 @@ object NotificationSoundVibrationHelper {
             stopCurrentSound()
             val uri = getNotificationSoundUri(context, soundKey)
             if (uri != Uri.EMPTY) {
-                currentRingtone = RingtoneManager.getRingtone(context.applicationContext, uri)
-                currentRingtone?.let {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        it.audioAttributes = android.media.AudioAttributes.Builder()
-                            .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .build()
+                if (soundKey.startsWith("content://") && !soundKey.contains("media/internal/audio")) {
+                    // Use MediaPlayer for SAF custom picked audio files
+                    currentMediaPlayer = android.media.MediaPlayer().apply {
+                        setDataSource(context.applicationContext, uri)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            val attrs = android.media.AudioAttributes.Builder()
+                                .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build()
+                            setAudioAttributes(attrs)
+                        }
+                        prepare()
+                        start()
                     }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        it.isLooping = false
+                } else {
+                    currentRingtone = RingtoneManager.getRingtone(context.applicationContext, uri)
+                    currentRingtone?.let {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            it.audioAttributes = android.media.AudioAttributes.Builder()
+                                .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build()
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            it.isLooping = false
+                        }
+                        it.play()
                     }
-                    it.play()
                 }
             }
         } catch (e: Exception) {
@@ -57,6 +74,10 @@ object NotificationSoundVibrationHelper {
         try {
             currentRingtone?.stop()
             currentRingtone = null
+            
+            currentMediaPlayer?.stop()
+            currentMediaPlayer?.release()
+            currentMediaPlayer = null
         } catch (e: Exception) {
             e.printStackTrace()
         }
