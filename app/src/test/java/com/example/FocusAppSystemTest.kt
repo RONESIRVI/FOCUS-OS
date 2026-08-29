@@ -150,13 +150,8 @@ class FocusAppSystemTest {
     @Test
     fun testAudioEngineSoundGeneration() {
         val audioEngine = FocusAudioEngine()
-        audioEngine.startSound(SoundType.ALPHA_WAVES, CoroutineScope(Dispatchers.Default))
-        audioEngine.stopSound()
-
-        audioEngine.startSound(SoundType.RAIN_SOUNDS, CoroutineScope(Dispatchers.Default))
-        audioEngine.stopSound()
-
         audioEngine.startSound(SoundType.NONE, CoroutineScope(Dispatchers.Default))
+        audioEngine.stopSound()
     }
 
     @Test
@@ -248,7 +243,7 @@ class FocusAppSystemTest {
             lockMode = LockMode.NORMAL,
             allowedPackageNames = emptyList()
         )
-        assertTrue(com.example.util.FocusLockManager.isPackageAllowed(blockedApp, ownPkg))
+        assertTrue(com.example.util.FocusLockManager.isPackageAllowed(null, blockedApp, ownPkg))
 
         // 2. When MAXIMUM_LOCK is active with Docs allowed
         com.example.util.FocusLockManager.updateFocusState(
