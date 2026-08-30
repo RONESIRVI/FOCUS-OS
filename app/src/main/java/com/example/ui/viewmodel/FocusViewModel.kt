@@ -514,6 +514,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             scheduledEndTime = scheduledEndTime,
             requiresPhoto = setup.requiresPhoto,
             requiresSelfie = setup.requiresSelfie,
+            whitelistProfile = setup.whitelistProfile,
             timestamp = System.currentTimeMillis()
         )
         

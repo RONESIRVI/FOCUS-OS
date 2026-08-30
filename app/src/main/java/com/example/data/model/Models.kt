@@ -29,6 +29,7 @@ data class FocusSession(
     val requiresSelfie: Boolean = false,
     val startPhotoUri: String? = null,
     val endSelfieUri: String? = null,
+    val whitelistProfile: String = "STRICT",
     val status: String = "COMPLETED" // "SCHEDULED", "ACTIVE", "COMPLETED", "MISSED"
 )
 

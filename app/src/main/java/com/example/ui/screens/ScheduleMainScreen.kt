@@ -287,7 +287,7 @@ fun ScheduleCard(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 val modeText = when (session.lockMode) {
-                    "MAXIMUM_LOCK" -> "Deep Work/Special Mode"
+                    "MAXIMUM_LOCK" -> if (session.whitelistProfile == "SPECIAL") "Special Whitelist Mode" else "Deep Work Mode"
                     "SOFT_LOCK" -> "Mindful Mode Enforced"
                     else -> "${session.lockMode} Mode Enforced"
                 }

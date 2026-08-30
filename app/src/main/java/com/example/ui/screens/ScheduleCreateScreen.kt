@@ -935,7 +935,7 @@ fun ScheduleCreateScreen(
                                         if (option.id == "DEEP_WORK" || option.id == "MINDFUL") {
                                             selectedWhitelistProfile = "STRICT"
                                         } else if (option.id == "SPECIAL") {
-                                            selectedWhitelistProfile = ""
+                                            selectedWhitelistProfile = "SPECIAL"
                                         }
                                     }
                             ) {
@@ -953,7 +953,7 @@ fun ScheduleCreateScreen(
                                             if (option.id == "DEEP_WORK" || option.id == "MINDFUL") {
                                                 selectedWhitelistProfile = "STRICT"
                                             } else if (option.id == "SPECIAL") {
-                                                selectedWhitelistProfile = ""
+                                                selectedWhitelistProfile = "SPECIAL"
                                             }
                                         },
                                         colors = RadioButtonDefaults.colors(
@@ -1067,9 +1067,9 @@ fun ScheduleCreateScreen(
                                         )
                                         if (selectedWhitelistProfile.isNotBlank()) {
                                             val currentAppsCount = when (selectedWhitelistProfile) {
-                                                "SPECIAL" -> whitelistedAppsSpecial.size
-                                                "MANUAL" -> whitelistedAppsManual.size
-                                                else -> whitelistedAppsStrict.size
+                                                "SPECIAL" -> whitelistedAppsSpecial.count { it.isAllowed }
+                                                "MANUAL" -> whitelistedAppsManual.count { it.isAllowed }
+                                                else -> whitelistedAppsStrict.count { it.isAllowed }
                                             }
                                             Text(
                                                 text = "${currentAppsCount} apps allowed during schedule",
