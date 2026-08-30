@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class TimerState(
     val isRunning: Boolean = false,
@@ -40,7 +41,8 @@ data class TimerState(
     val distractionAttempts: Int = 0,
     val selectedSound: SoundType = SoundType.NONE,
     val isScheduled: Boolean = false,
-    val isSpecialSession: Boolean = false
+    val isSpecialSession: Boolean = false,
+    val whitelistProfile: String = "STRICT"
 )
 
 class FocusTimerService : Service() {
@@ -77,8 +79,9 @@ class FocusTimerService : Service() {
                 val soundType = try { SoundType.valueOf(intent.getStringExtra("SOUND_TYPE") ?: "") } catch(e: Exception) { SoundType.NONE }
                 val requiresSelfie = intent.getBooleanExtra("REQUIRES_SELFIE", false)
                 val isScheduled = intent.getBooleanExtra("IS_SCHEDULED", false)
-                val isSpecialSession = intent.getBooleanExtra("IS_SPECIAL_WHITELIST_SESSION", false)
-                startTimer(duration, sessionName, subjectName, lockMode, soundType, requiresSelfie, isScheduled, isSpecialSession)
+                val whitelistProfile = intent.getStringExtra("WHITELIST_PROFILE") ?: if (intent.getBooleanExtra("IS_SPECIAL_WHITELIST_SESSION", false)) "SPECIAL" else "STRICT"
+                val isSpecialSession = intent.getBooleanExtra("IS_SPECIAL_WHITELIST_SESSION", false) || whitelistProfile == "SPECIAL"
+                startTimer(duration, sessionName, subjectName, lockMode, soundType, requiresSelfie, isScheduled, isSpecialSession, whitelistProfile)
             }
             "ACTION_START_PENDING_MONITOR" -> {
                 val sessionId = intent.getLongExtra("SESSION_ID", -1L)
@@ -209,7 +212,8 @@ class FocusTimerService : Service() {
         soundType: SoundType,
         requiresSelfie: Boolean = false,
         isScheduled: Boolean = false,
-        isSpecialSession: Boolean = false
+        isSpecialSession: Boolean = false,
+        whitelistProfile: String = if (isSpecialSession) "SPECIAL" else "STRICT"
     ) {
         FocusLockManager.clearPendingSchedule()
         val totalSecs = durationMinutes * 60
@@ -225,8 +229,26 @@ class FocusTimerService : Service() {
             lockMode = lockMode,
             selectedSound = soundType,
             isScheduled = isScheduled,
-            isSpecialSession = isSpecialSession
+            isSpecialSession = isSpecialSession,
+            whitelistProfile = whitelistProfile
         )
+
+        // Ensure FocusLockManager is armed with apps from DB for this profile
+        scope.launch(Dispatchers.IO) {
+            try {
+                val dao = com.example.data.db.AppDatabase.getDatabase(applicationContext).focusDao()
+                val apps = dao.getWhitelistedAppsList(whitelistProfile).filter { it.isAllowed }.map { it.packageName }
+                withContext(Dispatchers.Main) {
+                    FocusLockManager.updateFocusState(
+                        isActive = true,
+                        lockMode = lockMode,
+                        allowedPackageNames = apps
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("FocusTimerService", "Error syncing allowed apps for $whitelistProfile", e)
+            }
+        }
 
         val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
         wakeLock = powerManager.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "FocusApp::FocusTimerWakeLock")

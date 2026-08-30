@@ -271,6 +271,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun syncFocusLockState(state: TimerState) {
         val profile = when {
+            state.whitelistProfile.isNotBlank() -> state.whitelistProfile
             state.isSpecialSession -> "SPECIAL"
             else -> _setupState.value.whitelistProfile
         }
@@ -398,15 +399,17 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         val subject = if (setup.subjectName.isNotBlank()) setup.subjectName else name
         
         viewModelScope.launch(Dispatchers.IO) {
+            var actualProfile = setup.whitelistProfile
             if (scheduledId != null) {
                 val sessions = repository.allSessions.first()
                 val session = sessions.find { it.id == scheduledId }
                 if (session != null) {
+                    actualProfile = session.whitelistProfile
                     repository.updateSession(session.copy(status = "ACTIVE"))
                 }
             }
             
-            val profile = setup.whitelistProfile
+            val profile = actualProfile
             val dao = com.example.data.db.AppDatabase.getDatabase(context).focusDao()
             val apps = dao.getWhitelistedAppsList(profile).filter { it.isAllowed }.map { it.packageName }
             
@@ -426,6 +429,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                     putExtra("SOUND_TYPE", setup.selectedSound.name)
                     putExtra("REQUIRES_SELFIE", setup.requiresSelfie)
                     putExtra("IS_SCHEDULED", isScheduledSession)
+                    putExtra("WHITELIST_PROFILE", profile)
+                    putExtra("IS_SPECIAL_WHITELIST_SESSION", profile == "SPECIAL")
                 }
                 
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -461,7 +466,9 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             putExtra("LOCK_MODE", LockMode.MAXIMUM_LOCK.name)
             putExtra("SOUND_TYPE", SoundType.NONE.name)
             putExtra("REQUIRES_SELFIE", false)
-            putExtra("IS_SPECIAL_WHITELIST_SESSION", true) // custom flag
+            putExtra("IS_SCHEDULED", false)
+            putExtra("WHITELIST_PROFILE", whitelistType)
+            putExtra("IS_SPECIAL_WHITELIST_SESSION", whitelistType == "SPECIAL")
         }
         
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -755,7 +762,7 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.toggleAppWhitelist(packageName, isAllowed, profile)
             val updatedList = repository.getWhitelistedAppsList(profile).filter { it.isAllowed }.map { it.packageName }
-            val currentActiveProfile = if (_serviceTimerState.value.isSpecialSession) "SPECIAL" else _setupState.value.whitelistProfile
+            val currentActiveProfile = if (_serviceTimerState.value.isRunning) _serviceTimerState.value.whitelistProfile else _setupState.value.whitelistProfile
             if (currentActiveProfile == profile && _serviceTimerState.value.isRunning) {
                 FocusLockManager.updateFocusState(
                     isActive = true,
