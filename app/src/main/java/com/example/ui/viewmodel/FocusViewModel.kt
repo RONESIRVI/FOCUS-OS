@@ -693,56 +693,85 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     fun completeFocusSession() {
         val current = _serviceTimerState.value
         val scheduledId = _activeScheduledSessionId.value
-        
         val setup = _setupState.value
+        
         viewModelScope.launch(Dispatchers.IO) {
-            if (current.totalSeconds > 0 && !current.isSpecialSession) {
-                val completedSecs = current.totalSeconds - current.remainingSeconds
-                if (scheduledId != null) {
-                    val sessions = repository.allSessions.first()
-                    val existing = sessions.find { it.id == scheduledId }
-                    if (existing != null) {
-                        repository.updateSession(
-                            existing.copy(
-                                status = "COMPLETED",
-                                completedDurationSeconds = completedSecs,
-                                distractionAttempts = current.distractionAttempts,
-                                lockMode = current.lockMode.name,
-                                startPhotoUri = setup.startPhotoUri ?: existing.startPhotoUri,
-                                endSelfieUri = setup.endSelfieUri ?: existing.endSelfieUri
-                            )
-                        )
-                    } else {
-                        val session = FocusSession(
-                            sessionName = current.sessionName,
-                            subjectName = current.subjectName,
-                            targetDurationMinutes = current.totalSeconds / 60,
-                            completedDurationSeconds = completedSecs,
-                            lockMode = current.lockMode.name,
-                            distractionAttempts = current.distractionAttempts,
-                            allowedAppsCount = whitelistedAppsManual.value.size,
+            val totalSec = if (current.totalSeconds > 0) current.totalSeconds else (setup.durationMinutes * 60)
+            val completedSecs = if (current.totalSeconds > 0) {
+                if (current.remainingSeconds <= 0) totalSec else maxOf(1, totalSec - current.remainingSeconds)
+            } else {
+                maxOf(1, setup.durationMinutes * 60)
+            }
+            
+            val currentProfile = when {
+                current.whitelistProfile.isNotBlank() -> current.whitelistProfile
+                current.isSpecialSession -> "SPECIAL"
+                setup.whitelistProfile.isNotBlank() -> setup.whitelistProfile
+                else -> "MANUAL"
+            }
+            
+            val dao = com.example.data.db.AppDatabase.getDatabase(getApplication()).focusDao()
+            val allowedAppsCount = try {
+                dao.getWhitelistedAppsList(currentProfile).count { it.isAllowed }
+            } catch (e: Exception) {
+                0
+            }
+
+            val sessionName = if (current.sessionName.isNotBlank()) current.sessionName else (if (setup.sessionName.isNotBlank()) setup.sessionName else "Deep Focus")
+            val subjectName = if (current.subjectName.isNotBlank()) current.subjectName else (if (setup.subjectName.isNotBlank()) setup.subjectName else sessionName)
+            val lockMode = if (current.lockMode != LockMode.NORMAL) current.lockMode.name else setup.lockMode.name
+
+            if (scheduledId != null) {
+                val existing = repository.getSessionById(scheduledId)
+                if (existing != null) {
+                    repository.updateSession(
+                        existing.copy(
                             status = "COMPLETED",
-                            startPhotoUri = setup.startPhotoUri,
-                            endSelfieUri = setup.endSelfieUri
+                            completedDurationSeconds = completedSecs,
+                            distractionAttempts = current.distractionAttempts,
+                            lockMode = lockMode,
+                            whitelistProfile = currentProfile,
+                            allowedAppsCount = allowedAppsCount,
+                            timestamp = System.currentTimeMillis(),
+                            startPhotoUri = setup.startPhotoUri ?: existing.startPhotoUri,
+                            endSelfieUri = setup.endSelfieUri ?: existing.endSelfieUri
                         )
-                        repository.saveSession(session)
-                    }
+                    )
                 } else {
                     val session = FocusSession(
-                        sessionName = current.sessionName,
-                        subjectName = current.subjectName,
-                        targetDurationMinutes = current.totalSeconds / 60,
+                        sessionName = sessionName,
+                        subjectName = subjectName,
+                        targetDurationMinutes = totalSec / 60,
                         completedDurationSeconds = completedSecs,
-                        lockMode = current.lockMode.name,
+                        lockMode = lockMode,
                         distractionAttempts = current.distractionAttempts,
-                        allowedAppsCount = whitelistedAppsManual.value.size,
+                        allowedAppsCount = allowedAppsCount,
+                        whitelistProfile = currentProfile,
                         status = "COMPLETED",
+                        timestamp = System.currentTimeMillis(),
                         startPhotoUri = setup.startPhotoUri,
                         endSelfieUri = setup.endSelfieUri
                     )
                     repository.saveSession(session)
                 }
+            } else {
+                val session = FocusSession(
+                    sessionName = sessionName,
+                    subjectName = subjectName,
+                    targetDurationMinutes = totalSec / 60,
+                    completedDurationSeconds = completedSecs,
+                    lockMode = lockMode,
+                    distractionAttempts = current.distractionAttempts,
+                    allowedAppsCount = allowedAppsCount,
+                    whitelistProfile = currentProfile,
+                    status = "COMPLETED",
+                    timestamp = System.currentTimeMillis(),
+                    startPhotoUri = setup.startPhotoUri,
+                    endSelfieUri = setup.endSelfieUri
+                )
+                repository.saveSession(session)
             }
+
             _activeScheduledSessionId.value = null
             timerService?.stopTimer()
             val context = getApplication<android.app.Application>()

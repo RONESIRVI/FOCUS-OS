@@ -106,12 +106,12 @@ fun ScheduleMainScreen(
                 Tab(
                     selected = selectedTabIndex == 0,
                     onClick = { selectedTabIndex = 0 },
-                    text = { Text("UPCOMING", fontWeight = FontWeight.Bold) }
+                    text = { Text("UPCOMING (${scheduledSessions.size})", fontWeight = FontWeight.Bold) }
                 )
                 Tab(
                     selected = selectedTabIndex == 1,
                     onClick = { selectedTabIndex = 1 },
-                    text = { Text("HISTORY", fontWeight = FontWeight.Bold) }
+                    text = { Text("HISTORY (${historySessions.size})", fontWeight = FontWeight.Bold) }
                 )
             }
 
