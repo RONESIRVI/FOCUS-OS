@@ -275,16 +275,21 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             state.isSpecialSession -> "SPECIAL"
             else -> _setupState.value.whitelistProfile
         }
-        val allowedPackages = when (profile) {
-            "SPECIAL" -> whitelistedAppsSpecial.value.filter { it.isAllowed }.map { it.packageName }
-            "STRICT" -> whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
-            else -> whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val dao = com.example.data.db.AppDatabase.getDatabase(getApplication()).focusDao()
+                val allowedPackages = dao.getWhitelistedAppsList(profile).filter { it.isAllowed }.map { it.packageName }
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                    FocusLockManager.updateFocusState(
+                        isActive = state.isRunning,
+                        lockMode = state.lockMode,
+                        allowedPackageNames = allowedPackages
+                    )
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("FocusViewModel", "Error syncing focus state for $profile", e)
+            }
         }
-        FocusLockManager.updateFocusState(
-            isActive = state.isRunning,
-            lockMode = state.lockMode,
-            allowedPackageNames = allowedPackages
-        )
     }
 
     private val _activeScheduledSessionId = MutableStateFlow<Long?>(null)
@@ -292,9 +297,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadScheduledSession(sessionId: Long) {
         _activeScheduledSessionId.value = sessionId
-        viewModelScope.launch {
-            val sessions = repository.allSessions.first()
-            val session = sessions.find { it.id == sessionId }
+        viewModelScope.launch(Dispatchers.IO) {
+            val session = repository.getSessionById(sessionId)
             if (session != null) {
                 _setupState.value = _setupState.value.copy(
                     sessionName = session.sessionName,
