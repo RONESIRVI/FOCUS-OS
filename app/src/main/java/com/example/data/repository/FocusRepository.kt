@@ -20,52 +20,82 @@ class FocusRepository(private val focusDao: FocusDao) {
     fun whitelistedApps(profile: String = "MANUAL"): Flow<List<AllowedApp>> = focusDao.getWhitelistedApps(profile)
     val allSubjects: Flow<List<SubjectTask>> = focusDao.getAllSubjects()
 
+    suspend fun getWhitelistedAppsList(profile: String = "MANUAL"): List<AllowedApp> = focusDao.getWhitelistedAppsList(profile)
+
     suspend fun initializeDefaultDataIfEmpty(context: Context) {
         val existingAppsManual = allowedApps("MANUAL").first()
         val existingAppsStrict = allowedApps("STRICT").first()
         val existingAppsSpecial = allowedApps("SPECIAL").first()
 
-        if (existingAppsManual.isEmpty() || existingAppsStrict.isEmpty() || existingAppsSpecial.isEmpty()) {
-            val packageManager = context.packageManager
-            val intent = Intent(Intent.ACTION_MAIN, null).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
-            }
-            val resolveInfoList: List<ResolveInfo> = packageManager.queryIntentActivities(intent, 0)
-            
-            val appsToInsert = mutableListOf<AllowedApp>()
-            
-            val uniquePackages = resolveInfoList.mapNotNull { resolveInfo ->
-                val packageName = resolveInfo.activityInfo.packageName
-                val appName = resolveInfo.loadLabel(packageManager).toString()
-                if (packageName.isNotEmpty()) Pair(packageName, appName) else null
-            }.distinctBy { it.first }
-            
-            uniquePackages.forEach { (packageName, appName) ->
-                val isStudyTool = packageName.contains("calculator", ignoreCase = true) ||
-                        packageName.contains("dictionary", ignoreCase = true) ||
-                        packageName.contains("drive", ignoreCase = true) ||
-                        packageName.contains("classroom", ignoreCase = true) ||
-                        appName.contains("calculator", ignoreCase = true) ||
-                        appName.contains("dictionary", ignoreCase = true) ||
-                        appName.contains("notes", ignoreCase = true) ||
-                        appName.contains("clock", ignoreCase = true)
+        val defaultPopularApps = listOf(
+            Triple("com.google.android.youtube", "YouTube", "Entertainment"),
+            Triple("com.instagram.android", "Instagram", "Social"),
+            Triple("com.whatsapp", "WhatsApp", "Communication"),
+            Triple("com.android.chrome", "Google Chrome", "Browser"),
+            Triple("org.telegram.messenger", "Telegram", "Communication"),
+            Triple("com.facebook.katana", "Facebook", "Social"),
+            Triple("com.twitter.android", "X (Twitter)", "Social"),
+            Triple("com.zhiliaoapp.musically", "TikTok", "Entertainment"),
+            Triple("com.reddit.frontpage", "Reddit", "Social"),
+            Triple("com.spotify.music", "Spotify", "Music"),
+            Triple("com.netflix.mediaclient", "Netflix", "Entertainment"),
+            Triple("com.snapchat.android", "Snapchat", "Social"),
+            Triple("com.google.android.calculator", "Calculator", "Study Utility"),
+            Triple("com.google.android.keep", "Google Keep Notes", "Study Utility"),
+            Triple("com.google.android.apps.docs", "Google Drive", "Study Utility"),
+            Triple("com.google.android.apps.classroom", "Google Classroom", "Study Utility"),
+            Triple("com.google.android.deskclock", "Clock & Timer", "Study Utility"),
+            Triple("com.google.android.gm", "Gmail", "Productivity")
+        )
 
-                val category = if (isStudyTool) "Study Utility" else "Application"
+        val packageManager = context.packageManager
+        val intent = Intent(Intent.ACTION_MAIN, null).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        val resolveInfoList: List<ResolveInfo> = try {
+            packageManager.queryIntentActivities(intent, 0)
+        } catch (e: Exception) {
+            emptyList()
+        }
 
-                if (existingAppsManual.isEmpty()) {
-                    appsToInsert.add(AllowedApp(packageName, "MANUAL", appName, category, isStudyTool))
-                }
-                if (existingAppsStrict.isEmpty()) {
-                    appsToInsert.add(AllowedApp(packageName, "STRICT", appName, category, isStudyTool))
-                }
-                if (existingAppsSpecial.isEmpty()) {
-                    appsToInsert.add(AllowedApp(packageName, "SPECIAL", appName, category, isStudyTool))
+        val allUniqueApps = mutableMapOf<String, Pair<String, String>>()
+
+        // Add standard curated catalog first
+        defaultPopularApps.forEach { (pkg, name, cat) ->
+            allUniqueApps[pkg] = Pair(name, cat)
+        }
+
+        // Merge installed activities
+        resolveInfoList.forEach { resolveInfo ->
+            val pkg = resolveInfo.activityInfo.packageName
+            val label = resolveInfo.loadLabel(packageManager).toString()
+            if (pkg.isNotEmpty() && !allUniqueApps.containsKey(pkg)) {
+                val isStudy = pkg.contains("calc", true) || pkg.contains("note", true) || pkg.contains("clock", true) || pkg.contains("drive", true)
+                allUniqueApps[pkg] = Pair(label, if (isStudy) "Study Utility" else "Application")
+            }
+        }
+
+        val appsToInsert = mutableListOf<AllowedApp>()
+
+        listOf("MANUAL", "STRICT", "SPECIAL").forEach { profile ->
+            val existing = when (profile) {
+                "STRICT" -> existingAppsStrict
+                "SPECIAL" -> existingAppsSpecial
+                else -> existingAppsManual
+            }
+            val existingPkgs = existing.map { it.packageName }.toSet()
+
+            allUniqueApps.forEach { (pkg, pair) ->
+                if (!existingPkgs.contains(pkg)) {
+                    val (appName, category) = pair
+                    val isStudyTool = category == "Study Utility" || appName.contains("calc", true) || appName.contains("note", true) || appName.contains("drive", true)
+                    appsToInsert.add(AllowedApp(pkg, profile, appName, category, isAllowed = isStudyTool))
                 }
             }
-            
-            if (appsToInsert.isNotEmpty()) {
-                focusDao.insertOrUpdateApps(appsToInsert)
-            }
+        }
+
+        if (appsToInsert.isNotEmpty()) {
+            focusDao.insertOrUpdateApps(appsToInsert)
         }
     }
 

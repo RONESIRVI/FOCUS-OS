@@ -270,11 +270,14 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun syncFocusLockState(state: TimerState) {
-        val isScheduledSession = state.isScheduled || _activeScheduledSessionId.value != null
-        val allowedPackages = if (isScheduledSession) {
-            whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
-        } else {
-            whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
+        val profile = when {
+            state.isSpecialSession -> "SPECIAL"
+            else -> _setupState.value.whitelistProfile
+        }
+        val allowedPackages = when (profile) {
+            "SPECIAL" -> whitelistedAppsSpecial.value.filter { it.isAllowed }.map { it.packageName }
+            "STRICT" -> whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
+            else -> whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
         }
         FocusLockManager.updateFocusState(
             isActive = state.isRunning,
@@ -751,7 +754,15 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleAppAllowed(packageName: String, isAllowed: Boolean, profile: String = "MANUAL") {
         viewModelScope.launch {
             repository.toggleAppWhitelist(packageName, isAllowed, profile)
-            syncFocusLockState(_serviceTimerState.value)
+            val updatedList = repository.getWhitelistedAppsList(profile).filter { it.isAllowed }.map { it.packageName }
+            val currentActiveProfile = if (_serviceTimerState.value.isSpecialSession) "SPECIAL" else _setupState.value.whitelistProfile
+            if (currentActiveProfile == profile && _serviceTimerState.value.isRunning) {
+                FocusLockManager.updateFocusState(
+                    isActive = true,
+                    lockMode = _serviceTimerState.value.lockMode,
+                    allowedPackageNames = updatedList
+                )
+            }
         }
     }
 
