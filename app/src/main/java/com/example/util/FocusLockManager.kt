@@ -11,6 +11,7 @@ import com.example.data.model.LockMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.CopyOnWriteArraySet
 
 object FocusLockManager {
@@ -140,24 +141,20 @@ object FocusLockManager {
         pendingSessionId = sessionId
         pendingSessionName = sessionName
         if (context != null) {
-            val prefs = context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE)
-            val allowedString = prefs.getString("scheduled_apps_$sessionId", null)
-            if (!allowedString.isNullOrEmpty()) {
-                val allowedList = allowedString.split(",").filter { it.isNotBlank() }
-                whitelistedPackages.clear()
-                whitelistedPackages.addAll(allowedList)
-                Log.d(TAG, "Pending schedule set from prefs: sessionId=$sessionId, sessionName=$sessionName, allowedApps=${allowedList.size}")
-            } else {
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        val dao = AppDatabase.getDatabase(context.applicationContext).focusDao()
-                        val apps = dao.getWhitelistedAppsList("STRICT").map { it.packageName }
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val dao = com.example.data.db.AppDatabase.getDatabase(context.applicationContext).focusDao()
+                    val session = dao.getSessionById(sessionId)
+                    val profile = session?.whitelistProfile ?: "STRICT"
+                    val apps = dao.getWhitelistedAppsList(profile).filter { it.isAllowed }.map { it.packageName }
+                    
+                    withContext(Dispatchers.Main) {
                         whitelistedPackages.clear()
                         whitelistedPackages.addAll(apps)
-                        Log.d(TAG, "Pending schedule set from DB: sessionId=$sessionId, sessionName=$sessionName, allowedApps=${apps.size}")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error loading whitelisted apps from DB for pending schedule", e)
+                        Log.d(TAG, "Pending schedule set from DB: sessionId=$sessionId, sessionName=$sessionName, profile=$profile, allowedApps=${apps.size}")
                     }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error loading whitelisted apps from DB for pending schedule", e)
                 }
             }
 

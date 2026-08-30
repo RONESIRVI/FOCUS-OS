@@ -300,7 +300,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                     scheduledStartTime = session.scheduledStartTime,
                     scheduledEndTime = session.scheduledEndTime,
                     requiresPhoto = session.requiresPhoto,
-                    requiresSelfie = session.requiresSelfie
+                    requiresSelfie = session.requiresSelfie,
+                    whitelistProfile = session.whitelistProfile
                 )
             }
         }
@@ -320,7 +321,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                     scheduledStartTime = session.scheduledStartTime,
                     scheduledEndTime = session.scheduledEndTime,
                     requiresPhoto = session.requiresPhoto,
-                    requiresSelfie = session.requiresSelfie
+                    requiresSelfie = session.requiresSelfie,
+                    whitelistProfile = session.whitelistProfile
                 )
             }
             kotlinx.coroutines.withContext(Dispatchers.Main) {
@@ -386,53 +388,49 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     fun startFocusSession() {
         val setup = _setupState.value
         val context = getApplication<Application>()
-        val sharedPrefs = context.getSharedPreferences("schedule_prefs", android.content.Context.MODE_PRIVATE)
-
         val scheduledId = _activeScheduledSessionId.value
+        val isScheduledSession = scheduledId != null
         
-        if (scheduledId != null) {
-            viewModelScope.launch(Dispatchers.IO) {
+        val name = if (setup.sessionName.isNotBlank()) setup.sessionName else "Deep Focus"
+        val subject = if (setup.subjectName.isNotBlank()) setup.subjectName else name
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            if (scheduledId != null) {
                 val sessions = repository.allSessions.first()
                 val session = sessions.find { it.id == scheduledId }
                 if (session != null) {
                     repository.updateSession(session.copy(status = "ACTIVE"))
                 }
             }
-        }
-
-        // Immediately update FocusLockManager allowed packages
-        val isScheduledSession = scheduledId != null || _activeScheduledSessionId.value != null
-        val allowedList = if (scheduledId != null && sharedPrefs.getString("scheduled_apps_$scheduledId", null) != null) {
-            sharedPrefs.getString("scheduled_apps_$scheduledId", "")!!.split(",").filter { it.isNotBlank() }
-        } else if (isScheduledSession) {
-            whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
-        } else {
-            whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
-        }
-        FocusLockManager.updateFocusState(
-            isActive = true,
-            lockMode = setup.lockMode,
-            allowedPackageNames = allowedList
-        )
-
-        val name = if (setup.sessionName.isNotBlank()) setup.sessionName else "Deep Focus"
-        val subject = if (setup.subjectName.isNotBlank()) setup.subjectName else name
-
-        val intent = Intent(context, FocusTimerService::class.java).apply {
-            action = "ACTION_START_TIMER"
-            putExtra("DURATION", setup.durationMinutes)
-            putExtra("SESSION_NAME", name)
-            putExtra("SUBJECT_NAME", subject)
-            putExtra("LOCK_MODE", setup.lockMode.name)
-            putExtra("SOUND_TYPE", setup.selectedSound.name)
-            putExtra("REQUIRES_SELFIE", setup.requiresSelfie)
-            putExtra("IS_SCHEDULED", isScheduledSession)
-        }
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            context.startForegroundService(intent)
-        } else {
-            context.startService(intent)
+            
+            val profile = setup.whitelistProfile
+            val dao = com.example.data.db.AppDatabase.getDatabase(context).focusDao()
+            val apps = dao.getWhitelistedAppsList(profile).filter { it.isAllowed }.map { it.packageName }
+            
+            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                com.example.util.FocusLockManager.updateFocusState(
+                    isActive = true,
+                    lockMode = setup.lockMode,
+                    allowedPackageNames = apps
+                )
+                
+                val intent = Intent(context, com.example.services.FocusTimerService::class.java).apply {
+                    action = "ACTION_START_TIMER"
+                    putExtra("DURATION", setup.durationMinutes)
+                    putExtra("SESSION_NAME", name)
+                    putExtra("SUBJECT_NAME", subject)
+                    putExtra("LOCK_MODE", setup.lockMode.name)
+                    putExtra("SOUND_TYPE", setup.selectedSound.name)
+                    putExtra("REQUIRES_SELFIE", setup.requiresSelfie)
+                    putExtra("IS_SCHEDULED", isScheduledSession)
+                }
+                
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+            }
         }
     }
 
