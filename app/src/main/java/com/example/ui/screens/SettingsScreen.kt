@@ -1085,13 +1085,32 @@ fun SettingsScreen(
             else -> "PRIME_SIREN"
         }
 
-        val primeSounds = listOf(
-            "PRIME_SIREN" to "📢 Prime Dual Frequency Siren Alert",
-            "PRIME_QUANTUM" to "⚡ Prime Quantum Pulse Chime",
-            "PRIME_ZEN" to "🔮 Prime Zen Solfeggio 528Hz Bell",
-            "PRIME_STROBE" to "🚨 Prime High Strobe Warning Beep",
-            "SILENT" to "🔇 Silent (Mute Sound / Vibrate Only)"
+        var selectedBrandFilter by remember { mutableStateOf("ALL") }
+        val allSounds = com.example.util.NotificationSoundVibrationHelper.NOTIFICATION_SOUNDS_CATALOG
+
+        val brandFilters = listOf(
+            "ALL" to "All Sounds (${allSounds.size})",
+            "IPHONE" to "🍎 iPhone (iOS)",
+            "MOTO" to "📱 Motorola",
+            "SAMSUNG" to "🌟 Samsung Galaxy",
+            "PIXEL" to "🔵 Google Pixel",
+            "OTHER_OEM" to "🔴 OnePlus / Xiaomi",
+            "RETRO" to "☎️ Nokia",
+            "PRIME" to "📢 Prime Focus"
         )
+
+        val filteredSounds = remember(selectedBrandFilter) {
+            when (selectedBrandFilter) {
+                "IPHONE" -> allSounds.filter { it.brand.contains("iPhone") }
+                "MOTO" -> allSounds.filter { it.brand.contains("Motorola") }
+                "SAMSUNG" -> allSounds.filter { it.brand.contains("Samsung") }
+                "PIXEL" -> allSounds.filter { it.brand.contains("Pixel") }
+                "OTHER_OEM" -> allSounds.filter { it.brand.contains("OnePlus") || it.brand.contains("Xiaomi") }
+                "RETRO" -> allSounds.filter { it.brand.contains("Nokia") }
+                "PRIME" -> allSounds.filter { it.brand.contains("Prime") }
+                else -> allSounds
+            }
+        }
 
         AlertDialog(
             onDismissRequest = {
@@ -1102,77 +1121,161 @@ fun SettingsScreen(
                 Column {
                     Text(text = catTitle, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(text = "Choose Prime Sound • Live Audio Test on Select", color = FocusPrimary, fontSize = 11.sp)
+                    Text(text = "Tap to listen & select default OEM notification sounds", color = FocusPrimary, fontSize = 11.sp)
                 }
             },
             text = {
-                Column {
-                    val isCustomSelected = !primeSounds.any { it.first == currentSelectedKey } && currentSelectedKey.isNotEmpty()
-                    
-                    if (isCustomSelected) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = true,
-                                onClick = { com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, currentSelectedKey) },
-                                colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = "🎵 Custom Selected Audio",
-                                color = FocusPrimary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Brand Filter Chips
+                    androidx.compose.foundation.lazy.LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                    ) {
+                        items(brandFilters) { (filterKey, filterLabel) ->
+                            val isFilterActive = selectedBrandFilter == filterKey
+                            FilterChip(
+                                selected = isFilterActive,
+                                onClick = { selectedBrandFilter = filterKey },
+                                label = { Text(filterLabel, fontSize = 11.sp, fontWeight = if (isFilterActive) FontWeight.Bold else FontWeight.Normal) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = FocusPrimary.copy(alpha = 0.25f),
+                                    selectedLabelColor = FocusPrimary,
+                                    containerColor = FocusSurfaceVariant.copy(alpha = 0.3f),
+                                    labelColor = FocusTextSecondary
+                                )
                             )
                         }
                     }
 
-                    primeSounds.forEach { (key, label) ->
-                        val isSelected = currentSelectedKey == key
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    when (targetCat) {
-                                        "SCHEDULE" -> notifScheduleSound = key
-                                        "WARNING" -> notifWarningSound = key
-                                        "COMPLETE" -> notifCompleteSound = key
-                                        "SOFTLOCK" -> notifSoftlockSound = key
+                    // Sound List
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 380.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        val isCustomSelected = !allSounds.any { it.key == currentSelectedKey } && currentSelectedKey.isNotEmpty()
+                        if (isCustomSelected) {
+                            item {
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = FocusPrimary.copy(alpha = 0.15f),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.5f)),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 4.dp)
+                                        .clickable {
+                                            com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, currentSelectedKey)
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(
+                                            selected = true,
+                                            onClick = { com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, currentSelectedKey) },
+                                            colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(text = "🎵 Custom Selected Audio", color = FocusPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                            Text(text = currentSelectedKey, color = FocusTextSecondary, fontSize = 10.sp, maxLines = 1)
+                                        }
                                     }
-                                    sharedPrefs.edit().putString(prefKey, key).apply()
-                                    com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, key)
                                 }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = {
-                                    when (targetCat) {
-                                        "SCHEDULE" -> notifScheduleSound = key
-                                        "WARNING" -> notifWarningSound = key
-                                        "COMPLETE" -> notifCompleteSound = key
-                                        "SOFTLOCK" -> notifSoftlockSound = key
+                            }
+                        }
+
+                        items(filteredSounds) { item ->
+                            val isSelected = currentSelectedKey == item.key
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) FocusPrimary.copy(alpha = 0.12f) else Color.Transparent,
+                                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.4f)) else null,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        when (targetCat) {
+                                            "SCHEDULE" -> notifScheduleSound = item.key
+                                            "WARNING" -> notifWarningSound = item.key
+                                            "COMPLETE" -> notifCompleteSound = item.key
+                                            "SOFTLOCK" -> notifSoftlockSound = item.key
+                                        }
+                                        sharedPrefs.edit().putString(prefKey, item.key).apply()
+                                        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, item.key)
                                     }
-                                    sharedPrefs.edit().putString(prefKey, key).apply()
-                                    com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, key)
-                                },
-                                colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = label,
-                                color = if (isSelected) FocusPrimary else Color.White,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 13.sp
-                            )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 6.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = {
+                                            when (targetCat) {
+                                                "SCHEDULE" -> notifScheduleSound = item.key
+                                                "WARNING" -> notifWarningSound = item.key
+                                                "COMPLETE" -> notifCompleteSound = item.key
+                                                "SOFTLOCK" -> notifSoftlockSound = item.key
+                                            }
+                                            sharedPrefs.edit().putString(prefKey, item.key).apply()
+                                            com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, item.key)
+                                        },
+                                        colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "${item.brandEmoji} ${item.title}",
+                                                color = if (isSelected) FocusPrimary else Color.White,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                fontSize = 13.sp
+                                            )
+                                            if (item.badge != null) {
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Surface(
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = if (isSelected) FocusPrimary.copy(alpha = 0.2f) else FocusSurfaceVariant.copy(alpha = 0.5f)
+                                                ) {
+                                                    Text(
+                                                        text = item.badge,
+                                                        fontSize = 9.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isSelected) FocusPrimary else FocusTextSecondary,
+                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        Text(
+                                            text = item.description,
+                                            color = FocusTextSecondary,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            com.example.util.NotificationSoundVibrationHelper.playSoundKey(context, item.key)
+                                        },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = "Test Sound",
+                                            tint = if (isSelected) FocusPrimary else FocusTextSecondary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
-
                 }
             },
             confirmButton = {
@@ -1188,17 +1291,17 @@ fun SettingsScreen(
                                 intent.putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
                                 ringtonePickerLauncher.launch(intent)
                             }
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(imageVector = Icons.Default.PhoneIphone, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Icon(imageVector = Icons.Default.PhoneIphone, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "System Notifications",
+                            text = "Browse Phone Native Ringtone Library",
                             color = FocusPrimary,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            fontSize = 13.sp
                         )
                     }
                     Divider(color = FocusSurfaceVariant)
@@ -1208,15 +1311,17 @@ fun SettingsScreen(
                             .clickable {
                                 audioFilePickerLauncher.launch(arrayOf("audio/*"))
                             }
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
+                        Icon(imageVector = Icons.Default.AudioFile, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "📁 Pick Audio File from Storage",
+                            text = "Pick Custom Audio File from Storage",
                             color = FocusPrimary,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            fontSize = 13.sp
                         )
                     }
                     Divider(color = FocusSurfaceVariant)
@@ -1445,15 +1550,12 @@ fun PermissionRowItem(
 }
 
 fun getSoundLabel(key: String): String {
-    if (key.startsWith("content://")) return "📱 Custom Phone Ringtone"
-    return when (key) {
-        "PRIME_SIREN" -> "📢 Prime Dual Siren Alert"
-        "PRIME_QUANTUM" -> "⚡ Prime Quantum Pulse"
-        "PRIME_ZEN" -> "🔮 Prime Zen Crystal Bell"
-        "PRIME_STROBE" -> "🚨 Prime High Strobe Warning"
-        "SILENT" -> "🔇 Silent (No Sound)"
-        else -> "📢 Prime Dual Siren Alert"
+    if (key.startsWith("content://")) return "📱 Custom Audio File"
+    val item = com.example.util.NotificationSoundVibrationHelper.NOTIFICATION_SOUNDS_CATALOG.find { it.key == key }
+    if (item != null) {
+        return "${item.brandEmoji} ${item.title}"
     }
+    return "📢 Prime Dual Siren Alert"
 }
 
 @Composable
