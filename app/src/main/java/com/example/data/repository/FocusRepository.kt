@@ -22,32 +22,7 @@ class FocusRepository(private val focusDao: FocusDao) {
 
     suspend fun getWhitelistedAppsList(profile: String = "MANUAL"): List<AllowedApp> = focusDao.getWhitelistedAppsList(profile)
 
-    suspend fun initializeDefaultDataIfEmpty(context: Context) {
-        val existingAppsManual = allowedApps("MANUAL").first()
-        val existingAppsStrict = allowedApps("STRICT").first()
-        val existingAppsSpecial = allowedApps("SPECIAL").first()
-
-        val defaultPopularApps = listOf(
-            Triple("com.google.android.youtube", "YouTube", "Entertainment"),
-            Triple("com.instagram.android", "Instagram", "Social"),
-            Triple("com.whatsapp", "WhatsApp", "Communication"),
-            Triple("com.android.chrome", "Google Chrome", "Browser"),
-            Triple("org.telegram.messenger", "Telegram", "Communication"),
-            Triple("com.facebook.katana", "Facebook", "Social"),
-            Triple("com.twitter.android", "X (Twitter)", "Social"),
-            Triple("com.zhiliaoapp.musically", "TikTok", "Entertainment"),
-            Triple("com.reddit.frontpage", "Reddit", "Social"),
-            Triple("com.spotify.music", "Spotify", "Music"),
-            Triple("com.netflix.mediaclient", "Netflix", "Entertainment"),
-            Triple("com.snapchat.android", "Snapchat", "Social"),
-            Triple("com.google.android.calculator", "Calculator", "Study Utility"),
-            Triple("com.google.android.keep", "Google Keep Notes", "Study Utility"),
-            Triple("com.google.android.apps.docs", "Google Drive", "Study Utility"),
-            Triple("com.google.android.apps.classroom", "Google Classroom", "Study Utility"),
-            Triple("com.google.android.deskclock", "Clock & Timer", "Study Utility"),
-            Triple("com.google.android.gm", "Gmail", "Productivity")
-        )
-
+    suspend fun syncInstalledApps(context: Context) {
         val packageManager = context.packageManager
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
@@ -58,37 +33,60 @@ class FocusRepository(private val focusDao: FocusDao) {
             emptyList()
         }
 
-        val allUniqueApps = mutableMapOf<String, Pair<String, String>>()
-
-        // Add standard curated catalog first
-        defaultPopularApps.forEach { (pkg, name, cat) ->
-            allUniqueApps[pkg] = Pair(name, cat)
-        }
-
-        // Merge installed activities
+        val installedApps = mutableMapOf<String, Pair<String, String>>()
         resolveInfoList.forEach { resolveInfo ->
-            val pkg = resolveInfo.activityInfo.packageName
-            val label = resolveInfo.loadLabel(packageManager).toString()
-            if (pkg.isNotEmpty() && !allUniqueApps.containsKey(pkg)) {
-                val isStudy = pkg.contains("calc", true) || pkg.contains("note", true) || pkg.contains("clock", true) || pkg.contains("drive", true)
-                allUniqueApps[pkg] = Pair(label, if (isStudy) "Study Utility" else "Application")
+            val pkg = resolveInfo.activityInfo?.packageName
+            if (!pkg.isNullOrEmpty() && pkg != context.packageName) {
+                val label = try {
+                    resolveInfo.loadLabel(packageManager)?.toString()?.takeIf { it.isNotBlank() } ?: pkg
+                } catch (e: Exception) {
+                    pkg
+                }
+                val isStudy = pkg.contains("calc", true) || 
+                              pkg.contains("note", true) || 
+                              pkg.contains("clock", true) || 
+                              pkg.contains("drive", true) || 
+                              pkg.contains("doc", true) || 
+                              pkg.contains("sheet", true) ||
+                              label.contains("calc", true) ||
+                              label.contains("note", true) ||
+                              label.contains("clock", true)
+                val category = if (isStudy) "Study Utility" else "Application"
+                installedApps[pkg] = Pair(label, category)
             }
         }
+
+        val installedPackages = installedApps.keys.toList()
+
+        // Remove any apps from DB that are no longer installed on device
+        if (installedPackages.isNotEmpty()) {
+            focusDao.deleteUninstalledApps(installedPackages)
+        }
+
+        val existingAppsManual = allowedApps("MANUAL").first().associateBy { it.packageName }
+        val existingAppsStrict = allowedApps("STRICT").first().associateBy { it.packageName }
+        val existingAppsSpecial = allowedApps("SPECIAL").first().associateBy { it.packageName }
 
         val appsToInsert = mutableListOf<AllowedApp>()
 
         listOf("MANUAL", "STRICT", "SPECIAL").forEach { profile ->
-            val existing = when (profile) {
+            val existingMap = when (profile) {
                 "STRICT" -> existingAppsStrict
                 "SPECIAL" -> existingAppsSpecial
                 else -> existingAppsManual
             }
-            val existingPkgs = existing.map { it.packageName }.toSet()
 
-            allUniqueApps.forEach { (pkg, pair) ->
-                if (!existingPkgs.contains(pkg)) {
-                    val (appName, category) = pair
-                    val isStudyTool = category == "Study Utility" || appName.contains("calc", true) || appName.contains("note", true) || appName.contains("drive", true)
+            installedApps.forEach { (pkg, pair) ->
+                val (appName, category) = pair
+                val existingApp = existingMap[pkg]
+                if (existingApp != null) {
+                    // Update name and category if changed, but keep user's isAllowed choice
+                    if (existingApp.appName != appName || existingApp.category != category) {
+                        appsToInsert.add(existingApp.copy(appName = appName, category = category))
+                    }
+                } else {
+                    // New installed app - set default allowed status
+                    val isStudyTool = category == "Study Utility"
                     appsToInsert.add(AllowedApp(pkg, profile, appName, category, isAllowed = isStudyTool))
                 }
             }
@@ -97,6 +95,10 @@ class FocusRepository(private val focusDao: FocusDao) {
         if (appsToInsert.isNotEmpty()) {
             focusDao.insertOrUpdateApps(appsToInsert)
         }
+    }
+
+    suspend fun initializeDefaultDataIfEmpty(context: Context) {
+        syncInstalledApps(context)
     }
 
     suspend fun toggleAppWhitelist(packageName: String, isAllowed: Boolean, profile: String = "MANUAL") {

@@ -245,10 +245,14 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
-        viewModelScope.launch {
-            repository.initializeDefaultDataIfEmpty(application)
-        }
+        refreshInstalledApps()
         bindTimerService()
+    }
+
+    fun refreshInstalledApps() {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.syncInstalledApps(getApplication())
+        }
     }
 
     private fun bindTimerService() {

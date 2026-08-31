@@ -47,6 +47,12 @@ interface FocusDao {
     @Query("SELECT * FROM allowed_apps WHERE profile = :profile AND isAllowed = 1")
     suspend fun getWhitelistedAppsList(profile: String = "MANUAL"): List<AllowedApp>
 
+    @Query("DELETE FROM allowed_apps WHERE packageName NOT IN (:installedPackages)")
+    suspend fun deleteUninstalledApps(installedPackages: List<String>)
+
+    @Query("DELETE FROM allowed_apps WHERE packageName = :packageName")
+    suspend fun deleteAppByPackage(packageName: String)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateApps(apps: List<AllowedApp>)
 
