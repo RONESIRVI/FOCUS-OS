@@ -81,12 +81,12 @@ fun AppGuideDialog(
                 summaryEn = "Instant Pomodoro or custom duration timers with optional binaural background audio.",
                 summaryHi = "तुरंत पोमोडोरो या कस्टम टाइमर शुरू करें, साथ में बैकग्राउंड साउंड भी उपलब्ध है।",
                 detailsEn = listOf(
-                    "Presets: 25m (Standard Pomodoro), 45m (Lecture), 60m (Deep Work), or custom duration.",
+                    "Presets: 25m (Standard Pomodoro), 50m (Lecture), 60m (Deep Work), or custom duration.",
                     "Binaural Beats & Ambient Audio: White Noise, Rain, Forest, Alpha Waves (40Hz) to enhance concentration.",
                     "Subject tagging to track study hours per subject in analytics."
                 ),
                 detailsHi = listOf(
-                    "प्रीसेट्स: 25 मिनट (पोमोडोरो), 45 मिनट (क्लास), 60 मिनट (डीप स्टडी) या अपनी पसंद का समय चुनें।",
+                    "प्रीसेट्स: 25 मिनट (पोमोडोरो), 50 मिनट (क्लास), 60 मिनट (डीप स्टडी) या अपनी पसंद का समय चुनें।",
                     "बाइनॉरल बीट्स और बैकग्राउंड साउंड: व्हाइट नॉइज़, बारिश, जंगल की आवाज और अल्फा वेव्स।",
                     "सब्जेक्ट टैगिंग जिससे हर विषय के स्टडी आवर्स का पूरा हिसाब रहे।"
                 ),

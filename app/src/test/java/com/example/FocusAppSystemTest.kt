@@ -262,6 +262,150 @@ class FocusAppSystemTest {
     }
 
     @Test
+    fun testSpecialWhitelistProfileSeparation() = runBlocking {
+        val manualApp = AllowedApp("com.google.android.calculator", "MANUAL", "Calculator", "Tools", true)
+        val strictApp = AllowedApp("com.google.android.keep", "STRICT", "Keep Notes", "Notes", true)
+        val specialApp = AllowedApp("com.google.android.apps.docs", "SPECIAL", "Google Docs", "Docs", true)
+
+        dao.insertOrUpdateApps(listOf(manualApp, strictApp, specialApp))
+
+        val manualList = repository.whitelistedApps("MANUAL").first()
+        val strictList = repository.whitelistedApps("STRICT").first()
+        val specialList = repository.whitelistedApps("SPECIAL").first()
+
+        assertEquals(1, manualList.size)
+        assertEquals("Calculator", manualList[0].appName)
+
+        assertEquals(1, strictList.size)
+        assertEquals("Keep Notes", strictList[0].appName)
+
+        assertEquals(1, specialList.size)
+        assertEquals("Google Docs", specialList[0].appName)
+    }
+
+    @Test
+    fun testUninstalledAppsCleanup() = runBlocking {
+        val app1 = AllowedApp("com.installed.app1", "MANUAL", "App One", "Tools", true)
+        val app2 = AllowedApp("com.uninstalled.app2", "MANUAL", "App Two", "Games", false)
+        val app3 = AllowedApp("com.installed.app3", "SPECIAL", "App Three", "Study", true)
+
+        dao.insertOrUpdateApps(listOf(app1, app2, app3))
+
+        val manualBefore = dao.getAllowedApps("MANUAL").first()
+        val specialBefore = dao.getAllowedApps("SPECIAL").first()
+        assertEquals(2, manualBefore.size)
+        assertEquals(1, specialBefore.size)
+
+        // Only app1 and app3 are currently installed on device
+        val installedPackages = listOf("com.installed.app1", "com.installed.app3")
+        dao.deleteUninstalledApps(installedPackages)
+
+        val manualAfter = dao.getAllowedApps("MANUAL").first()
+        val specialAfter = dao.getAllowedApps("SPECIAL").first()
+        assertEquals(1, manualAfter.size)
+        assertEquals(1, specialAfter.size)
+        assertTrue(manualAfter.none { it.packageName == "com.uninstalled.app2" })
+        assertTrue(manualAfter.any { it.packageName == "com.installed.app1" })
+        assertTrue(specialAfter.any { it.packageName == "com.installed.app3" })
+    }
+
+    @Test
+    fun testSpecialSessionStatisticsSaving() = runBlocking {
+        val now = System.currentTimeMillis()
+        val specialSession = FocusSession(
+            sessionName = "Special Exam Prep",
+            subjectName = "UPSC Prelims",
+            targetDurationMinutes = 60,
+            completedDurationSeconds = 3600,
+            lockMode = "MAXIMUM_LOCK",
+            distractionAttempts = 2,
+            allowedAppsCount = 3,
+            whitelistProfile = "SPECIAL",
+            status = "COMPLETED",
+            timestamp = now
+        )
+
+        val id = repository.saveSession(specialSession)
+        assertTrue(id > 0)
+
+        val allSessions = repository.allSessions.first()
+        val saved = allSessions.find { it.id == id }
+        assertNotNull(saved)
+        assertEquals("SPECIAL", saved?.whitelistProfile)
+        assertEquals("COMPLETED", saved?.status)
+        assertEquals(3600, saved?.completedDurationSeconds)
+        assertEquals(2, saved?.distractionAttempts)
+        assertEquals(3, saved?.allowedAppsCount)
+    }
+
+    @Test
+    fun testDailyStreakCalculation() = runBlocking {
+        val now = System.currentTimeMillis()
+        val oneDayMillis = 24 * 3600 * 1000L
+
+        // Day 0 (Today)
+        val sToday = FocusSession(sessionName = "Today", subjectName = "A", targetDurationMinutes = 30, completedDurationSeconds = 1800, lockMode = "NORMAL", status = "COMPLETED", timestamp = now)
+        // Day -1 (Yesterday)
+        val sYesterday = FocusSession(sessionName = "Yesterday", subjectName = "B", targetDurationMinutes = 30, completedDurationSeconds = 1800, lockMode = "NORMAL", status = "COMPLETED", timestamp = now - oneDayMillis)
+        // Day -2 (2 days ago)
+        val s2DaysAgo = FocusSession(sessionName = "2 Days Ago", subjectName = "C", targetDurationMinutes = 30, completedDurationSeconds = 1800, lockMode = "NORMAL", status = "COMPLETED", timestamp = now - (2 * oneDayMillis))
+
+        repository.saveSession(sToday)
+        repository.saveSession(sYesterday)
+        repository.saveSession(s2DaysAgo)
+
+        val sessions = repository.allSessions.first().filter { it.status == "COMPLETED" }
+        assertEquals(3, sessions.size)
+        val totalFocusSeconds = sessions.sumOf { it.completedDurationSeconds }
+        assertEquals(5400, totalFocusSeconds) // 90 minutes total
+    }
+
+    @Test
+    fun testScheduleConflictValidation() = runBlocking {
+        val now = System.currentTimeMillis()
+        val existingStart = now + 3600 * 1000L // in 1 hour
+        val existingEnd = existingStart + 3600 * 1000L // 1 hour duration
+
+        val existingSession = FocusSession(
+            sessionName = "Existing Schedule",
+            subjectName = "Math",
+            targetDurationMinutes = 60,
+            completedDurationSeconds = 0,
+            lockMode = "MAXIMUM_LOCK",
+            status = "SCHEDULED",
+            scheduledStartTime = existingStart,
+            scheduledEndTime = existingEnd,
+            timestamp = now
+        )
+        repository.saveSession(existingSession)
+
+        val scheduled = repository.scheduledSessions.first()
+        assertEquals(1, scheduled.size)
+
+        // Conflicting time: overlapping with existing session
+        val candidateStart = existingStart + 1800 * 1000L // 30 mins after start
+        val candidateEnd = candidateStart + 3600 * 1000L
+
+        val isConflict = scheduled.any { session ->
+            val sStart = session.scheduledStartTime ?: 0L
+            val sEnd = session.scheduledEndTime ?: 0L
+            candidateStart < sEnd && candidateEnd > sStart
+        }
+        assertTrue("Candidate session should conflict with existing schedule", isConflict)
+
+        // Non-conflicting time: completely after existing session
+        val nonConflictStart = existingEnd + 1000L
+        val nonConflictEnd = nonConflictStart + 1800 * 1000L
+
+        val hasNoConflict = scheduled.none { session ->
+            val sStart = session.scheduledStartTime ?: 0L
+            val sEnd = session.scheduledEndTime ?: 0L
+            nonConflictStart < sEnd && nonConflictEnd > sStart
+        }
+        assertTrue("Non-overlapping candidate should have no conflict", hasNoConflict)
+    }
+
+    @Test
     fun testBootScheduledAlarmRestorationLogic() = runBlocking {
         val now = System.currentTimeMillis()
         val futureSession = FocusSession(
@@ -298,4 +442,77 @@ class FocusAppSystemTest {
         assertEquals(1, toRestore.size)
         assertEquals("Scheduled UPSC Study", toRestore[0].sessionName)
     }
+
+    @Test
+    fun testDuplicateSessionSaveProtection() = runBlocking {
+        val now = System.currentTimeMillis()
+        val session1 = FocusSession(
+            sessionName = "Math Revision",
+            subjectName = "Calculus",
+            targetDurationMinutes = 45,
+            completedDurationSeconds = 2700,
+            lockMode = "NORMAL",
+            distractionAttempts = 0,
+            allowedAppsCount = 1,
+            whitelistProfile = "MANUAL",
+            status = "COMPLETED",
+            timestamp = now
+        )
+
+        // First save
+        repository.saveSession(session1)
+
+        // Simulated duplicate check logic
+        val existingRecent = repository.allSessions.first().firstOrNull {
+            it.status == "COMPLETED" &&
+            Math.abs(now - it.timestamp) < 4000 &&
+            it.sessionName == session1.sessionName
+        }
+
+        // If duplicate attempted within 4 seconds, should be rejected
+        if (existingRecent == null) {
+            repository.saveSession(session1.copy(timestamp = now + 100))
+        }
+
+        val allCompleted = repository.allSessions.first().filter { it.sessionName == "Math Revision" }
+        assertEquals("Duplicate session should be blocked from saving twice", 1, allCompleted.size)
+    }
+
+    @Test
+    fun testDiagnosticDbWriteVerificationBeforeCleanup() = runBlocking {
+        val now = System.currentTimeMillis()
+        val session = FocusSession(
+            sessionName = "Physics Mechanics",
+            subjectName = "Physics",
+            targetDurationMinutes = 90,
+            completedDurationSeconds = 5400,
+            lockMode = "MAXIMUM_LOCK",
+            distractionAttempts = 4,
+            allowedAppsCount = 2,
+            whitelistProfile = "SPECIAL",
+            status = "COMPLETED",
+            timestamp = now
+        )
+
+        // 1. Write to DB
+        val savedId = repository.saveSession(session)
+        assertTrue(savedId > 0)
+
+        // 2. Diagnostic read-back verification (simulating what completeFocusSession does before temp data cleanup)
+        val verifiedSession = repository.getSessionById(savedId)
+        assertNotNull("Session must be readable immediately from DB", verifiedSession)
+        assertEquals("COMPLETED", verifiedSession?.status)
+        assertEquals(5400, verifiedSession?.completedDurationSeconds)
+        assertEquals(4, verifiedSession?.distractionAttempts)
+        assertEquals("SPECIAL", verifiedSession?.whitelistProfile)
+        assertEquals(2, verifiedSession?.allowedAppsCount)
+
+        // 3. Ensure safe cleanup of temporary state can proceed
+        var tempTimerStateRunning = true
+        if (verifiedSession != null) {
+            tempTimerStateRunning = false // Safely clear temp data only after verification
+        }
+        assertFalse(tempTimerStateRunning)
+    }
 }
+

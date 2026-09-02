@@ -1401,15 +1401,15 @@ fun QuickDurationDialog(
     onDismissRequest: () -> Unit,
     onSubmit: (Int) -> Unit
 ) {
-    var selectedDurationMins by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(45) }
+    var selectedDurationMins by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(50) }
     
     val durations = listOf(
         "10 मिनट" to 10,
         "25 मिनट" to 25,
-        "45 मिनट" to 45,
+        "50 मिनट" to 50,
         "1.5 Hours" to 90,
         "2.5 Hours" to 150,
-        "3.5 Hours" to 210,
+        "3 Hours" to 180,
         "4 Hours" to 240,
         "5 Hours" to 300
     )

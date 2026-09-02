@@ -79,9 +79,10 @@ class FocusTimerService : Service() {
                 val soundType = try { SoundType.valueOf(intent.getStringExtra("SOUND_TYPE") ?: "") } catch(e: Exception) { SoundType.NONE }
                 val requiresSelfie = intent.getBooleanExtra("REQUIRES_SELFIE", false)
                 val isScheduled = intent.getBooleanExtra("IS_SCHEDULED", false)
+                val scheduledSessionId = intent.getLongExtra("SCHEDULED_SESSION_ID", -1L).takeIf { it > 0 }
                 val whitelistProfile = intent.getStringExtra("WHITELIST_PROFILE") ?: if (intent.getBooleanExtra("IS_SPECIAL_WHITELIST_SESSION", false)) "SPECIAL" else "STRICT"
                 val isSpecialSession = intent.getBooleanExtra("IS_SPECIAL_WHITELIST_SESSION", false) || whitelistProfile == "SPECIAL"
-                startTimer(duration, sessionName, subjectName, lockMode, soundType, requiresSelfie, isScheduled, isSpecialSession, whitelistProfile)
+                startTimer(duration, sessionName, subjectName, lockMode, soundType, requiresSelfie, isScheduled, isSpecialSession, whitelistProfile, scheduledSessionId)
             }
             "ACTION_START_PENDING_MONITOR" -> {
                 val sessionId = intent.getLongExtra("SESSION_ID", -1L)
@@ -213,7 +214,8 @@ class FocusTimerService : Service() {
         requiresSelfie: Boolean = false,
         isScheduled: Boolean = false,
         isSpecialSession: Boolean = false,
-        whitelistProfile: String = if (isSpecialSession) "SPECIAL" else "STRICT"
+        whitelistProfile: String = if (isSpecialSession) "SPECIAL" else "STRICT",
+        scheduledSessionId: Long? = null
     ) {
         FocusLockManager.clearPendingSchedule()
         val totalSecs = durationMinutes * 60
@@ -233,11 +235,20 @@ class FocusTimerService : Service() {
             whitelistProfile = whitelistProfile
         )
 
-        // Ensure FocusLockManager is armed with apps from DB for this profile
+        // Ensure FocusLockManager is armed with apps (exact snapshot if scheduled, else from DB profile)
         scope.launch(Dispatchers.IO) {
             try {
-                val dao = com.example.data.db.AppDatabase.getDatabase(applicationContext).focusDao()
-                val apps = dao.getWhitelistedAppsList(whitelistProfile).filter { it.isAllowed }.map { it.packageName }
+                val prefs = applicationContext.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE)
+                val savedSnapshot = if (scheduledSessionId != null) {
+                    prefs.getString("scheduled_apps_$scheduledSessionId", null)
+                } else null
+                
+                val apps = if (!savedSnapshot.isNullOrBlank()) {
+                    savedSnapshot.split(",").filter { it.isNotBlank() }
+                } else {
+                    val dao = com.example.data.db.AppDatabase.getDatabase(applicationContext).focusDao()
+                    dao.getWhitelistedAppsList(whitelistProfile).filter { it.isAllowed }.map { it.packageName }
+                }
                 withContext(Dispatchers.Main) {
                     FocusLockManager.updateFocusState(
                         isActive = true,

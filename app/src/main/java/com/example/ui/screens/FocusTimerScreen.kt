@@ -736,7 +736,6 @@ fun FocusTimerScreen(
                             showExitAttemptDialog = false
                             showEmergencyConfirm = true
                         } else {
-                            viewModel.completeFocusSession()
                             onSessionComplete()
                         }
                     },
@@ -1609,7 +1608,6 @@ fun FocusTimerScreen(
                             onClick = {
                                 if (emergencyPenaltyCountdown <= 0) {
                                     showEmergencyConfirm = false
-                                    viewModel.emergencyExitSession()
                                     onSessionComplete()
                                 }
                             },

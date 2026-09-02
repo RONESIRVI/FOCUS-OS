@@ -1698,16 +1698,16 @@ fun TwoStepTimeAndDurationDialog(
     var minuteVal by remember { mutableStateOf(initialMinute) }
     var isAm by remember { mutableStateOf(initialHour < 12) }
 
-    var selectedDuration by remember { mutableStateOf(45) } // default 45 mins as in video
+    var selectedDuration by remember { mutableStateOf(50) } // default 50 mins as in video
 
     val durationOptions = remember {
         listOf(
             10 to "10 मिनट",
             25 to "25 मिनट",
-            45 to "45 मिनट",
+            50 to "50 मिनट",
             90 to "1.5 Hours",
             150 to "2.5 Hours",
-            210 to "3.5 Hours",
+            180 to "3 Hours",
             240 to "4 Hours",
             300 to "5 Hours"
         )

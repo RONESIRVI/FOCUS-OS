@@ -143,18 +143,24 @@ object FocusLockManager {
         if (context != null) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    val dao = com.example.data.db.AppDatabase.getDatabase(context.applicationContext).focusDao()
-                    val session = dao.getSessionById(sessionId)
-                    val profile = session?.whitelistProfile ?: "STRICT"
-                    val apps = dao.getWhitelistedAppsList(profile).filter { it.isAllowed }.map { it.packageName }
+                    val prefs = context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE)
+                    val savedSnapshot = prefs.getString("scheduled_apps_$sessionId", null)
+                    val apps = if (!savedSnapshot.isNullOrBlank()) {
+                        savedSnapshot.split(",").filter { it.isNotBlank() }
+                    } else {
+                        val dao = com.example.data.db.AppDatabase.getDatabase(context.applicationContext).focusDao()
+                        val session = dao.getSessionById(sessionId)
+                        val profile = session?.whitelistProfile ?: "STRICT"
+                        dao.getWhitelistedAppsList(profile).filter { it.isAllowed }.map { it.packageName }
+                    }
                     
                     withContext(Dispatchers.Main) {
                         whitelistedPackages.clear()
                         whitelistedPackages.addAll(apps)
-                        Log.d(TAG, "Pending schedule set from DB: sessionId=$sessionId, sessionName=$sessionName, profile=$profile, allowedApps=${apps.size}")
+                        Log.d(TAG, "Pending schedule set: sessionId=$sessionId, sessionName=$sessionName, allowedApps=${apps.size}")
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error loading whitelisted apps from DB for pending schedule", e)
+                    Log.e(TAG, "Error loading whitelisted apps for pending schedule", e)
                 }
             }
 
