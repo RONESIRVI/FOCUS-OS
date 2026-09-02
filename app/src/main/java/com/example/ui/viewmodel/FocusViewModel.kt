@@ -267,34 +267,12 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch {
                 service.timerState.collect { state ->
                     _serviceTimerState.value = state
-                    syncFocusLockState(state)
                 }
             }
         }
     }
 
-    private fun syncFocusLockState(state: TimerState) {
-        val profile = when {
-            state.whitelistProfile.isNotBlank() -> state.whitelistProfile
-            state.isSpecialSession -> "SPECIAL"
-            else -> _setupState.value.whitelistProfile
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val dao = com.example.data.db.AppDatabase.getDatabase(getApplication()).focusDao()
-                val allowedPackages = dao.getWhitelistedAppsList(profile).filter { it.isAllowed }.map { it.packageName }
-                kotlinx.coroutines.withContext(Dispatchers.Main) {
-                    FocusLockManager.updateFocusState(
-                        isActive = state.isRunning,
-                        lockMode = state.lockMode,
-                        allowedPackageNames = allowedPackages
-                    )
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("FocusViewModel", "Error syncing focus state for $profile", e)
-            }
-        }
-    }
+
 
     private val _activeScheduledSessionId = MutableStateFlow<Long?>(null)
     val activeScheduledSessionId: StateFlow<Long?> = _activeScheduledSessionId.asStateFlow()
@@ -869,11 +847,12 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.toggleAppWhitelist(packageName, isAllowed, profile)
             val updatedList = repository.getWhitelistedAppsList(profile).filter { it.isAllowed }.map { it.packageName }
-            val currentActiveProfile = if (_serviceTimerState.value.isRunning) _serviceTimerState.value.whitelistProfile else _setupState.value.whitelistProfile
-            if (currentActiveProfile == profile && _serviceTimerState.value.isRunning) {
+            val timerState = _serviceTimerState.value
+            val currentActiveProfile = if (timerState.isRunning) timerState.whitelistProfile else _setupState.value.whitelistProfile
+            if (currentActiveProfile == profile && timerState.isRunning && !timerState.isScheduled) {
                 FocusLockManager.updateFocusState(
                     isActive = true,
-                    lockMode = _serviceTimerState.value.lockMode,
+                    lockMode = timerState.lockMode,
                     allowedPackageNames = updatedList
                 )
             }
