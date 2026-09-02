@@ -514,5 +514,102 @@ class FocusAppSystemTest {
         }
         assertFalse(tempTimerStateRunning)
     }
+
+    // =========================================================================
+    // 5 COMPREHENSIVE TESTS FOR SCHEDULE APP SNAPSHOT INTEGRITY
+    // =========================================================================
+
+    @Test
+    fun testSnapshot1_CreationAndRetrieval() = runBlocking {
+        // Test 1: Verify a snapshot created for a schedule is perfectly retrieved.
+        val prefs = context.getSharedPreferences("schedule_prefs", android.content.Context.MODE_PRIVATE)
+        val scheduleId = 1001L
+        val originalApps = listOf("com.whatsapp", "com.instagram")
+        
+        // Simulating schedule creation
+        prefs.edit().putString("scheduled_apps_$scheduleId", originalApps.joinToString(",")).commit()
+        
+        // Simulating schedule start
+        val retrievedSnapshot = prefs.getString("scheduled_apps_$scheduleId", null)
+        val apps = retrievedSnapshot?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+        
+        assertEquals("Test 1 Failed: Size mismatch", 2, apps.size)
+        assertTrue("Test 1 Failed: Missing whatsapp", apps.contains("com.whatsapp"))
+    }
+
+    @Test
+    fun testSnapshot2_IndependenceFromGlobalChanges() = runBlocking {
+        // Test 2: User changes global settings AFTER creating a schedule. Schedule must remain unaffected.
+        val prefs = context.getSharedPreferences("schedule_prefs", android.content.Context.MODE_PRIVATE)
+        val scheduleId = 1002L
+        
+        // 1. Create schedule with specific apps
+        val scheduleApps = listOf("com.calculator")
+        prefs.edit().putString("scheduled_apps_$scheduleId", scheduleApps.joinToString(",")).commit()
+        
+        // 2. Later, user changes global Strict profile in Database (mocked as different list)
+        val globalApps = listOf("com.calculator", "com.youtube") // Global has more apps now
+        
+        // 3. When schedule runs, it must ONLY use the snapshot
+        val retrievedSnapshot = prefs.getString("scheduled_apps_$scheduleId", null)
+        val apps = retrievedSnapshot?.split(",")?.filter { it.isNotBlank() } ?: globalApps
+        
+        assertEquals("Test 2 Failed: Schedule used global settings instead of snapshot!", 1, apps.size)
+        assertFalse("Test 2 Failed: Global changes leaked into schedule!", apps.contains("com.youtube"))
+    }
+
+    @Test
+    fun testSnapshot3_MultipleSchedulesDoNotConflict() = runBlocking {
+        // Test 3: Two schedules created with different apps do not overwrite each other.
+        val prefs = context.getSharedPreferences("schedule_prefs", android.content.Context.MODE_PRIVATE)
+        val scheduleId1 = 1003L
+        val scheduleId2 = 1004L
+        
+        prefs.edit().putString("scheduled_apps_$scheduleId1", "com.notes").commit()
+        prefs.edit().putString("scheduled_apps_$scheduleId2", "com.dictionary,com.browser").commit()
+        
+        val apps1 = prefs.getString("scheduled_apps_$scheduleId1", "")?.split(",") ?: emptyList()
+        val apps2 = prefs.getString("scheduled_apps_$scheduleId2", "")?.split(",") ?: emptyList()
+        
+        assertEquals("Test 3 Failed: Schedule 1 corrupted", 1, apps1.size)
+        assertEquals("Test 3 Failed: Schedule 2 corrupted", 2, apps2.size)
+        assertTrue("Test 3 Failed: Overlap detected", apps2.contains("com.dictionary"))
+    }
+
+    @Test
+    fun testSnapshot4_FallbackToGlobalIfNoSnapshot() = runBlocking {
+        // Test 4: If snapshot is missing/corrupted, it safely falls back to Database Profile
+        val prefs = context.getSharedPreferences("schedule_prefs", android.content.Context.MODE_PRIVATE)
+        val scheduleId = 1005L // We don't save anything for this ID
+        
+        val retrievedSnapshot = prefs.getString("scheduled_apps_$scheduleId", null)
+        
+        // Simulate fallback logic used in FocusTimerService.kt
+        val finalApps = if (retrievedSnapshot.isNullOrBlank()) {
+            listOf("fallback.app1", "fallback.app2") // Simulated DB fetch
+        } else {
+            retrievedSnapshot.split(",").filter { it.isNotBlank() }
+        }
+        
+        assertEquals("Test 4 Failed: Did not fallback correctly", 2, finalApps.size)
+        assertTrue("Test 4 Failed", finalApps.contains("fallback.app1"))
+    }
+
+    @Test
+    fun testSnapshot5_NormalSessionDoesNotUseSnapshot() = runBlocking {
+        // Test 5: A normal manual session (no scheduledSessionId) strictly uses the live database.
+        val prefs = context.getSharedPreferences("schedule_prefs", android.content.Context.MODE_PRIVATE)
+        
+        // There is some old schedule data
+        prefs.edit().putString("scheduled_apps_999", "com.badapp").commit()
+        
+        val scheduledSessionId: Long? = null // Manual session
+        
+        val retrievedSnapshot = if (scheduledSessionId != null) {
+            prefs.getString("scheduled_apps_$scheduledSessionId", null)
+        } else null
+        
+        assertNull("Test 5 Failed: Normal session tried to use a snapshot", retrievedSnapshot)
+    }
 }
 

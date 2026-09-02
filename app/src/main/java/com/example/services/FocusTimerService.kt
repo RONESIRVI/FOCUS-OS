@@ -239,12 +239,12 @@ class FocusTimerService : Service() {
         scope.launch(Dispatchers.IO) {
             try {
                 val prefs = applicationContext.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE)
-                val savedSnapshot = if (scheduledSessionId != null) {
-                    prefs.getString("scheduled_apps_$scheduledSessionId", null)
+                val savedSnapshot = if (scheduledSessionId != null && prefs.contains("scheduled_apps_$scheduledSessionId")) {
+                    prefs.getString("scheduled_apps_$scheduledSessionId", "")
                 } else null
                 
-                val apps = if (!savedSnapshot.isNullOrBlank()) {
-                    savedSnapshot.split(",").filter { it.isNotBlank() }
+                val apps = if (savedSnapshot != null) {
+                    if (savedSnapshot.isNotBlank()) savedSnapshot.split(",").filter { it.isNotBlank() } else emptyList()
                 } else {
                     val dao = com.example.data.db.AppDatabase.getDatabase(applicationContext).focusDao()
                     dao.getWhitelistedAppsList(whitelistProfile).filter { it.isAllowed }.map { it.packageName }

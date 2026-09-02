@@ -419,12 +419,12 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             
             val profile = actualProfile
             val prefs = context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE)
-            val savedSnapshot = if (scheduledId != null) {
-                prefs.getString("scheduled_apps_$scheduledId", null)
+            val savedSnapshot = if (scheduledId != null && prefs.contains("scheduled_apps_$scheduledId")) {
+                prefs.getString("scheduled_apps_$scheduledId", "")
             } else null
             
-            val apps = if (!savedSnapshot.isNullOrBlank()) {
-                savedSnapshot.split(",").filter { it.isNotBlank() }
+            val apps = if (savedSnapshot != null) {
+                if (savedSnapshot.isNotBlank()) savedSnapshot.split(",").filter { it.isNotBlank() } else emptyList()
             } else {
                 val dao = com.example.data.db.AppDatabase.getDatabase(context).focusDao()
                 dao.getWhitelistedAppsList(profile).filter { it.isAllowed }.map { it.packageName }
@@ -547,11 +547,10 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             val sessionId = repository.saveSession(session)
             // Save fixed allowed apps & reminder offsets for this schedule
-            val currentAllowed = when (setup.whitelistProfile) {
-                "SPECIAL" -> whitelistedAppsSpecial.value.filter { it.isAllowed }.map { it.packageName }
-                "MANUAL" -> whitelistedAppsManual.value.filter { it.isAllowed }.map { it.packageName }
-                else -> whitelistedAppsStrict.value.filter { it.isAllowed }.map { it.packageName }
-            }
+            val dao = com.example.data.db.AppDatabase.getDatabase(context).focusDao()
+            val appsFromDb = dao.getWhitelistedAppsList(setup.whitelistProfile)
+            val currentAllowed = appsFromDb.filter { it.isAllowed }.map { it.packageName }
+            
             val reminderString = reminderMinutesList.joinToString(",")
             context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE).edit()
                 .putString("scheduled_apps_$sessionId", currentAllowed.joinToString(","))

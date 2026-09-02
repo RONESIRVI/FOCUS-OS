@@ -144,9 +144,11 @@ object FocusLockManager {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val prefs = context.getSharedPreferences("schedule_prefs", Context.MODE_PRIVATE)
-                    val savedSnapshot = prefs.getString("scheduled_apps_$sessionId", null)
-                    val apps = if (!savedSnapshot.isNullOrBlank()) {
-                        savedSnapshot.split(",").filter { it.isNotBlank() }
+                    val savedSnapshot = if (prefs.contains("scheduled_apps_$sessionId")) {
+                        prefs.getString("scheduled_apps_$sessionId", "")
+                    } else null
+                    val apps = if (savedSnapshot != null) {
+                        if (savedSnapshot.isNotBlank()) savedSnapshot.split(",").filter { it.isNotBlank() } else emptyList()
                     } else {
                         val dao = com.example.data.db.AppDatabase.getDatabase(context.applicationContext).focusDao()
                         val session = dao.getSessionById(sessionId)
