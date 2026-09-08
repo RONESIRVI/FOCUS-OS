@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import com.example.ui.theme.SpaceGroteskFontFamily
 import com.example.R
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -686,19 +687,22 @@ fun HomeScreen(
                         Text(
                             text = "FOCUS OS",
                             style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 1.5.sp
+                                fontFamily = SpaceGroteskFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 26.sp,
+                                letterSpacing = 0.5.sp
                             ),
                             color = Color.White
                         )
                         Text(
                             text = "PRODUCTIVITY ENGINE",
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.5.sp,
-                                fontSize = 8.sp
+                                fontFamily = SpaceGroteskFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 2.sp,
+                                fontSize = 11.sp
                             ),
-                            color = FocusPrimary
+                            color = Color(0xFF00FF7F)
                         )
                     }
                 }
@@ -781,13 +785,21 @@ fun HomeScreen(
                 Column {
                     Text(
                         text = "Hi, $userName 👋",
-                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                        color = FocusTextPrimary
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontFamily = SpaceGroteskFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 28.sp
+                        ),
+                        color = Color.White
                     )
                     Text(
                         text = "100% Distraction-free Study Environment",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = FocusTextSecondary
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontFamily = SpaceGroteskFontFamily,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp
+                        ),
+                        color = Color.LightGray
                     )
                 }
             }

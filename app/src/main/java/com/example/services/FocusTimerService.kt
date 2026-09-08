@@ -42,7 +42,8 @@ data class TimerState(
     val selectedSound: SoundType = SoundType.NONE,
     val isScheduled: Boolean = false,
     val isSpecialSession: Boolean = false,
-    val whitelistProfile: String = "STRICT"
+    val whitelistProfile: String = "STRICT",
+    val timelineEvents: List<String> = emptyList() // format: "timestamp|type|remainingSeconds"
 )
 
 class FocusTimerService : Service() {
@@ -234,6 +235,7 @@ class FocusTimerService : Service() {
             isSpecialSession = isSpecialSession,
             whitelistProfile = whitelistProfile
         )
+        recordEvent("START")
 
         // Ensure FocusLockManager is armed with apps (exact snapshot if scheduled, else from DB profile)
         scope.launch(Dispatchers.IO) {
@@ -372,13 +374,22 @@ class FocusTimerService : Service() {
         }
     }
 
+    private fun recordEvent(type: String) {
+        val ev = "${System.currentTimeMillis()}|$type|${_timerState.value.remainingSeconds}"
+        _timerState.value = _timerState.value.copy(
+            timelineEvents = _timerState.value.timelineEvents + ev
+        )
+    }
+
     fun pauseTimer() {
         _timerState.value = _timerState.value.copy(isPaused = true)
+        recordEvent("PAUSE")
         updateNotification()
     }
 
     fun resumeTimer() {
         _timerState.value = _timerState.value.copy(isPaused = false)
+        recordEvent("RESUME")
         updateNotification()
     }
 
@@ -395,6 +406,7 @@ class FocusTimerService : Service() {
     fun recordDistractionAttempt() {
         val current = _timerState.value.distractionAttempts
         _timerState.value = _timerState.value.copy(distractionAttempts = current + 1)
+        recordEvent("DISTRACTION")
         val prefs = getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
         val soundEnabled = prefs.getBoolean("NOTIF_WARNING_ENABLED", true)
         val warningSoundKey = if (soundEnabled) prefs.getString("NOTIF_WARNING_SOUND", "PRIME_SIREN") ?: "PRIME_SIREN" else "SILENT"
@@ -472,8 +484,6 @@ class FocusTimerService : Service() {
 
         // 1. Collapsed Notification View
         val collapsedView = RemoteViews(packageName, R.layout.notification_focus_collapsed).apply {
-            setTextViewText(R.id.notif_title, notifTitle.uppercase())
-            setTextColor(R.id.notif_title, primaryColor)
             setInt(R.id.notif_collapsed_root, "setBackgroundColor", rootBgColor)
             setTextViewText(R.id.notif_mode_badge, state.lockMode.title.uppercase())
             setTextViewText(R.id.notif_subject_text, "$subjectTitle • $sessionTitle")
@@ -484,8 +494,6 @@ class FocusTimerService : Service() {
                 else -> "⏱️ $formattedTime Remaining ($progressPercent%)"
             }
             setTextViewText(R.id.notif_timer_text, timerText)
-            
-            setProgressBar(R.id.notif_progress_bar, 100, if(state.isWaitingVerification) 100 else progressPercent, false)
             
             // Toggle icon
             setImageViewResource(
@@ -500,12 +508,13 @@ class FocusTimerService : Service() {
 
         // 2. Expanded Rich Notification View
         val expandedView = RemoteViews(packageName, R.layout.notification_focus_expanded).apply {
-            setTextViewText(R.id.notif_exp_app_title, notifTitle.uppercase())
-            setTextColor(R.id.notif_exp_app_title, primaryColor)
             setInt(R.id.notif_expanded_root, "setBackgroundColor", rootBgColor)
             setTextViewText(R.id.notif_exp_mode_badge, state.lockMode.title.uppercase())
             setTextViewText(R.id.notif_exp_distraction_badge, "🛡️ ${state.distractionAttempts} Blocked")
             setTextViewText(R.id.notif_exp_subject, "📚 $subjectTitle • $sessionTitle")
+            
+            setTextColor(R.id.notif_exp_progress_percent, primaryColor)
+            setTextColor(R.id.notif_btn_add_time_text, primaryColor)
             
             setTextViewText(R.id.notif_exp_timer, if(state.isWaitingVerification) "00:00" else formattedTime)
             
@@ -551,6 +560,9 @@ class FocusTimerService : Service() {
 
         return NotificationCompat.Builder(this, dynamicChannelId)
             .setSmallIcon(R.drawable.ic_notif_shield)
+            .setContentTitle(notifTitle)
+            .setColor(primaryColor)
+            .setColorized(true)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setCustomContentView(collapsedView)
             .setCustomBigContentView(expandedView)

@@ -30,6 +30,7 @@ data class FocusSession(
     val startPhotoUri: String? = null,
     val endSelfieUri: String? = null,
     val whitelistProfile: String = "STRICT",
+    val timelineEvents: String = "[]", // JSON or custom string format
     val status: String = "COMPLETED" // "SCHEDULED", "ACTIVE", "COMPLETED", "MISSED"
 )
 

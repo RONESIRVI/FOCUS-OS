@@ -721,6 +721,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                 val subjectName = if (current.subjectName.isNotBlank()) current.subjectName else (if (setup.subjectName.isNotBlank()) setup.subjectName else sessionName)
                 val lockMode = if (current.lockMode != LockMode.NORMAL) current.lockMode.name else setup.lockMode.name
 
+                val timelineStr = org.json.JSONArray(current.timelineEvents).toString()
+                
                 val savedId: Long
                 if (scheduledId != null) {
                     val existing = repository.getSessionById(scheduledId)
@@ -735,7 +737,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                                 allowedAppsCount = allowedAppsCount,
                                 timestamp = System.currentTimeMillis(),
                                 startPhotoUri = setup.startPhotoUri ?: existing.startPhotoUri,
-                                endSelfieUri = setup.endSelfieUri ?: existing.endSelfieUri
+                                endSelfieUri = setup.endSelfieUri ?: existing.endSelfieUri,
+                                timelineEvents = timelineStr
                             )
                         )
                         savedId = scheduledId
@@ -759,7 +762,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                                 status = "COMPLETED",
                                 timestamp = System.currentTimeMillis(),
                                 startPhotoUri = setup.startPhotoUri,
-                                endSelfieUri = setup.endSelfieUri
+                                endSelfieUri = setup.endSelfieUri,
+                                timelineEvents = timelineStr
                             )
                             savedId = repository.saveSession(session)
                         } else {
@@ -786,7 +790,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                             status = "COMPLETED",
                             timestamp = System.currentTimeMillis(),
                             startPhotoUri = setup.startPhotoUri,
-                            endSelfieUri = setup.endSelfieUri
+                            endSelfieUri = setup.endSelfieUri,
+                            timelineEvents = timelineStr
                         )
                         savedId = repository.saveSession(session)
                     } else {

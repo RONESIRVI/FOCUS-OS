@@ -1470,27 +1470,33 @@ fun DayTabContent(allSessions: List<FocusSession>) {
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     selectedDaySessions.forEach { session ->
-                        Row(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(FocusSurfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(12.dp)
                         ) {
-                            Column {
-                                Text(session.subjectName, color = Color.White, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(session.subjectName, color = Color.White, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                                    Text(
+                                        SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(session.timestamp)),
+                                        color = FocusTextSecondary,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
                                 Text(
-                                    SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(session.timestamp)),
-                                    color = FocusTextSecondary,
-                                    style = MaterialTheme.typography.labelSmall
+                                    formatSecondsToReadable(session.completedDurationSeconds),
+                                    color = StatBlue,
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
                                 )
                             }
-                            Text(
-                                formatSecondsToReadable(session.completedDurationSeconds),
-                                color = StatBlue,
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
-                            )
+                            
+                            SessionTimelineGraph(session = session)
                         }
                     }
                 }
@@ -1676,5 +1682,94 @@ fun TabButton(text: String, isSelected: Boolean, onClick: () -> Unit) {
         )
     ) {
         androidx.compose.material3.Text(text, style = androidx.compose.material3.MaterialTheme.typography.labelMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
+    }
+}
+
+@Composable
+fun SessionTimelineGraph(session: FocusSession) {
+    if (session.timelineEvents == "[]" || session.timelineEvents.isBlank()) return
+    
+    val eventsList = remember(session.timelineEvents) {
+        val list = mutableListOf<String>()
+        try {
+            val jsonArray = org.json.JSONArray(session.timelineEvents)
+            for (i in 0 until jsonArray.length()) {
+                list.add(jsonArray.getString(i))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        list
+    }
+    
+    if (eventsList.isEmpty()) return
+    
+    val totalSeconds = (session.targetDurationMinutes * 60).coerceAtLeast(session.completedDurationSeconds)
+    if (totalSeconds <= 0) return
+
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Text("Session Timeline Activity", style = MaterialTheme.typography.labelSmall, color = FocusTextSecondary)
+        Spacer(modifier = Modifier.height(4.dp))
+        
+        Box(modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .background(Color.Black.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+        ) {
+            androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp)) {
+                val graphPath = androidx.compose.ui.graphics.Path()
+                val graphHeight = size.height - 8.dp.toPx()
+                val baseY = size.height - 4.dp.toPx()
+                
+                val dataPoints = mutableListOf<Pair<Float, Float>>()
+                var lastX = 0f
+                var currentY = 0.5f // Baseline
+                
+                dataPoints.add(lastX to currentY)
+                
+                eventsList.forEach { evStr ->
+                    val parts = evStr.split("|")
+                    if (parts.size >= 3) {
+                        val type = parts[1]
+                        val remSecs = parts[2].toIntOrNull() ?: 0
+                        val elapsedSecs = totalSeconds - remSecs
+                        val xProgress = (elapsedSecs.toFloat() / totalSeconds).coerceIn(0f, 1f)
+                        
+                        dataPoints.add(xProgress to currentY)
+                        
+                        when(type) {
+                            "PAUSE" -> currentY = 0.1f // drop down
+                            "RESUME" -> currentY = 0.5f // return to base
+                            "DISTRACTION" -> {
+                                dataPoints.add(xProgress to 0.9f) // sharp spike up
+                                currentY = 0.5f
+                                dataPoints.add(xProgress to currentY)
+                            }
+                        }
+                        lastX = xProgress
+                    }
+                }
+                
+                // Add final point based on completed duration
+                val finalX = (session.completedDurationSeconds.toFloat() / totalSeconds).coerceIn(0f, 1f)
+                dataPoints.add(finalX to currentY)
+                
+                graphPath.moveTo(0f, baseY - (dataPoints.first().second * graphHeight))
+                dataPoints.forEach { (xP, yP) ->
+                    val px = xP * size.width
+                    val py = baseY - (yP * graphHeight)
+                    graphPath.lineTo(px, py)
+                }
+                
+                drawPath(
+                    path = graphPath,
+                    color = StatBlue,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                        width = 3f, 
+                        join = androidx.compose.ui.graphics.StrokeJoin.Round
+                    )
+                )
+            }
+        }
     }
 }

@@ -67,6 +67,9 @@ fun CameraVerificationScreen(
     var photoUriString by rememberSaveable { mutableStateOf<String?>(null) }
     var tempCaptureUriString by rememberSaveable { mutableStateOf<String?>(null) }
     var isSavingToGallery by remember { mutableStateOf(false) }
+
+    val setupState by viewModel.setupState.collectAsState()
+    val sessionName = setupState.sessionName.ifBlank { "Deep Study" }
     
     val photoUri = photoUriString?.let { Uri.parse(it) }
     val tempCaptureUri = tempCaptureUriString?.let { Uri.parse(it) }
@@ -255,46 +258,60 @@ fun CameraVerificationScreen(
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = "Retake", tint = Color.White)
                         }
+                        
+                        // Premium Watermark Overlay
+                        WatermarkOverlay(
+                            sessionName = sessionName,
+                            modifier = Modifier.align(Alignment.BottomEnd)
+                        )
                     }
                 } else {
                     // Placeholder when no photo taken yet
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clickable { launchCamera() }
-                            .padding(24.dp)
-                    ) {
-                        Box(
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
                             modifier = Modifier
-                                .size(88.dp)
-                                .background(FocusPrimary.copy(alpha = 0.15f), CircleShape)
-                                .border(2.dp, FocusPrimary.copy(alpha = 0.5f), CircleShape),
-                            contentAlignment = Alignment.Center
+                                .fillMaxSize()
+                                .clickable { launchCamera() }
+                                .padding(24.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.CameraAlt,
-                                contentDescription = "Open Camera",
-                                tint = FocusPrimary,
-                                modifier = Modifier.size(40.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(88.dp)
+                                    .background(FocusPrimary.copy(alpha = 0.15f), CircleShape)
+                                    .border(2.dp, FocusPrimary.copy(alpha = 0.5f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = "Open Camera",
+                                    tint = FocusPrimary,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            }
+    
+                            Spacer(modifier = Modifier.height(18.dp))
+    
+                            Text(
+                                text = "TAP TO OPEN PHONE CAMERA",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+                                color = Color.White
+                            )
+    
+                            Spacer(modifier = Modifier.height(6.dp))
+    
+                            Text(
+                                text = "Opens real camera • Saves to Gallery",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = FocusWarning
                             )
                         }
-
-                        Spacer(modifier = Modifier.height(18.dp))
-
-                        Text(
-                            text = "TAP TO OPEN PHONE CAMERA",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                            color = Color.White
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Text(
-                            text = "Opens real camera • Saves to Gallery",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = FocusWarning
+                        
+                        // Premium Watermark Overlay preview on empty state
+                        WatermarkOverlay(
+                            sessionName = sessionName,
+                            modifier = Modifier.align(Alignment.BottomEnd)
                         )
                     }
                 }
@@ -386,5 +403,58 @@ fun CameraVerificationScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun WatermarkOverlay(sessionName: String, modifier: Modifier = Modifier) {
+    val currentDate = remember { java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy")) }
+    val currentDay = remember { java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EEEE")) }
+    
+    Column(
+        modifier = modifier
+            .padding(16.dp),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.Bottom
+    ) {
+        Text(
+            text = currentDate.uppercase(),
+            fontFamily = SpaceGroteskFontFamily,
+            fontWeight = FontWeight.Bold,
+            fontSize = 12.sp,
+            color = Color.White,
+            style = androidx.compose.ui.text.TextStyle(
+                shadow = androidx.compose.ui.graphics.Shadow(
+                    color = Color.Black.copy(alpha = 0.8f),
+                    blurRadius = 8f
+                )
+            )
+        )
+        Text(
+            text = currentDay.uppercase(),
+            fontFamily = SpaceGroteskFontFamily,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 22.sp,
+            color = FocusPrimary,
+            style = androidx.compose.ui.text.TextStyle(
+                shadow = androidx.compose.ui.graphics.Shadow(
+                    color = Color.Black.copy(alpha = 0.8f),
+                    blurRadius = 8f
+                )
+            )
+        )
+        Text(
+            text = sessionName.uppercase(),
+            fontFamily = SpaceGroteskFontFamily,
+            fontWeight = FontWeight.Medium,
+            fontSize = 11.sp,
+            color = Color.White.copy(alpha = 0.9f),
+            style = androidx.compose.ui.text.TextStyle(
+                shadow = androidx.compose.ui.graphics.Shadow(
+                    color = Color.Black.copy(alpha = 0.8f),
+                    blurRadius = 8f
+                )
+            )
+        )
     }
 }

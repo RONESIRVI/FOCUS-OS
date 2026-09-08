@@ -401,6 +401,80 @@ fun FocusTimerScreen(
                         size = arcSize,
                         style = Stroke(width = strokeWidth)
                     )
+
+                    // Background Live Activity Graph
+                    val events = timerState.timelineEvents
+                    if (timerState.totalSeconds > 0) {
+                        val graphPath = Path()
+                        val graphHeight = 80.dp.toPx()
+                        val baseY = size.height / 2 + 30.dp.toPx()
+                        
+                        val dataPoints = mutableListOf<Pair<Float, Float>>()
+                        var lastX = 0f
+                        var currentY = 0.5f // Baseline
+                        
+                        dataPoints.add(lastX to currentY)
+                        
+                        events.forEach { evStr ->
+                            val parts = evStr.split("|")
+                            if (parts.size == 3) {
+                                val type = parts[1]
+                                val remSecs = parts[2].toIntOrNull() ?: 0
+                                val elapsedSecs = timerState.totalSeconds - remSecs
+                                val xProgress = (elapsedSecs.toFloat() / timerState.totalSeconds).coerceIn(0f, 1f)
+                                
+                                dataPoints.add(xProgress to currentY)
+                                
+                                when(type) {
+                                    "PAUSE" -> currentY = 0.1f // drop down
+                                    "RESUME" -> currentY = 0.5f // return to base
+                                    "DISTRACTION" -> {
+                                        dataPoints.add(xProgress to 0.9f) // sharp spike up
+                                        currentY = 0.5f
+                                        dataPoints.add(xProgress to currentY)
+                                    }
+                                }
+                                lastX = xProgress
+                            }
+                        }
+                        
+                        val currentElapsed = timerState.totalSeconds - timerState.remainingSeconds
+                        val liveX = (currentElapsed.toFloat() / timerState.totalSeconds).coerceIn(0f, 1f)
+                        dataPoints.add(liveX to currentY)
+                        
+                        val innerRadius = (diameter / 2) - 16.dp.toPx()
+                        val graphWidth = innerRadius * 1.5f // keep it inside the ring
+                        val startXOffset = (size.width - graphWidth) / 2
+                        
+                        graphPath.moveTo(startXOffset, baseY - (dataPoints.first().second * graphHeight) + (graphHeight / 2))
+                        dataPoints.forEach { (xP, yP) ->
+                            val px = startXOffset + (xP * graphWidth)
+                            val py = baseY - (yP * graphHeight) + (graphHeight / 2)
+                            graphPath.lineTo(px, py)
+                        }
+                        
+                        drawPath(
+                            path = graphPath,
+                            color = FocusWarning.copy(alpha = 0.5f),
+                            style = Stroke(width = 6f, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+                        )
+                        
+                        // Fill under graph to make it look nicer
+                        val fillPath = Path().apply {
+                            addPath(graphPath)
+                            lineTo(startXOffset + (liveX * graphWidth), baseY + (graphHeight / 2))
+                            lineTo(startXOffset, baseY + (graphHeight / 2))
+                            close()
+                        }
+                        drawPath(
+                            path = fillPath,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(FocusWarning.copy(alpha = 0.2f), Color.Transparent),
+                                startY = baseY - (graphHeight / 2),
+                                endY = baseY + (graphHeight / 2)
+                            )
+                        )
+                    }
                 }
 
                 // Clock Digital Time Text Display

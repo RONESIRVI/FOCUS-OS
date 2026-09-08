@@ -12,7 +12,7 @@ import com.example.data.model.SubjectTask
 
 @Database(
     entities = [FocusSession::class, AllowedApp::class, SubjectTask::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -22,6 +22,12 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE focus_sessions ADD COLUMN whitelistProfile TEXT NOT NULL DEFAULT 'STRICT'")
+            }
+        }
+        
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE focus_sessions ADD COLUMN timelineEvents TEXT NOT NULL DEFAULT '[]'")
             }
         }
 
@@ -35,7 +41,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "focus_os_database"
                 )
-                    .addMigrations(MIGRATION_3_4)
+                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                 INSTANCE = instance
                 instance
