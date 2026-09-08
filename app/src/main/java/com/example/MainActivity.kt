@@ -41,9 +41,6 @@ import com.example.ui.navigation.FocusRoutes
 import com.example.ui.theme.FocusBackground
 import com.example.ui.theme.FocusOSTheme
 import com.example.ui.viewmodel.FocusViewModel
-import com.example.ui.components.AppUpdateDialog
-import com.example.util.update.AppUpdateManager
-import com.example.util.update.UpdateStatus
 import com.example.util.FocusLockManager
 import com.example.util.FocusLockOverlayManager
 
@@ -55,10 +52,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         val sharedPrefs = getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
-        val autoCheckUpdates = sharedPrefs.getBoolean("AUTO_CHECK_UPDATES", true)
-        if (autoCheckUpdates) {
-            AppUpdateManager.checkForUpdates(this, isManual = false)
-        }
 
         FocusLockOverlayManager.dismissOverlay()
         FocusLockManager.onDistractionListener = { blockedPkg, showRedModal ->
@@ -135,13 +128,6 @@ class MainActivity : ComponentActivity() {
                         }
                         viewModel.clearStartSessionEvent()
                     }
-                }
-                val updateStatus by AppUpdateManager.updateStatus.collectAsState()
-                if (updateStatus !is UpdateStatus.Idle) {
-                    AppUpdateDialog(
-                        status = updateStatus,
-                        onDismiss = { AppUpdateManager.resetStatus() }
-                    )
                 }
 
                 Scaffold(

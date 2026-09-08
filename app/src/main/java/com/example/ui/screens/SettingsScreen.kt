@@ -40,8 +40,6 @@ import com.example.ui.theme.*
 import com.example.ui.viewmodel.FocusViewModel
 import com.example.util.LockPermissionHelper
 import com.example.util.PermissionItemState
-import com.example.util.update.AppUpdateManager
-import com.example.util.update.UpdateStatus
 import com.example.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,12 +53,9 @@ fun SettingsScreen(
     var showAccessibilityDisclosure by remember { mutableStateOf(false) }
     var showUsageAccessDisclosure by remember { mutableStateOf(false) }
     var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
-    var showCustomServerDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
 
-    var autoCheckUpdates by remember { mutableStateOf(sharedPrefs.getBoolean("AUTO_CHECK_UPDATES", true)) }
-    var manifestUrlText by remember { mutableStateOf(AppUpdateManager.getUpdateManifestUrl(context)) }
     var userName by remember { mutableStateOf(sharedPrefs.getString("USER_NAME", "Focus Student") ?: "Focus Student") }
     var profilePhotoUri by remember { mutableStateOf<String?>(sharedPrefs.getString("PROFILE_PHOTO_URI", null)) }
 
@@ -196,18 +191,6 @@ fun SettingsScreen(
     val grantedCount = permissionsList.count { it.isGranted }
     val totalCount = permissionsList.size
     val shieldPercentage = (grantedCount.toFloat() / totalCount.toFloat() * 100).toInt()
-
-    val snackbarHostState = remember { SnackbarHostState() }
-    val updateStatus by AppUpdateManager.updateStatus.collectAsState()
-
-    LaunchedEffect(Unit) {
-        AppUpdateManager.snackbarMessage.collect { message ->
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Short
-            )
-        }
-    }
 
     Box(modifier = Modifier.fillMaxSize().background(NavyBackground)) {
         LazyColumn(
@@ -850,199 +833,8 @@ fun SettingsScreen(
                 )
             }
         }
-
-        // In-App Direct Updater & Version Management
-        item {
-            SettingsSectionTitle("📲 IN-APP DIRECT UPDATER & VERSION")
-            SettingsCard {
-                SettingsItem(
-                    icon = Icons.Default.Info,
-                    title = "Focus OS Version",
-                    subtitle = "Production Release Channel",
-                    valueText = "v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-                    valueColor = NavyPrimary
-                )
-                Divider(color = NavySurfaceVariant)
-
-                // Dedicated Prominent Manual Check Action Box
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(NavySurfaceVariant.copy(alpha = 0.6f))
-                        .border(1.dp, NavyPrimary.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
-                        .padding(14.dp)
-                ) {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = if (updateStatus is UpdateStatus.Downloading) "Downloading Update..." 
-                                           else if (updateStatus is UpdateStatus.ReadyToInstall) "Update Ready" 
-                                           else "Update Check Status",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = when (updateStatus) {
-                                        is UpdateStatus.Checking -> "Checking online repositories..."
-                                        is UpdateStatus.Downloading -> "${(updateStatus as UpdateStatus.Downloading).progressPercent}% Completed"
-                                        is UpdateStatus.ReadyToInstall -> "Ready to install the new version"
-                                        else -> "Ready to scan for new builds"
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = if (updateStatus is UpdateStatus.Checking || updateStatus is UpdateStatus.Downloading || updateStatus is UpdateStatus.ReadyToInstall) NavyPrimary else NavyTextSecondary
-                                )
-                            }
-                            if (updateStatus is UpdateStatus.Checking) {
-                                CircularProgressIndicator(
-                                    color = NavyPrimary,
-                                    strokeWidth = 2.5.dp,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            } else if (updateStatus is UpdateStatus.Downloading) {
-                                CircularProgressIndicator(
-                                    progress = { if ((updateStatus as UpdateStatus.Downloading).progressPercent > 0) (updateStatus as UpdateStatus.Downloading).progressPercent / 100f else 0.05f },
-                                    color = NavyPrimary,
-                                    strokeWidth = 2.5.dp,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            } else if (updateStatus is UpdateStatus.ReadyToInstall) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(24.dp))
-                            }
-                        }
-
-                        if (updateStatus is UpdateStatus.Downloading) {
-                            Spacer(modifier = Modifier.height(14.dp))
-                            val dlStatus = updateStatus as UpdateStatus.Downloading
-                            LinearProgressIndicator(
-                                progress = { if (dlStatus.progressPercent > 0) dlStatus.progressPercent / 100f else 0f },
-                                color = NavyPrimary,
-                                trackColor = NavySurfaceVariant,
-                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp))
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "${String.format("%.1f", dlStatus.downloadedMB)} MB / ${String.format("%.1f", dlStatus.totalMB)} MB",
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                color = NavyTextSecondary,
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.End
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        Button(
-                            onClick = {
-                                if (updateStatus is UpdateStatus.ReadyToInstall) {
-                                    AppUpdateManager.installApk(context, (updateStatus as UpdateStatus.ReadyToInstall).apkFile)
-                                } else {
-                                    AppUpdateManager.checkForUpdates(context, isManual = true)
-                                }
-                            },
-                            enabled = updateStatus !is UpdateStatus.Checking && updateStatus !is UpdateStatus.Downloading,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = NavyPrimary,
-                                contentColor = Color(0xFF070E1F),
-                                disabledContainerColor = NavyPrimary.copy(alpha = 0.4f)
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(44.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (updateStatus is UpdateStatus.Checking) Icons.Default.Sync 
-                                              else if (updateStatus is UpdateStatus.ReadyToInstall) Icons.Default.SystemUpdate
-                                              else Icons.Default.CloudSync,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (updateStatus is UpdateStatus.Checking) "CHECKING FOR UPDATES..." 
-                                       else if (updateStatus is UpdateStatus.ReadyToInstall) "INSTALL UPDATE"
-                                       else "MANUAL CHECK FOR UPDATES",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 13.sp
-                            )
-                        }
-                    }
-                }
-
-                Divider(color = NavySurfaceVariant)
-                SettingsToggleItem(
-                    icon = Icons.Default.Autorenew,
-                    title = "Auto-Check on App Launch",
-                    subtitle = "Automatically notifies when a new update is released",
-                    defaultChecked = autoCheckUpdates,
-                    onCheckedChange = { isChecked ->
-                        autoCheckUpdates = isChecked
-                        sharedPrefs.edit().putBoolean("AUTO_CHECK_UPDATES", isChecked).apply()
-                    }
-                )
-                Divider(color = NavySurfaceVariant)
-                SettingsClickableItem(
-                    icon = Icons.Default.Link,
-                    title = "Update Server Manifest URL",
-                    subtitle = "Configured: ${AppUpdateManager.getUpdateManifestUrl(context).take(36)}...",
-                    onClick = { 
-                        manifestUrlText = AppUpdateManager.getUpdateManifestUrl(context)
-                        showCustomServerDialog = true 
-                    }
-                )
-                
-                Divider(color = NavySurfaceVariant)
-                SettingsClickableItem(
-                    icon = Icons.Default.Science,
-                    title = "Test In-App Update Flow (Demo)",
-                    subtitle = "Preview update dialog, download progress & installer UI",
-                    onClick = {
-                        AppUpdateManager.triggerDemoUpdate(context)
-                    }
-                )
-
-                Divider(color = NavySurfaceVariant)
-                SettingsClickableItem(
-                    icon = Icons.Default.SaveAlt,
-                    title = "Export / Download Latest APK",
-                    subtitle = "Save this app's raw APK file directly to your Downloads folder",
-                    onClick = {
-                        AppUpdateManager.exportCurrentApk(context)
-                    }
-                )
-                
-                // Safe Upgrade Guarantee Banner
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF0C244A))
-                        .border(1.dp, NavyPrimary.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 12.dp, vertical = 10.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.VerifiedUser, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "🛡️ Active Record Guarantee: Updating the app preserves 100% of your data, sessions, timetables, whitelist configs, streaks, and statistics.",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                            color = NavyPrimary
-                        )
-                    }
-                }
-            }
-        }
-
         item { Spacer(modifier = Modifier.height(100.dp)) }
+    }
     }
 
     // Permission Architecture Info Dialog
@@ -1654,74 +1446,6 @@ fun SettingsScreen(
         )
     }
 
-    if (showCustomServerDialog) {
-        var tempUrl by remember { mutableStateOf(manifestUrlText) }
-        AlertDialog(
-            onDismissRequest = { showCustomServerDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.Link, contentDescription = null, tint = NavyPrimary)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Update Manifest Endpoint", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "Enter the JSON manifest or GitHub Release version endpoint for checking updates:",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NavyTextSecondary
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = tempUrl,
-                        onValueChange = { tempUrl = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Manifest URL") },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedBorderColor = NavyPrimary,
-                            unfocusedBorderColor = NavySurfaceVariant
-                        ),
-                        singleLine = false,
-                        maxLines = 3
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    AppUpdateManager.setUpdateManifestUrl(context, tempUrl.trim())
-                    manifestUrlText = tempUrl.trim()
-                    showCustomServerDialog = false
-                }) {
-                    Text("Save & Apply", color = NavyPrimary, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCustomServerDialog = false }) {
-                    Text("Cancel", color = NavyTextSecondary)
-                }
-            },
-            containerColor = NavySurface
-        )
-    }
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 72.dp, start = 16.dp, end = 16.dp)
-        ) { data ->
-            Snackbar(
-                snackbarData = data,
-                containerColor = NavySurface,
-                contentColor = NavyTextPrimary,
-                actionColor = NavyPrimary,
-                shape = RoundedCornerShape(12.dp)
-            )
-        }
-    }
 }
 
 @Composable

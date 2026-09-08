@@ -367,6 +367,8 @@ fun StatisticsScreen(
                 .let { if (isExporting) it else it.verticalScroll(rememberScrollState()) },
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            WeeklySummaryCard(allSessions = allSessions)
+
             // Navigation Tabs
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1770,6 +1772,103 @@ fun SessionTimelineGraph(session: FocusSession) {
                     )
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun WeeklySummaryCard(allSessions: List<FocusSession>) {
+    val thisWeekTotal = remember(allSessions) {
+        val cal = Calendar.getInstance().apply {
+            firstDayOfWeek = Calendar.MONDAY
+            set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val currentWeekStart = cal.timeInMillis
+        val currentWeekEnd = currentWeekStart + 7L * 24 * 3600 * 1000 - 1
+        allSessions.filter { it.timestamp in currentWeekStart..currentWeekEnd }.sumOf { it.completedDurationSeconds }
+    }
+    
+    val lastWeekTotal = remember(allSessions) {
+        val cal = Calendar.getInstance().apply {
+            firstDayOfWeek = Calendar.MONDAY
+            set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            add(Calendar.DAY_OF_YEAR, -7)
+        }
+        val lastWeekStart = cal.timeInMillis
+        val lastWeekEnd = lastWeekStart + 7L * 24 * 3600 * 1000 - 1
+        allSessions.filter { it.timestamp in lastWeekStart..lastWeekEnd }.sumOf { it.completedDurationSeconds }
+    }
+    
+    val maxTotal = maxOf(thisWeekTotal, lastWeekTotal, 3600) // minimum 1 hour for scale
+    
+    Card(
+        colors = CardDefaults.cardColors(containerColor = FocusSurface),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Weekly Summary", color = Color.White, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                // Last Week Bar
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(formatSecondsToReadable(lastWeekTotal), color = FocusTextSecondary, style = MaterialTheme.typography.labelSmall)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(modifier = Modifier
+                        .width(48.dp)
+                        .height(100.dp * (lastWeekTotal.toFloat() / maxTotal))
+                        .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+                        .background(FocusSurfaceVariant)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Last Wk", color = FocusTextSecondary, style = MaterialTheme.typography.labelSmall)
+                }
+                
+                // This Week Bar
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(formatSecondsToReadable(thisWeekTotal), color = StatBlue, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(modifier = Modifier
+                        .width(48.dp)
+                        .height(100.dp * (thisWeekTotal.toFloat() / maxTotal))
+                        .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+                        .background(StatBlue)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("This Wk", color = Color.White, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = FocusSurfaceVariant)
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            val diff = thisWeekTotal - lastWeekTotal
+            val diffText = if (diff >= 0) {
+                "Up ${formatSecondsToReadable(diff)} from last week! Keep it up! 🚀"
+            } else {
+                "Down ${formatSecondsToReadable(-diff)} from last week. Let's catch up! 💪"
+            }
+            
+            Text(
+                text = diffText,
+                color = if (diff >= 0) StatGreen else FocusWarning,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
         }
     }
 }
