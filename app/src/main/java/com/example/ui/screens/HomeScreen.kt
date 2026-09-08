@@ -1087,26 +1087,40 @@ fun HomeScreen(
                     )
                 }
                 
-                Surface(
-                    onClick = onNavigateToScheduleCreate,
-                    shape = RoundedCornerShape(12.dp),
-                    color = FocusPrimary.copy(alpha = 0.15f),
-                    contentColor = FocusPrimary
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { /* Download Timetable */ },
+                        modifier = Modifier.size(36.dp).background(FocusPrimary.copy(alpha = 0.15f), CircleShape)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add New",
-                            modifier = Modifier.size(18.dp)
+                            imageVector = Icons.Default.Download,
+                            contentDescription = "Download Timetable",
+                            tint = FocusPrimary,
+                            modifier = Modifier.size(20.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "ADD",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        onClick = onNavigateToScheduleCreate,
+                        shape = RoundedCornerShape(12.dp),
+                        color = FocusPrimary.copy(alpha = 0.15f),
+                        contentColor = FocusPrimary
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add New",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "ADD",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
                     }
                 }
             }
