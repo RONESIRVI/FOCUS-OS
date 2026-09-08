@@ -42,7 +42,13 @@ sealed class UpdateStatus {
     data class UpdateAvailable(val info: UpdateInfo) : UpdateStatus()
     data class NoUpdate(val currentVersion: String) : UpdateStatus()
     data class Downloading(val progressPercent: Int, val downloadedMB: Float, val totalMB: Float) : UpdateStatus()
-    data class ReadyToInstall(val apkFile: File, val info: UpdateInfo) : UpdateStatus()
+    data class ReadyToInstall(
+        val apkFile: File,
+        val info: UpdateInfo,
+        val archivePackageName: String? = null,
+        val archiveVersionCode: Long = -1L,
+        val archiveVersionName: String? = null
+    ) : UpdateStatus()
     data class Error(val message: String) : UpdateStatus()
 }
 
@@ -121,9 +127,11 @@ object AppUpdateManager {
 
                 var responseText: String? = null
                 var lastResponseCode = 0
+                var successfulUrl = ""
 
                 for (targetUrl in urlsToTry) {
                     try {
+                        Log.i(TAG, "🔍 Querying update manifest from: $targetUrl")
                         val url = URL(targetUrl)
                         val connection = (url.openConnection() as HttpURLConnection).apply {
                             connectTimeout = 6000
@@ -135,8 +143,10 @@ object AppUpdateManager {
 
                         val code = connection.responseCode
                         lastResponseCode = code
+                        Log.i(TAG, "📡 Response code from $targetUrl: $code")
                         if (code == 200) {
                             responseText = connection.inputStream.bufferedReader().use { it.readText() }
+                            successfulUrl = targetUrl
                             break
                         }
                     } catch (e: Exception) {
@@ -145,6 +155,7 @@ object AppUpdateManager {
                 }
 
                 if (responseText != null) {
+                    Log.i(TAG, "📄 Manifest Payload received:\n$responseText")
                     val json = JSONObject(responseText)
 
                     var latestVersionCode = json.optInt("versionCode", 0)
@@ -189,9 +200,24 @@ object AppUpdateManager {
                     val currentVersionCode = BuildConfig.VERSION_CODE
                     val currentVersionName = BuildConfig.VERSION_NAME
 
-                    Log.d(TAG, "Current build: $currentVersionCode ($currentVersionName), Latest online: $latestVersionCode ($latestVersionName)")
+                    val isCodeNewer = latestVersionCode > currentVersionCode
+                    val isNameNewer = isNewerVersionName(latestVersionName, currentVersionName)
 
-                    if (latestVersionCode > currentVersionCode && apkUrl.isNotEmpty()) {
+                    Log.i(TAG, "==================================================")
+                    Log.i(TAG, "🔍 [UPDATE VERSION CODE COMPARISON]")
+                    Log.i(TAG, "   • Installed App Package: ${context.packageName}")
+                    Log.i(TAG, "   • Installed versionCode: $currentVersionCode")
+                    Log.i(TAG, "   • Installed versionName: $currentVersionName")
+                    Log.i(TAG, "   • Fetched Manifest URL:  $successfulUrl")
+                    Log.i(TAG, "   • Remote manifest versionCode: $latestVersionCode")
+                    Log.i(TAG, "   • Remote manifest versionName: $latestVersionName")
+                    Log.i(TAG, "   • Remote APK download URL:     $apkUrl")
+                    Log.i(TAG, "   • Evaluation: (latestVersionCode > currentVersionCode) => ($latestVersionCode > $currentVersionCode) = $isCodeNewer")
+                    Log.i(TAG, "   • Evaluation: (isNewerVersionName) => ($latestVersionName > $currentVersionName) = $isNameNewer")
+                    Log.i(TAG, "==================================================")
+
+                    if (isCodeNewer && apkUrl.isNotEmpty()) {
+                        Log.i(TAG, "✅ Newer update detected by versionCode ($latestVersionCode > $currentVersionCode). Showing update dialog.")
                         val updateInfo = UpdateInfo(
                             versionName = latestVersionName.ifEmpty { "v${latestVersionCode}" },
                             versionCode = latestVersionCode,
@@ -202,7 +228,8 @@ object AppUpdateManager {
                             releaseDate = releaseDate
                         )
                         _updateStatus.value = UpdateStatus.UpdateAvailable(updateInfo)
-                    } else if (apkUrl.isNotEmpty() && isNewerVersionName(latestVersionName, currentVersionName)) {
+                    } else if (apkUrl.isNotEmpty() && isNameNewer) {
+                        Log.i(TAG, "✅ Newer update detected by versionName comparison ($latestVersionName > $currentVersionName). Showing update dialog.")
                         val updateInfo = UpdateInfo(
                             versionName = latestVersionName.ifEmpty { "v${latestVersionCode}" },
                             versionCode = latestVersionCode,
@@ -214,16 +241,17 @@ object AppUpdateManager {
                         )
                         _updateStatus.value = UpdateStatus.UpdateAvailable(updateInfo)
                     } else {
+                        Log.i(TAG, "ℹ️ No newer version found. Installed versionCode $currentVersionCode is equal or higher than remote $latestVersionCode.")
                         _updateStatus.value = UpdateStatus.NoUpdate(currentVersionName)
                         if (isManual) {
-                            _snackbarMessage.emit("✅ Focus OS is up to date (v$currentVersionName).")
+                            _snackbarMessage.emit("✅ Focus OS is up to date (v$currentVersionName, code $currentVersionCode).")
                         }
                     }
                 } else {
                     // Fallback / Graceful notification on 404 or unconfigured repo
-                    Log.w(TAG, "Update server not reachable or 404 (Code: $lastResponseCode)")
+                    Log.w(TAG, "Update server not reachable or 404 (Last HTTP Code: $lastResponseCode)")
                     if (isManual) {
-                        _snackbarMessage.emit("📡 No newer update found online. You're on the latest build (v${BuildConfig.VERSION_NAME}).")
+                        _snackbarMessage.emit("📡 No newer update found online. You're on the latest build (v${BuildConfig.VERSION_NAME}, code ${BuildConfig.VERSION_CODE}).")
                         _updateStatus.value = UpdateStatus.NoUpdate(BuildConfig.VERSION_NAME)
                     } else {
                         _updateStatus.value = UpdateStatus.Idle
@@ -266,7 +294,7 @@ object AppUpdateManager {
             versionName = "v2.5.0 (Demo Update)",
             versionCode = 250,
             releaseNotes = "✨ Demo In-App Update Engine:\n• 100% Data & Session Preservation verified\n• Direct background download progress\n• One-click system APK installer launch\n• Zero browser navigation required",
-            apkUrl = "https://github.com/google/iosched/releases/download/v1.0.0/app-release.apk",
+            apkUrl = "demo://focus_os_demo_update.apk",
             fileSizeMB = "12.4 MB",
             isMandatory = false,
             releaseDate = "Just now"
@@ -284,27 +312,70 @@ object AppUpdateManager {
 
         scope.launch {
             try {
+                if (info.apkUrl.startsWith("demo://")) {
+                    // Realistic simulation of download progress for testing UI flow
+                    val totalMB = 12.4f
+                    for (percent in 5..100 step 5) {
+                        kotlinx.coroutines.delay(100)
+                        val downloadedMB = (totalMB * percent) / 100f
+                        _updateStatus.value = UpdateStatus.Downloading(percent, downloadedMB, totalMB)
+                    }
+                    _snackbarMessage.emit("✅ Demo update downloaded successfully!")
+                    _updateStatus.value = UpdateStatus.Idle
+                    return@launch
+                }
+
                 val updatesDir = File(context.cacheDir, "updates").apply { mkdirs() }
                 val targetFile = File(updatesDir, "FocusOS_${info.versionName}.apk")
                 if (targetFile.exists()) {
                     targetFile.delete()
                 }
 
-                val url = URL(info.apkUrl)
-                val connection = (url.openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 15000
-                    readTimeout = 30000
-                    requestMethod = "GET"
-                    setRequestProperty("User-Agent", "FocusOS-Android/${BuildConfig.VERSION_NAME}")
+                var currentUrl = info.apkUrl
+                var connection: HttpURLConnection? = null
+                var redirectCount = 0
+                val maxRedirects = 5
+                var responseCode = 0
+
+                while (redirectCount < maxRedirects) {
+                    Log.i(TAG, "📥 Connecting to APK download URL: $currentUrl")
+                    val url = URL(currentUrl)
+                    val conn = (url.openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 15000
+                        readTimeout = 30000
+                        requestMethod = "GET"
+                        instanceFollowRedirects = true
+                        setRequestProperty("User-Agent", "FocusOS-Android/${BuildConfig.VERSION_NAME}")
+                    }
+                    responseCode = conn.responseCode
+                    Log.i(TAG, "📥 Download connection response code: $responseCode")
+                    if (responseCode in 300..399) {
+                        val newLocation = conn.getHeaderField("Location")
+                        if (!newLocation.isNullOrBlank()) {
+                            Log.i(TAG, "🔀 Following redirect ($responseCode) -> $newLocation")
+                            currentUrl = newLocation
+                            redirectCount++
+                            conn.disconnect()
+                            continue
+                        }
+                    }
+                    connection = conn
+                    break
                 }
 
-                val responseCode = connection.responseCode
-                if (responseCode != 200) {
-                    throw IllegalStateException("Server returned HTTP $responseCode during APK download")
+                if (connection == null || responseCode != 200) {
+                    val errMsg = when (responseCode) {
+                        404 -> "Server returned HTTP 404 (File Not Found). APK link in 'version.json' does not exist."
+                        403 -> "Server returned HTTP 403 (Access Denied). Please check repository permissions."
+                        else -> "Server returned HTTP $responseCode during APK download."
+                    }
+                    Log.e(TAG, "❌ Download failed with HTTP $responseCode: $errMsg")
+                    throw IllegalStateException(errMsg)
                 }
 
                 val contentLength = connection.contentLength
                 val totalMB = if (contentLength > 0) contentLength / (1024f * 1024f) else 15f
+                Log.i(TAG, "📥 Starting stream read. Total size: ${contentLength} bytes (~${String.format("%.2f", totalMB)} MB)")
 
                 var inputStream: InputStream? = null
                 var outputStream: FileOutputStream? = null
@@ -337,11 +408,63 @@ object AppUpdateManager {
                 }
 
                 if (targetFile.exists() && targetFile.length() > 1000) {
-                    _updateStatus.value = UpdateStatus.ReadyToInstall(targetFile, info)
+                    Log.i(TAG, "✅ APK Download Complete: ${targetFile.absolutePath} (${targetFile.length()} bytes)")
+
+                    // Parse downloaded APK archive info for version code & package diagnostics
+                    val packageInfo = try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            context.packageManager.getPackageArchiveInfo(
+                                targetFile.absolutePath,
+                                android.content.pm.PackageManager.PackageInfoFlags.of(0)
+                            )
+                        } else {
+                            @Suppress("DEPRECATION")
+                            context.packageManager.getPackageArchiveInfo(targetFile.absolutePath, 0)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error parsing package archive info", e)
+                        null
+                    }
+
+                    val downloadedPkg = packageInfo?.packageName
+                    val downloadedVerCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        packageInfo?.longVersionCode ?: -1L
+                    } else {
+                        @Suppress("DEPRECATION")
+                        packageInfo?.versionCode?.toLong() ?: -1L
+                    }
+                    val downloadedVerName = packageInfo?.versionName
+
+                    Log.i(TAG, "==================================================")
+                    Log.i(TAG, "📦 [DOWNLOADED APK ARCHIVE INSPECTION]")
+                    Log.i(TAG, "   • File: ${targetFile.name} (${targetFile.length()} bytes)")
+                    Log.i(TAG, "   • Archive Package:     $downloadedPkg")
+                    Log.i(TAG, "   • Archive VersionCode: $downloadedVerCode")
+                    Log.i(TAG, "   • Archive VersionName: $downloadedVerName")
+                    Log.i(TAG, "   • Installed Package:     ${context.packageName}")
+                    Log.i(TAG, "   • Installed VersionCode: ${BuildConfig.VERSION_CODE}")
+                    Log.i(TAG, "   • Installed VersionName: ${BuildConfig.VERSION_NAME}")
+                    
+                    if (downloadedPkg != null && downloadedPkg != context.packageName) {
+                        Log.w(TAG, "⚠️ PACKAGE MISMATCH: APK package '$downloadedPkg' does not match installed '${context.packageName}'!")
+                    }
+                    if (downloadedVerCode != -1L && downloadedVerCode <= BuildConfig.VERSION_CODE) {
+                        Log.w(TAG, "⚠️ VERSION CODE WARNING: Downloaded APK versionCode ($downloadedVerCode) is <= installed versionCode (${BuildConfig.VERSION_CODE}). Android OS will reject in-place upgrade!")
+                    }
+                    Log.i(TAG, "==================================================")
+
+                    _updateStatus.value = UpdateStatus.ReadyToInstall(
+                        apkFile = targetFile,
+                        info = info,
+                        archivePackageName = downloadedPkg,
+                        archiveVersionCode = downloadedVerCode,
+                        archiveVersionName = downloadedVerName
+                    )
                     withContext(Dispatchers.Main) {
                         installApk(context, targetFile)
                     }
                 } else {
+                    Log.e(TAG, "❌ Downloaded APK file is invalid or zero bytes")
                     _updateStatus.value = UpdateStatus.Error("Downloaded update file is corrupted or incomplete.")
                 }
             } catch (e: Exception) {
@@ -363,16 +486,20 @@ object AppUpdateManager {
                 return
             }
 
+            Log.i(TAG, "🚀 Preparing to install APK: ${apkFile.absolutePath}")
             val apkUri: Uri = FileProvider.getUriForFile(
                 context.applicationContext,
                 "${context.packageName}.fileprovider",
                 apkFile
             )
+            Log.i(TAG, "📎 FileProvider content URI: $apkUri")
 
             val installIntent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(apkUri, "application/vnd.android.package-archive")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
             }
+
+            Log.i(TAG, "📲 Launching Package Installer Intent...")
             context.startActivity(installIntent)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to launch package installer", e)
@@ -380,4 +507,5 @@ object AppUpdateManager {
         }
     }
 }
+
 
