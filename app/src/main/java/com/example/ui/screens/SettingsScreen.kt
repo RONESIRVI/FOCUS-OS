@@ -39,6 +39,8 @@ import com.example.ui.theme.*
 import com.example.ui.viewmodel.FocusViewModel
 import com.example.util.LockPermissionHelper
 import com.example.util.PermissionItemState
+import com.example.util.update.AppUpdateManager
+import com.example.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,9 +53,12 @@ fun SettingsScreen(
     var showAccessibilityDisclosure by remember { mutableStateOf(false) }
     var showUsageAccessDisclosure by remember { mutableStateOf(false) }
     var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
+    var showCustomServerDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
 
+    var autoCheckUpdates by remember { mutableStateOf(sharedPrefs.getBoolean("AUTO_CHECK_UPDATES", true)) }
+    var manifestUrlText by remember { mutableStateOf(AppUpdateManager.getUpdateManifestUrl(context)) }
     var userName by remember { mutableStateOf(sharedPrefs.getString("USER_NAME", "Focus Student") ?: "Focus Student") }
     var profilePhotoUri by remember { mutableStateOf<String?>(sharedPrefs.getString("PROFILE_PHOTO_URI", null)) }
 
@@ -831,6 +836,71 @@ fun SettingsScreen(
             }
         }
 
+        // In-App Direct Updater & Version Management
+        item {
+            SettingsSectionTitle("📲 IN-APP DIRECT UPDATER & VERSION")
+            SettingsCard {
+                SettingsItem(
+                    icon = Icons.Default.Info,
+                    title = "Focus OS Version",
+                    subtitle = "Production Release Channel",
+                    valueText = "v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                    valueColor = FocusPrimary
+                )
+                Divider(color = FocusSurfaceVariant)
+                SettingsClickableItem(
+                    icon = Icons.Default.CloudSync,
+                    title = "Check for Updates Now",
+                    subtitle = "Direct in-app APK auto-updater engine • Tap to check",
+                    onClick = {
+                        AppUpdateManager.checkForUpdates(context, isManual = true)
+                    }
+                )
+                Divider(color = FocusSurfaceVariant)
+                SettingsToggleItem(
+                    icon = Icons.Default.Autorenew,
+                    title = "Auto-Check on App Launch",
+                    subtitle = "Automatically notifies when a new update is released",
+                    defaultChecked = autoCheckUpdates,
+                    onCheckedChange = { isChecked ->
+                        autoCheckUpdates = isChecked
+                        sharedPrefs.edit().putBoolean("AUTO_CHECK_UPDATES", isChecked).apply()
+                    }
+                )
+                Divider(color = FocusSurfaceVariant)
+                SettingsClickableItem(
+                    icon = Icons.Default.Link,
+                    title = "Update Server Manifest URL",
+                    subtitle = "Configured: ${AppUpdateManager.getUpdateManifestUrl(context).take(36)}...",
+                    onClick = { 
+                        manifestUrlText = AppUpdateManager.getUpdateManifestUrl(context)
+                        showCustomServerDialog = true 
+                    }
+                )
+                
+                // Safe Upgrade Guarantee Banner
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF10281C))
+                        .border(1.dp, FocusPrimary.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(imageVector = Icons.Default.VerifiedUser, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "🛡️ Active Record Guarantee: Updating the app preserves 100% of your data, sessions, timetables, whitelist configs, streaks, and statistics.",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                            color = FocusPrimary
+                        )
+                    }
+                }
+            }
+        }
+
         item { Spacer(modifier = Modifier.height(100.dp)) }
     }
 
@@ -1435,6 +1505,59 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = { showNotifThemeDialog = false }) {
                     Text("Apply Theme", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = FocusSurface
+        )
+    }
+
+    if (showCustomServerDialog) {
+        var tempUrl by remember { mutableStateOf(manifestUrlText) }
+        AlertDialog(
+            onDismissRequest = { showCustomServerDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(imageVector = Icons.Default.Link, contentDescription = null, tint = FocusPrimary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Update Manifest Endpoint", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Enter the JSON manifest or GitHub Release version endpoint for checking updates:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = FocusTextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = tempUrl,
+                        onValueChange = { tempUrl = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Manifest URL") },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = FocusPrimary,
+                            unfocusedBorderColor = FocusSurfaceVariant
+                        ),
+                        singleLine = false,
+                        maxLines = 3
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    AppUpdateManager.setUpdateManifestUrl(context, tempUrl.trim())
+                    manifestUrlText = tempUrl.trim()
+                    showCustomServerDialog = false
+                }) {
+                    Text("Save & Apply", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCustomServerDialog = false }) {
+                    Text("Cancel", color = FocusTextSecondary)
                 }
             },
             containerColor = FocusSurface
