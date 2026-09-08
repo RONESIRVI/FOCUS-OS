@@ -646,13 +646,13 @@ fun HomeScreen(
         }
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(FocusBackground)
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(FocusBackground)) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
         item { Spacer(modifier = Modifier.height(16.dp)) }
 
         // Premium Top Header
@@ -1086,17 +1086,6 @@ fun HomeScreen(
                         color = FocusTextPrimary
                     )
                 }
-                
-                TextButton(
-                    onClick = onNavigateToScheduleCreate,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "+ ADD NEW",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = FocusPrimary
-                    )
-                }
             }
         }
 
@@ -1280,8 +1269,31 @@ fun HomeScreen(
                 )
             }
         }
-        item { Spacer(modifier = Modifier.height(60.dp)) }
+        item { Spacer(modifier = Modifier.height(80.dp)) } // Extra padding for FAB
     }
+
+    // Modern Redesigned + FAB
+    FloatingActionButton(
+        onClick = onNavigateToScheduleCreate,
+        containerColor = FocusPrimary,
+        contentColor = Color(0xFF070E1F), // Dark navy for contrast
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(24.dp)
+            .size(64.dp),
+        shape = CircleShape,
+        elevation = FloatingActionButtonDefaults.elevation(
+            defaultElevation = 8.dp,
+            pressedElevation = 12.dp
+        )
+    ) {
+        Icon(
+            imageVector = Icons.Default.Add,
+            contentDescription = "Add New Schedule",
+            modifier = Modifier.size(32.dp)
+        )
+    }
+}
 }
 
 
