@@ -21,5 +21,16 @@ val FocusTextPrimary = Color(0xFFF0F2F5)     // Crisp White Text
 val FocusTextSecondary = Color(0xFF9BA1B0)   // Muted Text
 val FocusTextDisabled = Color(0xFF5A6175)    // Disabled Text
 
+// Dedicated Navy Blue Theme Colors (Settings Section)
+val NavyBackground = Color(0xFF070E1F)          // Deep Midnight Navy Canvas
+val NavySurface = Color(0xFF0F1B38)             // Rich Navy Blue Card Surface
+val NavySurfaceVariant = Color(0xFF182952)      // Elevated Navy Slate Surface
+val NavyOutline = Color(0xFF1E376D)             // Subtle Navy Blue Border
+val NavyPrimary = Color(0xFF38BDF8)             // Vivid Electric Cyan-Blue Accent
+val NavyPrimaryDark = Color(0xFF0C4A6E)         // Deep Navy Blue Container
+val NavyAccent = Color(0xFF60A5FA)              // Soft Sky/Royal Blue
+val NavyTextPrimary = Color(0xFFF1F5F9)         // Crisp Ice-White Text
+val NavyTextSecondary = Color(0xFF94A3B8)       // Muted Navy-Slate Text
+
 
 

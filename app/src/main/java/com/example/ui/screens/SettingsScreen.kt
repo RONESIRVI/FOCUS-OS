@@ -208,7 +208,7 @@ fun SettingsScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(FocusBackground)) {
+    Box(modifier = Modifier.fillMaxSize().background(NavyBackground)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -226,10 +226,10 @@ fun SettingsScreen(
                 Text(
                     text = "SETTINGS",
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black, letterSpacing = 1.sp),
-                    color = FocusPrimary
+                    color = NavyPrimary
                 )
                 IconButton(onClick = { showInfoDialog = true }) {
-                    Icon(imageVector = Icons.Default.Info, contentDescription = "Permission Architecture Info", tint = FocusPrimary)
+                    Icon(imageVector = Icons.Default.Info, contentDescription = "Permission Architecture Info", tint = NavyPrimary)
                 }
             }
         }
@@ -237,8 +237,9 @@ fun SettingsScreen(
         // Profile Section
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = FocusSurface),
+                colors = CardDefaults.cardColors(containerColor = NavySurface),
                 shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, NavyOutline.copy(alpha = 0.6f)),
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
             ) {
                 Row(
@@ -263,25 +264,25 @@ fun SettingsScreen(
                                     .size(60.dp)
                                     .align(Alignment.Center)
                                     .clip(CircleShape)
-                                    .border(2.dp, FocusPrimary, CircleShape)
+                                    .border(2.dp, NavyPrimary, CircleShape)
                             )
                         } else {
                             Box(
                                 modifier = Modifier
                                     .size(60.dp)
-                                    .background(FocusSurfaceVariant, CircleShape)
+                                    .background(NavySurfaceVariant, CircleShape)
                                     .align(Alignment.Center),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = FocusTextSecondary, modifier = Modifier.size(32.dp))
+                                Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = NavyTextSecondary, modifier = Modifier.size(32.dp))
                             }
                         }
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
-                                .background(FocusPrimary, CircleShape)
+                                .background(NavyPrimary, CircleShape)
                                 .align(Alignment.BottomEnd)
-                                .border(2.dp, FocusSurface, CircleShape),
+                                .border(2.dp, NavySurface, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(imageVector = Icons.Default.Shield, contentDescription = "Pro Protection", tint = Color.Black, modifier = Modifier.size(12.dp))
@@ -289,11 +290,11 @@ fun SettingsScreen(
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(userName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = FocusTextPrimary)
-                        Text("Strict Lockdown Mode Active", style = MaterialTheme.typography.bodySmall, color = FocusPrimary)
+                        Text(userName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = NavyTextPrimary)
+                        Text("Strict Lockdown Mode Active", style = MaterialTheme.typography.bodySmall, color = NavyPrimary)
                     }
                     IconButton(onClick = { showEditProfileDialog = true }) {
-                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit Profile", tint = FocusTextSecondary)
+                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit Profile", tint = NavyTextSecondary)
                     }
                 }
             }
@@ -303,12 +304,12 @@ fun SettingsScreen(
         item {
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = if (grantedCount >= 8) Color(0xFF10281C) else Color(0xFF281E10)
+                    containerColor = if (grantedCount >= 8) Color(0xFF0C244A) else Color(0xFF281E10)
                 ),
                 shape = RoundedCornerShape(16.dp),
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp,
-                    if (grantedCount >= 8) FocusPrimary.copy(alpha = 0.5f) else Color(0xFFFFB74D)
+                    if (grantedCount >= 8) NavyPrimary.copy(alpha = 0.5f) else Color(0xFFFFB74D)
                 ),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -322,7 +323,7 @@ fun SettingsScreen(
                             Icon(
                                 imageVector = if (grantedCount >= 8) Icons.Default.VerifiedUser else Icons.Default.Warning,
                                 contentDescription = null,
-                                tint = if (grantedCount >= 8) FocusPrimary else Color(0xFFFFB74D),
+                                tint = if (grantedCount >= 8) NavyPrimary else Color(0xFFFFB74D),
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
@@ -330,23 +331,23 @@ fun SettingsScreen(
                                 Text(
                                     text = "SHIELD PROTECTION LEVEL",
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-                                    color = FocusTextSecondary
+                                    color = NavyTextSecondary
                                 )
                                 Text(
                                     text = if (grantedCount == totalCount) "Maximum Lockdown Ready (10/10)" else "$grantedCount of $totalCount Permissions Active",
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = if (grantedCount >= 8) FocusPrimary else Color(0xFFFFB74D)
+                                    color = if (grantedCount >= 8) NavyPrimary else Color(0xFFFFB74D)
                                 )
                             }
                         }
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = if (grantedCount >= 8) FocusPrimary.copy(alpha = 0.2f) else Color(0xFFFFB74D).copy(alpha = 0.2f)
+                            color = if (grantedCount >= 8) NavyPrimary.copy(alpha = 0.2f) else Color(0xFFFFB74D).copy(alpha = 0.2f)
                         ) {
                             Text(
                                 text = "$shieldPercentage%",
                                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Black),
-                                color = if (grantedCount >= 8) FocusPrimary else Color(0xFFFFB74D),
+                                color = if (grantedCount >= 8) NavyPrimary else Color(0xFFFFB74D),
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
@@ -359,14 +360,14 @@ fun SettingsScreen(
                             .fillMaxWidth()
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp)),
-                        color = if (grantedCount >= 8) FocusPrimary else Color(0xFFFFB74D),
-                        trackColor = FocusSurfaceVariant
+                        color = if (grantedCount >= 8) NavyPrimary else Color(0xFFFFB74D),
+                        trackColor = NavySurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = if (grantedCount == totalCount) "All 10 required services and permissions are active. Your study sessions are 100% distraction-proof." else "Setup all listed permissions below for bulletproof app blocking and background stability.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FocusTextSecondary
+                        color = NavyTextSecondary
                     )
                 }
             }
@@ -382,14 +383,14 @@ fun SettingsScreen(
                     subtitle = "Allowed apps during Quick Focus sessions",
                     onClick = { onNavigateToAppSelector("MANUAL") }
                 )
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
                 SettingsClickableItem(
                     icon = Icons.Default.AppRegistration,
                     title = "Strict Schedule Whitelist",
                     subtitle = "Allowed apps during Strict Scheduled Focus",
                     onClick = { onNavigateToAppSelector("STRICT") }
                 )
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
                 SettingsClickableItem(
                     icon = Icons.Default.Star,
                     title = "Special Whitelist",
@@ -425,17 +426,17 @@ fun SettingsScreen(
                                     viewModel.updateSetup(lockMode = mode)
                                     sharedPrefs.edit().putString("SAVED_LOCK_MODE", mode.name).apply()
                                 },
-                                colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
+                                colors = RadioButtonDefaults.colors(selectedColor = NavyPrimary, unselectedColor = NavyTextSecondary)
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
-                                Text(text = mode.title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = if (isSelected) FocusPrimary else FocusTextPrimary)
-                                Text(text = mode.description, style = MaterialTheme.typography.bodySmall, color = FocusTextSecondary)
+                                Text(text = mode.title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = if (isSelected) NavyPrimary else NavyTextPrimary)
+                                Text(text = mode.description, style = MaterialTheme.typography.bodySmall, color = NavyTextSecondary)
                             }
                         }
                     }
                     if (index < selectableModes.size - 1) {
-                        Divider(color = FocusSurfaceVariant)
+                        Divider(color = NavySurfaceVariant)
                     }
                 }
             }
@@ -447,7 +448,7 @@ fun SettingsScreen(
             Text(
                 text = "These core permissions detect distracting apps and display the focus shield overlay during study.",
                 style = MaterialTheme.typography.bodySmall,
-                color = FocusTextSecondary,
+                color = NavyTextSecondary,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
             )
         }
@@ -464,7 +465,7 @@ fun SettingsScreen(
                     actionLabel = "Grant Access",
                     onAction = { showUsageAccessDisclosure = true }
                 )
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // 2. Draw Over Apps
                 PermissionRowItem(
@@ -476,7 +477,7 @@ fun SettingsScreen(
                     actionLabel = "Enable Overlay",
                     onAction = { LockPermissionHelper.openOverlaySettings(context) }
                 )
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // 3. Query Packages
                 PermissionRowItem(
@@ -497,7 +498,7 @@ fun SettingsScreen(
             Text(
                 text = "Ensures background timer stability and protects against Android OEM battery cleaners.",
                 style = MaterialTheme.typography.bodySmall,
-                color = FocusTextSecondary,
+                color = NavyTextSecondary,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
             )
         }
@@ -514,7 +515,7 @@ fun SettingsScreen(
                     actionLabel = "Active",
                     onAction = { }
                 )
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // 5. Special Use FGS
                 PermissionRowItem(
@@ -526,7 +527,7 @@ fun SettingsScreen(
                     actionLabel = "Active",
                     onAction = { }
                 )
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // 6. Battery Optimization
                 PermissionRowItem(
@@ -538,7 +539,7 @@ fun SettingsScreen(
                     actionLabel = "Exempt Battery",
                     onAction = { LockPermissionHelper.requestIgnoreBatteryOptimizations(context) }
                 )
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // 7. Boot Startup
                 PermissionRowItem(
@@ -559,7 +560,7 @@ fun SettingsScreen(
             Text(
                 text = "Provides instant lock screen overlay, alert alarms, and precise timer triggers.",
                 style = MaterialTheme.typography.bodySmall,
-                color = FocusTextSecondary,
+                color = NavyTextSecondary,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
             )
         }
@@ -576,7 +577,7 @@ fun SettingsScreen(
                     actionLabel = "Allow Overlay",
                     onAction = { LockPermissionHelper.openOverlaySettings(context) }
                 )
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // 9. Notifications
                 PermissionRowItem(
@@ -588,7 +589,7 @@ fun SettingsScreen(
                     actionLabel = "Enable Alerts",
                     onAction = { LockPermissionHelper.openNotificationSettings(context) }
                 )
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // 10. Schedule Exact Alarms
                 PermissionRowItem(
@@ -608,9 +609,9 @@ fun SettingsScreen(
             SettingsSectionTitle("FOCUS PREFERENCES")
             SettingsCard {
                 SettingsItem(icon = Icons.Default.Timer, title = "Default Duration", valueText = "45 Min")
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
                 SettingsItem(icon = Icons.Default.Tune, title = "Default Mode", valueText = "Strict Lock")
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
                 SettingsItem(icon = Icons.Default.Headphones, title = "Focus Audio", valueText = "Deep Space")
             }
         }
@@ -620,9 +621,9 @@ fun SettingsScreen(
             SettingsSectionTitle("STRICT FOCUS RULES")
             SettingsCard {
                 SettingsToggleItem(icon = Icons.Default.CameraAlt, title = "Start Verification", subtitle = "Require study desk photo to start", defaultChecked = true)
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
                 SettingsToggleItem(icon = Icons.Default.Face, title = "End Verification", subtitle = "Require selfie proof to complete", defaultChecked = true)
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
                 SettingsToggleItem(icon = Icons.Default.Warning, title = "Security Audio Siren", subtitle = "Plays warning sound on distraction", defaultChecked = true)
             }
         }
@@ -636,13 +637,13 @@ fun SettingsScreen(
                     "CYBER_NEON" -> Color(0xFFB388FF)
                     "WARM_SUNSET" -> Color(0xFFFFAB40)
                     "ICE_BLUE" -> Color(0xFF40C4FF)
-                    else -> FocusPrimary
+                    else -> NavyPrimary
                 }
                 val themeBg = when(notifDesignTheme) {
                     "CYBER_NEON" -> Color(0xFF1F1135)
                     "WARM_SUNSET" -> Color(0xFF331D0A)
                     "ICE_BLUE" -> Color(0xFF0A2233)
-                    else -> Color(0xFF131F19)
+                    else -> Color(0xFF0B1938)
                 }
 
                 Box(
@@ -695,7 +696,7 @@ fun SettingsScreen(
                         Text(
                             text = "⏱️ 25:00 Remaining (100%)",
                             style = MaterialTheme.typography.labelSmall,
-                            color = FocusTextSecondary
+                            color = NavyTextSecondary
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         LinearProgressIndicator(
@@ -705,12 +706,12 @@ fun SettingsScreen(
                                 .height(4.dp)
                                 .clip(RoundedCornerShape(2.dp)),
                             color = themeAccent,
-                            trackColor = FocusSurfaceVariant
+                            trackColor = NavySurfaceVariant
                         )
                     }
                 }
 
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // 1. Scheduled Session Alert
                 SettingsClickableItem(
@@ -720,7 +721,7 @@ fun SettingsScreen(
                     onClick = { activeSoundCategoryTarget = "SCHEDULE" }
                 )
 
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // 2. Security Distraction Siren Warning
                 SettingsToggleItem(
@@ -742,7 +743,7 @@ fun SettingsScreen(
                     )
                 }
 
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // 3. Session Complete Finish Alarm
                 SettingsClickableItem(
@@ -752,7 +753,7 @@ fun SettingsScreen(
                     onClick = { activeSoundCategoryTarget = "COMPLETE" }
                 )
 
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // 4. Soft Lock Warning Tone
                 SettingsToggleItem(
@@ -774,7 +775,7 @@ fun SettingsScreen(
                     )
                 }
 
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // 5. Mobile Hardware Vibration System
                 val vibrateLabel = when(notifVibratePattern) {
@@ -790,7 +791,7 @@ fun SettingsScreen(
                     onClick = { showNotifVibrateDialog = true }
                 )
 
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // 6. Notification App Title Header
                 SettingsClickableItem(
@@ -800,7 +801,7 @@ fun SettingsScreen(
                     onClick = { showNotifTitleDialog = true }
                 )
 
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // 7. Notification Design Theme
                 val themeLabel = when(notifDesignTheme) {
@@ -823,9 +824,9 @@ fun SettingsScreen(
         item {
             SettingsSectionTitle("APPEARANCE")
             SettingsCard {
-                SettingsToggleItem(icon = Icons.Default.DarkMode, title = "OLED Dark Mode", defaultChecked = true)
-                Divider(color = FocusSurfaceVariant)
-                SettingsItem(icon = Icons.Default.Palette, title = "Accent Theme", valueText = "Electric Emerald")
+                SettingsToggleItem(icon = Icons.Default.DarkMode, title = "Navy OLED Dark Mode", defaultChecked = true)
+                Divider(color = NavySurfaceVariant)
+                SettingsItem(icon = Icons.Default.Palette, title = "Accent Theme", valueText = "Midnight Navy Blue", valueColor = NavyPrimary)
             }
         }
 
@@ -839,7 +840,7 @@ fun SettingsScreen(
                     subtitle = "100% Offline, Zero Tracking, No Keystroke Logging",
                     onClick = { showPrivacyPolicyDialog = true }
                 )
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
                 SettingsClickableItem(
                     icon = Icons.Default.Security,
                     title = "Usage Access Disclosure",
@@ -858,9 +859,9 @@ fun SettingsScreen(
                     title = "Focus OS Version",
                     subtitle = "Production Release Channel",
                     valueText = "v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-                    valueColor = FocusPrimary
+                    valueColor = NavyPrimary
                 )
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
 
                 // Dedicated Prominent Manual Check Action Box
                 Box(
@@ -868,8 +869,8 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .padding(14.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(FocusSurfaceVariant.copy(alpha = 0.6f))
-                        .border(1.dp, FocusPrimary.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+                        .background(NavySurfaceVariant.copy(alpha = 0.6f))
+                        .border(1.dp, NavyPrimary.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
                         .padding(14.dp)
                 ) {
                     Column {
@@ -888,12 +889,12 @@ fun SettingsScreen(
                                 Text(
                                     text = if (updateStatus is UpdateStatus.Checking) "Checking online repositories..." else "Ready to scan for new builds",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (updateStatus is UpdateStatus.Checking) FocusPrimary else FocusTextSecondary
+                                    color = if (updateStatus is UpdateStatus.Checking) NavyPrimary else NavyTextSecondary
                                 )
                             }
                             if (updateStatus is UpdateStatus.Checking) {
                                 CircularProgressIndicator(
-                                    color = FocusPrimary,
+                                    color = NavyPrimary,
                                     strokeWidth = 2.5.dp,
                                     modifier = Modifier.size(24.dp)
                                 )
@@ -908,9 +909,9 @@ fun SettingsScreen(
                             },
                             enabled = updateStatus !is UpdateStatus.Checking,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = FocusPrimary,
-                                contentColor = Color.Black,
-                                disabledContainerColor = FocusPrimary.copy(alpha = 0.4f)
+                                containerColor = NavyPrimary,
+                                contentColor = Color(0xFF070E1F),
+                                disabledContainerColor = NavyPrimary.copy(alpha = 0.4f)
                             ),
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier
@@ -932,7 +933,7 @@ fun SettingsScreen(
                     }
                 }
 
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
                 SettingsToggleItem(
                     icon = Icons.Default.Autorenew,
                     title = "Auto-Check on App Launch",
@@ -943,7 +944,7 @@ fun SettingsScreen(
                         sharedPrefs.edit().putBoolean("AUTO_CHECK_UPDATES", isChecked).apply()
                     }
                 )
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
                 SettingsClickableItem(
                     icon = Icons.Default.Link,
                     title = "Update Server Manifest URL",
@@ -954,7 +955,7 @@ fun SettingsScreen(
                     }
                 )
                 
-                Divider(color = FocusSurfaceVariant)
+                Divider(color = NavySurfaceVariant)
                 SettingsClickableItem(
                     icon = Icons.Default.Science,
                     title = "Test In-App Update Flow (Demo)",
@@ -970,17 +971,17 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .padding(12.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF10281C))
-                        .border(1.dp, FocusPrimary.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                        .background(Color(0xFF0C244A))
+                        .border(1.dp, NavyPrimary.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                         .padding(horizontal = 12.dp, vertical = 10.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.VerifiedUser, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(20.dp))
+                        Icon(imageVector = Icons.Default.VerifiedUser, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = "🛡️ Active Record Guarantee: Updating the app preserves 100% of your data, sessions, timetables, whitelist configs, streaks, and statistics.",
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                            color = FocusPrimary
+                            color = NavyPrimary
                         )
                     }
                 }
@@ -996,7 +997,7 @@ fun SettingsScreen(
             onDismissRequest = { showInfoDialog = false },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.Shield, contentDescription = null, tint = FocusPrimary)
+                    Icon(imageVector = Icons.Default.Shield, contentDescription = null, tint = NavyPrimary)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("App-Blocking Architecture", color = Color.White, fontWeight = FontWeight.Bold)
                 }
@@ -1006,7 +1007,7 @@ fun SettingsScreen(
                     Text(
                         text = "How FOCUS OS reliably blocks distracting apps during study:",
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        color = FocusPrimary
+                        color = NavyPrimary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -1014,7 +1015,7 @@ fun SettingsScreen(
                                 "• When a blocked distracting app is opened during active study, the system instantly raises the Focus Lock screen.\n\n" +
                                 "• Foreground Service + Battery Optimization Exemption work in synergy to ensure continuous, unkillable background protection.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FocusTextSecondary,
+                        color = NavyTextSecondary,
                         lineHeight = 18.sp
                     )
 
@@ -1022,10 +1023,10 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showInfoDialog = false }) {
-                    Text("Got It", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                    Text("Got It", color = NavyPrimary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = FocusSurface
+            containerColor = NavySurface
         )
     }
 
@@ -1041,7 +1042,7 @@ fun SettingsScreen(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
-                        focusedBorderColor = FocusPrimary
+                        focusedBorderColor = NavyPrimary
                     ),
                     singleLine = true
                 )
@@ -1052,15 +1053,15 @@ fun SettingsScreen(
                     sharedPrefs.edit().putString("USER_NAME", tempName).apply()
                     showEditProfileDialog = false
                 }) {
-                    Text("Save", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                    Text("Save", color = NavyPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showEditProfileDialog = false }) {
-                    Text("Cancel", color = FocusTextSecondary)
+                    Text("Cancel", color = NavyTextSecondary)
                 }
             },
-            containerColor = FocusSurface
+            containerColor = NavySurface
         )
     }
 
@@ -1072,7 +1073,7 @@ fun SettingsScreen(
                 Icon(
                     imageVector = Icons.Default.Security,
                     contentDescription = null,
-                    tint = FocusPrimary,
+                    tint = NavyPrimary,
                     modifier = Modifier.size(36.dp)
                 )
             },
@@ -1089,7 +1090,7 @@ fun SettingsScreen(
                     Text(
                         text = "Why Usage Access is needed:",
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        color = FocusPrimary
+                        color = NavyPrimary
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -1098,7 +1099,7 @@ fun SettingsScreen(
                                 "• Does NOT track browsing history, accounts, or personal activity.\n\n" +
                                 "• Processed 100% locally on your device with complete data privacy.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FocusTextSecondary,
+                        color = NavyTextSecondary,
                         lineHeight = 18.sp
                     )
                 }
@@ -1109,17 +1110,17 @@ fun SettingsScreen(
                         showUsageAccessDisclosure = false
                         LockPermissionHelper.openUsageStatsSettings(context)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black)
+                    colors = ButtonDefaults.buttonColors(containerColor = NavyPrimary, contentColor = Color(0xFF070E1F))
                 ) {
                     Text("Agree & Open Settings", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showUsageAccessDisclosure = false }) {
-                    Text("Decline", color = FocusTextSecondary)
+                    Text("Decline", color = NavyTextSecondary)
                 }
             },
-            containerColor = FocusSurface
+            containerColor = NavySurface
         )
     }
 
@@ -1131,7 +1132,7 @@ fun SettingsScreen(
                 Icon(
                     imageVector = Icons.Default.Policy,
                     contentDescription = null,
-                    tint = FocusPrimary,
+                    tint = NavyPrimary,
                     modifier = Modifier.size(36.dp)
                 )
             },
@@ -1148,7 +1149,7 @@ fun SettingsScreen(
                     Text(
                         text = "Google Play Policy Compliance Assurances:",
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        color = FocusPrimary
+                        color = NavyPrimary
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -1157,7 +1158,7 @@ fun SettingsScreen(
                                 "3. Foreground Service: Declared with 'specialUse' for student focus session lockdown.\n\n" +
                                 "4. Zero External Transmission: All study stats, custom notes, and app whitelists remain strictly on your local device.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FocusTextSecondary,
+                        color = NavyTextSecondary,
                         lineHeight = 18.sp
                     )
 
@@ -1165,10 +1166,10 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showPrivacyPolicyDialog = false }) {
-                    Text("Close", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                    Text("Close", color = NavyPrimary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = FocusSurface
+            containerColor = NavySurface
         )
     }
 
@@ -1179,7 +1180,7 @@ fun SettingsScreen(
             title = { Text("Custom Notification Title Header", color = Color.White, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text("Enter the header title displayed on focus notifications:", style = MaterialTheme.typography.bodySmall, color = FocusTextSecondary)
+                    Text("Enter the header title displayed on focus notifications:", style = MaterialTheme.typography.bodySmall, color = NavyTextSecondary)
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = tempTitle,
@@ -1188,7 +1189,7 @@ fun SettingsScreen(
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
-                            focusedBorderColor = FocusPrimary
+                            focusedBorderColor = NavyPrimary
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -1203,15 +1204,15 @@ fun SettingsScreen(
                     }
                     showNotifTitleDialog = false
                 }) {
-                    Text("Save Header", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                    Text("Save Header", color = NavyPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showNotifTitleDialog = false }) {
-                    Text("Cancel", color = FocusTextSecondary)
+                    Text("Cancel", color = NavyTextSecondary)
                 }
             },
-            containerColor = FocusSurface
+            containerColor = NavySurface
         )
     }
 
@@ -1277,7 +1278,7 @@ fun SettingsScreen(
                 Column {
                     Text(text = catTitle, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(text = "Tap to listen & select default OEM notification sounds", color = FocusPrimary, fontSize = 11.sp)
+                    Text(text = "Tap to listen & select default OEM notification sounds", color = NavyPrimary, fontSize = 11.sp)
                 }
             },
             text = {
@@ -1289,17 +1290,19 @@ fun SettingsScreen(
                             .fillMaxWidth()
                             .padding(bottom = 8.dp)
                     ) {
-                        items(brandFilters) { (filterKey, filterLabel) ->
+                        items(brandFilters) { filterPair ->
+                            val filterKey = filterPair.first
+                            val filterLabel = filterPair.second
                             val isFilterActive = selectedBrandFilter == filterKey
                             FilterChip(
                                 selected = isFilterActive,
                                 onClick = { selectedBrandFilter = filterKey },
                                 label = { Text(filterLabel, fontSize = 11.sp, fontWeight = if (isFilterActive) FontWeight.Bold else FontWeight.Normal) },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = FocusPrimary.copy(alpha = 0.25f),
-                                    selectedLabelColor = FocusPrimary,
-                                    containerColor = FocusSurfaceVariant.copy(alpha = 0.3f),
-                                    labelColor = FocusTextSecondary
+                                    selectedContainerColor = NavyPrimary.copy(alpha = 0.25f),
+                                    selectedLabelColor = NavyPrimary,
+                                    containerColor = NavySurfaceVariant.copy(alpha = 0.3f),
+                                    labelColor = NavyTextSecondary
                                 )
                             )
                         }
@@ -1317,8 +1320,8 @@ fun SettingsScreen(
                             item {
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
-                                    color = FocusPrimary.copy(alpha = 0.15f),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.5f)),
+                                    color = NavyPrimary.copy(alpha = 0.15f),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, NavyPrimary.copy(alpha = 0.5f)),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(bottom = 4.dp)
@@ -1333,35 +1336,35 @@ fun SettingsScreen(
                                         RadioButton(
                                             selected = true,
                                             onClick = { com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, currentSelectedKey) },
-                                            colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
+                                            colors = RadioButtonDefaults.colors(selectedColor = NavyPrimary, unselectedColor = NavyTextSecondary)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Column {
-                                            Text(text = "🎵 Custom Selected Audio", color = FocusPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                            Text(text = currentSelectedKey, color = FocusTextSecondary, fontSize = 10.sp, maxLines = 1)
+                                            Text(text = "🎵 Custom Selected Audio", color = NavyPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                            Text(text = currentSelectedKey, color = NavyTextSecondary, fontSize = 10.sp, maxLines = 1)
                                         }
                                     }
                                 }
                             }
                         }
 
-                        items(filteredSounds) { item ->
-                            val isSelected = currentSelectedKey == item.key
+                        items(filteredSounds) { soundItem ->
+                            val isSelected = currentSelectedKey == soundItem.key
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = if (isSelected) FocusPrimary.copy(alpha = 0.12f) else Color.Transparent,
-                                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.4f)) else null,
+                                color = if (isSelected) NavyPrimary.copy(alpha = 0.12f) else Color.Transparent,
+                                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, NavyPrimary.copy(alpha = 0.4f)) else null,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
                                         when (targetCat) {
-                                            "SCHEDULE" -> notifScheduleSound = item.key
-                                            "WARNING" -> notifWarningSound = item.key
-                                            "COMPLETE" -> notifCompleteSound = item.key
-                                            "SOFTLOCK" -> notifSoftlockSound = item.key
+                                            "SCHEDULE" -> notifScheduleSound = soundItem.key
+                                            "WARNING" -> notifWarningSound = soundItem.key
+                                            "COMPLETE" -> notifCompleteSound = soundItem.key
+                                            "SOFTLOCK" -> notifSoftlockSound = soundItem.key
                                         }
-                                        sharedPrefs.edit().putString(prefKey, item.key).apply()
-                                        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, item.key)
+                                        sharedPrefs.edit().putString(prefKey, soundItem.key).apply()
+                                        com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, soundItem.key)
                                     }
                             ) {
                                 Row(
@@ -1374,57 +1377,57 @@ fun SettingsScreen(
                                         selected = isSelected,
                                         onClick = {
                                             when (targetCat) {
-                                                "SCHEDULE" -> notifScheduleSound = item.key
-                                                "WARNING" -> notifWarningSound = item.key
-                                                "COMPLETE" -> notifCompleteSound = item.key
-                                                "SOFTLOCK" -> notifSoftlockSound = item.key
+                                                "SCHEDULE" -> notifScheduleSound = soundItem.key
+                                                "WARNING" -> notifWarningSound = soundItem.key
+                                                "COMPLETE" -> notifCompleteSound = soundItem.key
+                                                "SOFTLOCK" -> notifSoftlockSound = soundItem.key
                                             }
-                                            sharedPrefs.edit().putString(prefKey, item.key).apply()
-                                            com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, item.key)
+                                            sharedPrefs.edit().putString(prefKey, soundItem.key).apply()
+                                            com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, soundItem.key)
                                         },
-                                        colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
+                                        colors = RadioButtonDefaults.colors(selectedColor = NavyPrimary, unselectedColor = NavyTextSecondary)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
-                                                text = "${item.brandEmoji} ${item.title}",
-                                                color = if (isSelected) FocusPrimary else Color.White,
+                                                text = "${soundItem.brandEmoji} ${soundItem.title}",
+                                                color = if (isSelected) NavyPrimary else Color.White,
                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                                 fontSize = 13.sp
                                             )
-                                            if (item.badge != null) {
+                                            if (soundItem.badge != null) {
                                                 Spacer(modifier = Modifier.width(6.dp))
                                                 Surface(
                                                     shape = RoundedCornerShape(4.dp),
-                                                    color = if (isSelected) FocusPrimary.copy(alpha = 0.2f) else FocusSurfaceVariant.copy(alpha = 0.5f)
+                                                    color = if (isSelected) NavyPrimary.copy(alpha = 0.2f) else NavySurfaceVariant.copy(alpha = 0.5f)
                                                 ) {
                                                     Text(
-                                                        text = item.badge,
+                                                        text = soundItem.badge,
                                                         fontSize = 9.sp,
                                                         fontWeight = FontWeight.Bold,
-                                                        color = if (isSelected) FocusPrimary else FocusTextSecondary,
+                                                        color = if (isSelected) NavyPrimary else NavyTextSecondary,
                                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                                                     )
                                                 }
                                             }
                                         }
                                         Text(
-                                            text = item.description,
-                                            color = FocusTextSecondary,
+                                            text = soundItem.description,
+                                            color = NavyTextSecondary,
                                             fontSize = 11.sp
                                         )
                                     }
                                     IconButton(
                                         onClick = {
-                                            com.example.util.NotificationSoundVibrationHelper.playSoundKey(context, item.key)
+                                            com.example.util.NotificationSoundVibrationHelper.playSoundKey(context, soundItem.key)
                                         },
                                         modifier = Modifier.size(32.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.PlayArrow,
                                             contentDescription = "Test Sound",
-                                            tint = if (isSelected) FocusPrimary else FocusTextSecondary,
+                                            tint = if (isSelected) NavyPrimary else NavyTextSecondary,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -1436,7 +1439,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    Divider(color = FocusSurfaceVariant)
+                    Divider(color = NavySurfaceVariant)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1451,16 +1454,16 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(imageVector = Icons.Default.PhoneIphone, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(18.dp))
+                        Icon(imageVector = Icons.Default.PhoneIphone, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Browse Phone Native Ringtone Library",
-                            color = FocusPrimary,
+                            color = NavyPrimary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         )
                     }
-                    Divider(color = FocusSurfaceVariant)
+                    Divider(color = NavySurfaceVariant)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1471,16 +1474,16 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(imageVector = Icons.Default.AudioFile, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(18.dp))
+                        Icon(imageVector = Icons.Default.AudioFile, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Pick Custom Audio File from Storage",
-                            color = FocusPrimary,
+                            color = NavyPrimary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         )
                     }
-                    Divider(color = FocusSurfaceVariant)
+                    Divider(color = NavySurfaceVariant)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
@@ -1489,12 +1492,12 @@ fun SettingsScreen(
                             com.example.util.NotificationSoundVibrationHelper.stopCurrentSound()
                             activeSoundCategoryTarget = null
                         }) {
-                            Text("Done", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                            Text("Done", color = NavyPrimary, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             },
-            containerColor = FocusSurface
+            containerColor = NavySurface
         )
     }
 
@@ -1531,10 +1534,10 @@ fun SettingsScreen(
                                     notifVibratePattern = key
                                     sharedPrefs.edit().putString("NOTIF_VIBRATE_PATTERN", key).apply()
                                 },
-                                colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
+                                colors = RadioButtonDefaults.colors(selectedColor = NavyPrimary, unselectedColor = NavyTextSecondary)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text(text = label, color = if (isSelected) FocusPrimary else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                            Text(text = label, color = if (isSelected) NavyPrimary else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                         }
                     }
 
@@ -1542,16 +1545,16 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showNotifVibrateDialog = false }) {
-                    Text("Done", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                    Text("Done", color = NavyPrimary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = FocusSurface
+            containerColor = NavySurface
         )
     }
 
     if (showNotifThemeDialog) {
         val themes = listOf(
-            "DEEP_DARK" to "🌌 Deep Dark Emerald (Classic)",
+            "DEEP_DARK" to "🌌 Deep Dark Navy (Classic)",
             "CYBER_NEON" to "⚡ Cyber Neon (Purple & Cyan)",
             "WARM_SUNSET" to "🌅 Warm Sunset (Amber & Orange)",
             "ICE_BLUE" to "🧊 Ice Blue (Electric Blue)"
@@ -1579,10 +1582,10 @@ fun SettingsScreen(
                                     notifDesignTheme = key
                                     sharedPrefs.edit().putString("NOTIF_DESIGN_THEME", key).apply()
                                 },
-                                colors = RadioButtonDefaults.colors(selectedColor = FocusPrimary, unselectedColor = FocusTextSecondary)
+                                colors = RadioButtonDefaults.colors(selectedColor = NavyPrimary, unselectedColor = NavyTextSecondary)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text(text = label, color = if (isSelected) FocusPrimary else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                            Text(text = label, color = if (isSelected) NavyPrimary else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                         }
                     }
 
@@ -1590,10 +1593,10 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showNotifThemeDialog = false }) {
-                    Text("Apply Theme", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                    Text("Apply Theme", color = NavyPrimary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = FocusSurface
+            containerColor = NavySurface
         )
     }
 
@@ -1603,7 +1606,7 @@ fun SettingsScreen(
             onDismissRequest = { showCustomServerDialog = false },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.Link, contentDescription = null, tint = FocusPrimary)
+                    Icon(imageVector = Icons.Default.Link, contentDescription = null, tint = NavyPrimary)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Update Manifest Endpoint", color = Color.White, fontWeight = FontWeight.Bold)
                 }
@@ -1613,7 +1616,7 @@ fun SettingsScreen(
                     Text(
                         text = "Enter the JSON manifest or GitHub Release version endpoint for checking updates:",
                         style = MaterialTheme.typography.bodySmall,
-                        color = FocusTextSecondary
+                        color = NavyTextSecondary
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
@@ -1624,8 +1627,8 @@ fun SettingsScreen(
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
-                            focusedBorderColor = FocusPrimary,
-                            unfocusedBorderColor = FocusSurfaceVariant
+                            focusedBorderColor = NavyPrimary,
+                            unfocusedBorderColor = NavySurfaceVariant
                         ),
                         singleLine = false,
                         maxLines = 3
@@ -1638,15 +1641,15 @@ fun SettingsScreen(
                     manifestUrlText = tempUrl.trim()
                     showCustomServerDialog = false
                 }) {
-                    Text("Save & Apply", color = FocusPrimary, fontWeight = FontWeight.Bold)
+                    Text("Save & Apply", color = NavyPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCustomServerDialog = false }) {
-                    Text("Cancel", color = FocusTextSecondary)
+                    Text("Cancel", color = NavyTextSecondary)
                 }
             },
-            containerColor = FocusSurface
+            containerColor = NavySurface
         )
     }
 
@@ -1658,9 +1661,9 @@ fun SettingsScreen(
         ) { data ->
             Snackbar(
                 snackbarData = data,
-                containerColor = FocusSurface,
-                contentColor = FocusTextPrimary,
-                actionColor = FocusPrimary,
+                containerColor = NavySurface,
+                contentColor = NavyTextPrimary,
+                actionColor = NavyPrimary,
                 shape = RoundedCornerShape(12.dp)
             )
         }
@@ -1690,14 +1693,14 @@ fun PermissionRowItem(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                 Surface(
                     shape = CircleShape,
-                    color = if (isGranted) FocusPrimary.copy(alpha = 0.15f) else Color(0xFFFF5252).copy(alpha = 0.15f),
+                    color = if (isGranted) NavyPrimary.copy(alpha = 0.15f) else Color(0xFFFF5252).copy(alpha = 0.15f),
                     modifier = Modifier.size(24.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             text = number,
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black),
-                            color = if (isGranted) FocusPrimary else Color(0xFFFF5252)
+                            color = if (isGranted) NavyPrimary else Color(0xFFFF5252)
                         )
                     }
                 }
@@ -1706,17 +1709,17 @@ fun PermissionRowItem(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        color = FocusTextPrimary
+                        color = NavyTextPrimary
                     )
                     Surface(
                         shape = RoundedCornerShape(4.dp),
-                        color = FocusSurfaceVariant,
+                        color = NavySurfaceVariant,
                         modifier = Modifier.padding(top = 2.dp)
                     ) {
                         Text(
                             text = badgeText,
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = FocusTextSecondary,
+                            color = NavyTextSecondary,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
@@ -1726,7 +1729,7 @@ fun PermissionRowItem(
             if (isGranted) {
                 Surface(
                     shape = RoundedCornerShape(20.dp),
-                    color = FocusPrimary.copy(alpha = 0.15f)
+                    color = NavyPrimary.copy(alpha = 0.15f)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1735,14 +1738,14 @@ fun PermissionRowItem(
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Granted",
-                            tint = FocusPrimary,
+                            tint = NavyPrimary,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "ACTIVE",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = FocusPrimary
+                            color = NavyPrimary
                         )
                     }
                 }
@@ -1769,7 +1772,7 @@ fun PermissionRowItem(
         Text(
             text = description,
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-            color = FocusTextSecondary
+            color = NavyTextSecondary
         )
     }
 }
@@ -1788,7 +1791,7 @@ fun SettingsSectionTitle(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-        color = FocusTextSecondary,
+        color = NavyTextSecondary,
         modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)
     )
 }
@@ -1796,8 +1799,9 @@ fun SettingsSectionTitle(title: String) {
 @Composable
 fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = FocusSurface),
+        colors = CardDefaults.cardColors(containerColor = NavySurface),
         shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, NavyOutline.copy(alpha = 0.5f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(vertical = 4.dp)) {
@@ -1812,7 +1816,7 @@ fun SettingsItem(
     title: String,
     subtitle: String? = null,
     valueText: String? = null,
-    valueColor: Color = FocusTextSecondary
+    valueColor: Color = NavyTextSecondary
 ) {
     Row(
         modifier = Modifier
@@ -1822,12 +1826,12 @@ fun SettingsItem(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = icon, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(20.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(text = title, style = MaterialTheme.typography.bodyLarge, color = FocusTextPrimary)
+                Text(text = title, style = MaterialTheme.typography.bodyLarge, color = NavyTextPrimary)
                 if (subtitle != null) {
-                    Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = FocusTextSecondary)
+                    Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = NavyTextSecondary)
                 }
             }
         }
@@ -1835,7 +1839,7 @@ fun SettingsItem(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(text = valueText, style = MaterialTheme.typography.bodyMedium, color = valueColor)
                 Spacer(modifier = Modifier.width(8.dp))
-                Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = FocusTextSecondary, modifier = Modifier.size(16.dp))
+                Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = NavyTextSecondary, modifier = Modifier.size(16.dp))
             }
         }
     }
@@ -1857,16 +1861,16 @@ fun SettingsClickableItem(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-            Icon(imageVector = icon, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(20.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(text = title, style = MaterialTheme.typography.bodyLarge, color = FocusTextPrimary)
+                Text(text = title, style = MaterialTheme.typography.bodyLarge, color = NavyTextPrimary)
                 if (subtitle != null) {
-                    Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = FocusTextSecondary)
+                    Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = NavyTextSecondary)
                 }
             }
         }
-        Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = FocusTextSecondary, modifier = Modifier.size(16.dp))
+        Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = NavyTextSecondary, modifier = Modifier.size(16.dp))
     }
 }
 
@@ -1888,12 +1892,12 @@ fun SettingsToggleItem(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-            Icon(imageVector = icon, contentDescription = null, tint = FocusPrimary, modifier = Modifier.size(20.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(text = title, style = MaterialTheme.typography.bodyLarge, color = FocusTextPrimary)
+                Text(text = title, style = MaterialTheme.typography.bodyLarge, color = NavyTextPrimary)
                 if (subtitle != null) {
-                    Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = FocusTextSecondary)
+                    Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = NavyTextSecondary)
                 }
             }
         }
@@ -1904,10 +1908,10 @@ fun SettingsToggleItem(
                 onCheckedChange?.invoke(it)
             },
             colors = SwitchDefaults.colors(
-                checkedThumbColor = FocusBackground,
-                checkedTrackColor = FocusPrimary,
-                uncheckedThumbColor = FocusTextSecondary,
-                uncheckedTrackColor = FocusSurfaceVariant
+                checkedThumbColor = Color(0xFF070E1F),
+                checkedTrackColor = NavyPrimary,
+                uncheckedThumbColor = NavyTextSecondary,
+                uncheckedTrackColor = NavySurfaceVariant
             )
         )
     }
