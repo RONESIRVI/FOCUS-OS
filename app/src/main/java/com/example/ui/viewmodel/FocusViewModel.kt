@@ -392,6 +392,8 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
                 if (session != null) {
                     actualProfile = session.whitelistProfile
                     repository.updateSession(session.copy(status = "ACTIVE"))
+                    // Cancel scheduled alarms since the session has been started manually
+                    com.example.util.AlarmScheduler.cancelSessionAlarms(context, scheduledId)
                 }
             }
             

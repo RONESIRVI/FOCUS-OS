@@ -727,32 +727,43 @@ fun FocusTimerScreen(
                     }
                 }
 
-                // Finish Session Button
-                Button(
-                    onClick = {
-                        if (timerState.lockMode == LockMode.MAXIMUM_LOCK && timerState.remainingSeconds > 0) {
-                            // Penalty for trying to cheat and finish early in Deep Work Mode
-                            viewModel.addPenaltyTime(420) // 7 minutes
-                            showExitAttemptDialog = false
-                            showEmergencyConfirm = true
-                        } else {
-                            onSessionComplete()
+                // Determine if Finish Button should be visible
+                // For scheduled sessions in MAXIMUM_LOCK, require 60% completion
+                val isFinishVisible = if (timerState.lockMode == LockMode.MAXIMUM_LOCK && timerState.isScheduled) {
+                    val threshold = timerState.totalSeconds * 0.4
+                    timerState.remainingSeconds <= threshold || timerState.remainingSeconds == 0
+                } else {
+                    true
+                }
+
+                if (isFinishVisible) {
+                    // Finish Session Button
+                    Button(
+                        onClick = {
+                            if (timerState.lockMode == LockMode.MAXIMUM_LOCK && timerState.remainingSeconds > 0) {
+                                // Penalty for trying to cheat and finish early in Deep Work Mode
+                                viewModel.addPenaltyTime(420) // 7 minutes
+                                showExitAttemptDialog = false
+                                showEmergencyConfirm = true
+                            } else {
+                                onSessionComplete()
+                            }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                            .testTag("finish_session_btn"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = FocusWarning,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("FINISH", fontWeight = FontWeight.Bold)
                         }
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(50.dp)
-                        .testTag("finish_session_btn"),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = FocusWarning,
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("FINISH", fontWeight = FontWeight.Bold)
                     }
                 }
             }

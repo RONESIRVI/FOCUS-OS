@@ -13,6 +13,9 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.filled.Schedule
@@ -36,6 +39,8 @@ import com.example.ui.viewmodel.FocusViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.platform.LocalContext
+import com.example.util.ScheduleExporter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +55,7 @@ fun ScheduleMainScreen(
     val historySessions = allSessions.filter { it.scheduledStartTime != null && it.status == "COMPLETED" }.sortedByDescending { it.timestamp }
     
     var selectedTabIndex by remember { mutableStateOf(0) }
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -65,6 +71,34 @@ fun ScheduleMainScreen(
                     )
                 },
                 actions = {
+                    IconButton(
+                        onClick = {
+                            if (scheduledSessions.isNotEmpty()) {
+                                val calendar = java.util.Calendar.getInstance()
+                                calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+                                calendar.set(java.util.Calendar.MINUTE, 0)
+                                calendar.set(java.util.Calendar.SECOND, 0)
+                                calendar.set(java.util.Calendar.MILLISECOND, 0)
+                                val startOfDay = calendar.timeInMillis
+                                calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
+                                val endOfDay = calendar.timeInMillis
+                                
+                                val todaysSessions = scheduledSessions.filter { 
+                                    it.scheduledStartTime != null && 
+                                    it.scheduledStartTime >= startOfDay && 
+                                    it.scheduledStartTime < endOfDay 
+                                }
+                                
+                                if (todaysSessions.isNotEmpty()) {
+                                    ScheduleExporter.exportScheduleAsImage(context, todaysSessions)
+                                } else {
+                                    android.widget.Toast.makeText(context, "No schedule found for today.", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(Icons.Default.Download, contentDescription = "Download Schedule Image", tint = Color.White)
+                    }
                     Button(
                         onClick = onNavigateToCreate,
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)), // Bright Blue
@@ -123,8 +157,8 @@ fun ScheduleMainScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(scheduledSessions, key = { it.id }) { session ->
                             ScheduleCard(
@@ -147,8 +181,8 @@ fun ScheduleMainScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(historySessions, key = { it.id }) { session ->
                             ScheduleCard(
@@ -212,144 +246,151 @@ fun ScheduleCard(
     onDelete: () -> Unit
 ) {
     val formatter = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
-    val dateFormatter = remember { SimpleDateFormat("EEE, d MMM", Locale.getDefault()) }
+    val dateFormatter = remember { SimpleDateFormat("EEEE, d MMM", Locale.getDefault()) }
     
     val timeString = session.scheduledStartTime?.let { formatter.format(Date(it)) } ?: "N/A"
     val dateString = session.scheduledStartTime?.let { dateFormatter.format(Date(it)) } ?: ""
     val durationString = "${session.targetDurationMinutes} min"
-
+    
     val isPending = session.scheduledStartTime?.let { it < System.currentTimeMillis() } == true
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = FocusSurface),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2633)),
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, FocusOutline),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.Top, modifier = Modifier.weight(1f)) {
                     Icon(
-                        imageVector = Icons.Default.Schedule,
+                        imageVector = Icons.Default.MenuBook,
                         contentDescription = null,
-                        tint = if (isHistory) FocusTextSecondary else if (isPending) MaterialTheme.colorScheme.error else FocusPrimary,
-                        modifier = Modifier.size(20.dp)
+                        tint = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.size(40.dp).padding(end = 12.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "$dateString • $timeString",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = if (isHistory) FocusTextSecondary else if (isPending) MaterialTheme.colorScheme.error else FocusPrimary
-                    )
+                    Column {
+                        Text(
+                            text = if (session.sessionName.isNotBlank()) session.sessionName else "Study Session",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp),
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "$dateString • $timeString",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.6f)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = durationString,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.6f)
+                        )
+                    }
                 }
                 
                 Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (isHistory) FocusSurfaceVariant else if (isPending) MaterialTheme.colorScheme.error.copy(alpha = 0.2f) else FocusPrimary.copy(alpha = 0.2f)
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.Transparent,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isHistory) FocusTextSecondary else if (isPending) MaterialTheme.colorScheme.error else FocusPrimary)
                 ) {
                     Text(
-                        text = if (isHistory) "COMPLETED" else if (isPending) "PENDING" else "UPCOMING",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Black),
+                        text = if (isHistory) "Completed" else if (isPending) "Pending" else "Upcoming",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                         color = if (isHistory) FocusTextSecondary else if (isPending) MaterialTheme.colorScheme.error else FocusPrimary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Body
-            Text(
-                text = session.subjectName,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "${session.sessionName} • $durationString",
-                style = MaterialTheme.typography.bodyMedium,
-                color = FocusTextSecondary
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Lock Mode Info
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = FocusWarning,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                val modeText = when (session.lockMode) {
-                    "MAXIMUM_LOCK" -> if (session.whitelistProfile == "SPECIAL") "Special Whitelist Mode" else "Deep Work Mode"
-                    "SOFT_LOCK" -> "Mindful Mode Enforced"
-                    else -> "${session.lockMode} Mode Enforced"
-                }
-                Text(
-                    text = modeText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = FocusWarning
-                )
-                if (session.requiresSelfie) {
-                    Spacer(modifier = Modifier.width(12.dp))
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            androidx.compose.material3.Divider(color = Color.White.copy(alpha = 0.1f))
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Middle section (Features)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                // Feature 1: Mode
+                val isDeepWork = session.lockMode == "MAXIMUM_LOCK"
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = if (isDeepWork) Icons.Default.Psychology else Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = FocusWarning,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "• Selfie Required",
-                        style = MaterialTheme.typography.labelSmall,
+                        text = if (isDeepWork) "Deep Work Mode" else "Strict Mode",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                         color = FocusWarning
                     )
                 }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Actions
-            if (!isHistory) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = onDelete) {
-                        Icon(Icons.Default.Lock, contentDescription = "Locked Cancel", tint = FocusTextSecondary, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("🔒 CANCEL LOCKED", color = FocusTextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = { /* Handle Download */ },
-                            modifier = Modifier.size(32.dp).background(FocusSurfaceVariant, CircleShape)
-                        ) {
-                            Icon(Icons.Default.Download, contentDescription = "Download Schedule", tint = FocusTextSecondary, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Button(
-                            onClick = onStart,
-                            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "Start", tint = Color.Black, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("START SESSION", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
+                
+                // Feature 2: Selfie
+                if (session.requiresSelfie) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.PhotoCamera,
+                            contentDescription = null,
+                            tint = FocusWarning,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Selfie Required",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = FocusWarning
+                        )
                     }
                 }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("DELETE HISTORY", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                
+                // Feature 3: Cancel Locked
+                if (!isHistory) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.4f),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Cancel Locked",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = Color.White.copy(alpha = 0.4f)
+                        )
                     }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Bottom Button
+            if (!isHistory) {
+                Button(
+                    onClick = onStart,
+                    modifier = Modifier.fillMaxWidth().height(46.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = "Start", tint = Color.Black, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("START SESSION", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                }
+            } else {
+                androidx.compose.material3.TextButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("DELETE HISTORY", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

@@ -1,12 +1,16 @@
 package com.example.util.update
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.example.BuildConfig
 import kotlinx.coroutines.CoroutineScope
@@ -517,6 +521,54 @@ object AppUpdateManager {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to launch package installer", e)
             _updateStatus.value = UpdateStatus.Error("Install failed: ${e.localizedMessage}")
+        }
+    }
+
+    /**
+     * Exports the currently installed APK to the user's Downloads directory.
+     */
+    fun exportCurrentApk(context: Context) {
+        scope.launch {
+            try {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Exporting APK...", Toast.LENGTH_SHORT).show()
+                }
+                val sourceFile = File(context.applicationInfo.sourceDir)
+                val fileName = "FocusOS_v${BuildConfig.VERSION_NAME}_${BuildConfig.VERSION_CODE}.apk"
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val resolver = context.contentResolver
+                    val contentValues = ContentValues().apply {
+                        put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                        put(MediaStore.MediaColumns.MIME_TYPE, "application/vnd.android.package-archive")
+                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                    }
+                    val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                    if (uri != null) {
+                        resolver.openOutputStream(uri)?.use { output ->
+                            sourceFile.inputStream().use { input ->
+                                input.copyTo(output)
+                            }
+                        }
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "✅ APK saved to Downloads folder!", Toast.LENGTH_LONG).show()
+                        }
+                    } else {
+                        throw Exception("Could not create MediaStore entry")
+                    }
+                } else {
+                    val targetFile = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName)
+                    sourceFile.copyTo(targetFile, overwrite = true)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "✅ APK saved to Downloads folder!", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to export APK", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "❌ Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 }

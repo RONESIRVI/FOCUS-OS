@@ -1087,19 +1087,7 @@ fun HomeScreen(
                     )
                 }
                 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = { /* Download Timetable */ },
-                        modifier = Modifier.size(36.dp).background(FocusPrimary.copy(alpha = 0.15f), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Download,
-                            contentDescription = "Download Timetable",
-                            tint = FocusPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
+                // Removed Download Timetable button
             }
         }
 
@@ -1204,18 +1192,6 @@ fun HomeScreen(
                                     }
 
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(
-                                            onClick = { /* Handle Download Action */ },
-                                            modifier = Modifier.size(32.dp).background(FocusSurfaceVariant, CircleShape)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Download,
-                                                contentDescription = "Download Schedule",
-                                                tint = FocusTextSecondary,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(12.dp))
                                         FilledTonalButton(
                                             onClick = {
                                                 onNavigateToSessionRouter(session.id)

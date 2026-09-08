@@ -1008,6 +1008,16 @@ fun SettingsScreen(
                         AppUpdateManager.triggerDemoUpdate(context)
                     }
                 )
+
+                Divider(color = NavySurfaceVariant)
+                SettingsClickableItem(
+                    icon = Icons.Default.SaveAlt,
+                    title = "Export / Download Latest APK",
+                    subtitle = "Save this app's raw APK file directly to your Downloads folder",
+                    onClick = {
+                        AppUpdateManager.exportCurrentApk(context)
+                    }
+                )
                 
                 // Safe Upgrade Guarantee Banner
                 Box(
