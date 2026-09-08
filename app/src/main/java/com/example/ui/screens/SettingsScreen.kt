@@ -40,6 +40,7 @@ import com.example.ui.viewmodel.FocusViewModel
 import com.example.util.LockPermissionHelper
 import com.example.util.PermissionItemState
 import com.example.util.update.AppUpdateManager
+import com.example.util.update.UpdateStatus
 import com.example.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -195,13 +196,25 @@ fun SettingsScreen(
     val totalCount = permissionsList.size
     val shieldPercentage = (grantedCount.toFloat() / totalCount.toFloat() * 100).toInt()
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(FocusBackground)
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val updateStatus by AppUpdateManager.updateStatus.collectAsState()
+
+    LaunchedEffect(Unit) {
+        AppUpdateManager.snackbarMessage.collect { message ->
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(FocusBackground)) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         item { Spacer(modifier = Modifier.height(24.dp)) }
 
         item {
@@ -848,14 +861,77 @@ fun SettingsScreen(
                     valueColor = FocusPrimary
                 )
                 Divider(color = FocusSurfaceVariant)
-                SettingsClickableItem(
-                    icon = Icons.Default.CloudSync,
-                    title = "Check for Updates Now",
-                    subtitle = "Direct in-app APK auto-updater engine • Tap to check",
-                    onClick = {
-                        AppUpdateManager.checkForUpdates(context, isManual = true)
+
+                // Dedicated Prominent Manual Check Action Box
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(FocusSurfaceVariant.copy(alpha = 0.6f))
+                        .border(1.dp, FocusPrimary.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+                        .padding(14.dp)
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Update Check Status",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = Color.White
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = if (updateStatus is UpdateStatus.Checking) "Checking online repositories..." else "Ready to scan for new builds",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (updateStatus is UpdateStatus.Checking) FocusPrimary else FocusTextSecondary
+                                )
+                            }
+                            if (updateStatus is UpdateStatus.Checking) {
+                                CircularProgressIndicator(
+                                    color = FocusPrimary,
+                                    strokeWidth = 2.5.dp,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Button(
+                            onClick = {
+                                AppUpdateManager.checkForUpdates(context, isManual = true)
+                            },
+                            enabled = updateStatus !is UpdateStatus.Checking,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = FocusPrimary,
+                                contentColor = Color.Black,
+                                disabledContainerColor = FocusPrimary.copy(alpha = 0.4f)
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (updateStatus is UpdateStatus.Checking) Icons.Default.Sync else Icons.Default.CloudSync,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (updateStatus is UpdateStatus.Checking) "CHECKING FOR UPDATES..." else "MANUAL CHECK FOR UPDATES",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
-                )
+                }
+
                 Divider(color = FocusSurfaceVariant)
                 SettingsToggleItem(
                     icon = Icons.Default.Autorenew,
@@ -875,6 +951,16 @@ fun SettingsScreen(
                     onClick = { 
                         manifestUrlText = AppUpdateManager.getUpdateManifestUrl(context)
                         showCustomServerDialog = true 
+                    }
+                )
+                
+                Divider(color = FocusSurfaceVariant)
+                SettingsClickableItem(
+                    icon = Icons.Default.Science,
+                    title = "Test In-App Update Flow (Demo)",
+                    subtitle = "Preview update dialog, download progress & installer UI",
+                    onClick = {
+                        AppUpdateManager.triggerDemoUpdate(context)
                     }
                 )
                 
@@ -1562,6 +1648,22 @@ fun SettingsScreen(
             },
             containerColor = FocusSurface
         )
+    }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 72.dp, start = 16.dp, end = 16.dp)
+        ) { data ->
+            Snackbar(
+                snackbarData = data,
+                containerColor = FocusSurface,
+                contentColor = FocusTextPrimary,
+                actionColor = FocusPrimary,
+                shape = RoundedCornerShape(12.dp)
+            )
+        }
     }
 }
 
