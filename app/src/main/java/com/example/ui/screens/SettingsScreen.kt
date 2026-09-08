@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -881,15 +882,22 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Update Check Status",
+                                    text = if (updateStatus is UpdateStatus.Downloading) "Downloading Update..." 
+                                           else if (updateStatus is UpdateStatus.ReadyToInstall) "Update Ready" 
+                                           else "Update Check Status",
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                     color = Color.White
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = if (updateStatus is UpdateStatus.Checking) "Checking online repositories..." else "Ready to scan for new builds",
+                                    text = when (updateStatus) {
+                                        is UpdateStatus.Checking -> "Checking online repositories..."
+                                        is UpdateStatus.Downloading -> "${(updateStatus as UpdateStatus.Downloading).progressPercent}% Completed"
+                                        is UpdateStatus.ReadyToInstall -> "Ready to install the new version"
+                                        else -> "Ready to scan for new builds"
+                                    },
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (updateStatus is UpdateStatus.Checking) NavyPrimary else NavyTextSecondary
+                                    color = if (updateStatus is UpdateStatus.Checking || updateStatus is UpdateStatus.Downloading || updateStatus is UpdateStatus.ReadyToInstall) NavyPrimary else NavyTextSecondary
                                 )
                             }
                             if (updateStatus is UpdateStatus.Checking) {
@@ -898,16 +906,48 @@ fun SettingsScreen(
                                     strokeWidth = 2.5.dp,
                                     modifier = Modifier.size(24.dp)
                                 )
+                            } else if (updateStatus is UpdateStatus.Downloading) {
+                                CircularProgressIndicator(
+                                    progress = { if ((updateStatus as UpdateStatus.Downloading).progressPercent > 0) (updateStatus as UpdateStatus.Downloading).progressPercent / 100f else 0.05f },
+                                    color = NavyPrimary,
+                                    strokeWidth = 2.5.dp,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            } else if (updateStatus is UpdateStatus.ReadyToInstall) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(24.dp))
                             }
+                        }
+
+                        if (updateStatus is UpdateStatus.Downloading) {
+                            Spacer(modifier = Modifier.height(14.dp))
+                            val dlStatus = updateStatus as UpdateStatus.Downloading
+                            LinearProgressIndicator(
+                                progress = { if (dlStatus.progressPercent > 0) dlStatus.progressPercent / 100f else 0f },
+                                color = NavyPrimary,
+                                trackColor = NavySurfaceVariant,
+                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp))
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "${String.format("%.1f", dlStatus.downloadedMB)} MB / ${String.format("%.1f", dlStatus.totalMB)} MB",
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                color = NavyTextSecondary,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.End
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(14.dp))
 
                         Button(
                             onClick = {
-                                AppUpdateManager.checkForUpdates(context, isManual = true)
+                                if (updateStatus is UpdateStatus.ReadyToInstall) {
+                                    AppUpdateManager.installApk(context, (updateStatus as UpdateStatus.ReadyToInstall).apkFile)
+                                } else {
+                                    AppUpdateManager.checkForUpdates(context, isManual = true)
+                                }
                             },
-                            enabled = updateStatus !is UpdateStatus.Checking,
+                            enabled = updateStatus !is UpdateStatus.Checking && updateStatus !is UpdateStatus.Downloading,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = NavyPrimary,
                                 contentColor = Color(0xFF070E1F),
@@ -919,13 +959,17 @@ fun SettingsScreen(
                                 .height(44.dp)
                         ) {
                             Icon(
-                                imageVector = if (updateStatus is UpdateStatus.Checking) Icons.Default.Sync else Icons.Default.CloudSync,
+                                imageVector = if (updateStatus is UpdateStatus.Checking) Icons.Default.Sync 
+                                              else if (updateStatus is UpdateStatus.ReadyToInstall) Icons.Default.SystemUpdate
+                                              else Icons.Default.CloudSync,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (updateStatus is UpdateStatus.Checking) "CHECKING FOR UPDATES..." else "MANUAL CHECK FOR UPDATES",
+                                text = if (updateStatus is UpdateStatus.Checking) "CHECKING FOR UPDATES..." 
+                                       else if (updateStatus is UpdateStatus.ReadyToInstall) "INSTALL UPDATE"
+                                       else "MANUAL CHECK FOR UPDATES",
                                 fontWeight = FontWeight.Black,
                                 fontSize = 13.sp
                             )

@@ -320,8 +320,24 @@ object AppUpdateManager {
                         val downloadedMB = (totalMB * percent) / 100f
                         _updateStatus.value = UpdateStatus.Downloading(percent, downloadedMB, totalMB)
                     }
-                    _snackbarMessage.emit("✅ Demo update downloaded successfully!")
-                    _updateStatus.value = UpdateStatus.Idle
+                    
+                    val updatesDir = File(context.cacheDir, "updates").apply { mkdirs() }
+                    val targetFile = File(updatesDir, "FocusOS_Demo.apk")
+                    val currentApkFile = File(context.applicationInfo.sourceDir)
+                    
+                    if (currentApkFile.exists()) {
+                        currentApkFile.copyTo(targetFile, overwrite = true)
+                        _updateStatus.value = UpdateStatus.ReadyToInstall(
+                            apkFile = targetFile,
+                            info = info,
+                            archivePackageName = context.packageName,
+                            archiveVersionCode = BuildConfig.VERSION_CODE.toLong() + 1L,
+                            archiveVersionName = "Demo"
+                        )
+                    } else {
+                        _snackbarMessage.emit("✅ Demo update downloaded successfully!")
+                        _updateStatus.value = UpdateStatus.Idle
+                    }
                     return@launch
                 }
 
@@ -460,9 +476,6 @@ object AppUpdateManager {
                         archiveVersionCode = downloadedVerCode,
                         archiveVersionName = downloadedVerName
                     )
-                    withContext(Dispatchers.Main) {
-                        installApk(context, targetFile)
-                    }
                 } else {
                     Log.e(TAG, "❌ Downloaded APK file is invalid or zero bytes")
                     _updateStatus.value = UpdateStatus.Error("Downloaded update file is corrupted or incomplete.")
