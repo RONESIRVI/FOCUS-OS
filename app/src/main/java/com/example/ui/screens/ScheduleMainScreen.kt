@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.filled.Schedule
@@ -320,14 +321,23 @@ fun ScheduleCard(
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("🔒 CANCEL LOCKED", color = FocusTextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
-                    Button(
-                        onClick = onStart,
-                        colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "Start", tint = Color.Black, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("START SESSION", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { /* Handle Download */ },
+                            modifier = Modifier.size(32.dp).background(FocusSurfaceVariant, CircleShape)
+                        ) {
+                            Icon(Icons.Default.Download, contentDescription = "Download Schedule", tint = FocusTextSecondary, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Button(
+                            onClick = onStart,
+                            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = "Start", tint = Color.Black, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("START SESSION", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             } else {

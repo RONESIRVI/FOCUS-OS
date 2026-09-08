@@ -646,13 +646,13 @@ fun HomeScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(FocusBackground)) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(FocusBackground)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
         item { Spacer(modifier = Modifier.height(16.dp)) }
 
         // Premium Top Header
@@ -1086,6 +1086,29 @@ fun HomeScreen(
                         color = FocusTextPrimary
                     )
                 }
+                
+                Surface(
+                    onClick = onNavigateToScheduleCreate,
+                    shape = RoundedCornerShape(12.dp),
+                    color = FocusPrimary.copy(alpha = 0.15f),
+                    contentColor = FocusPrimary
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add New",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "ADD",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+                }
             }
         }
 
@@ -1189,18 +1212,32 @@ fun HomeScreen(
                                         Text("Strict Focus", style = MaterialTheme.typography.labelMedium, color = FocusPrimary)
                                     }
 
-                                    FilledTonalButton(
-                                        onClick = {
-                                            onNavigateToSessionRouter(session.id)
-                                        },
-                                        shape = RoundedCornerShape(10.dp),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                        colors = ButtonDefaults.filledTonalButtonColors(
-                                            containerColor = FocusWarning.copy(alpha = 0.2f),
-                                            contentColor = FocusWarning
-                                        )
-                                    ) {
-                                        Text("START NOW", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(
+                                            onClick = { /* Handle Download Action */ },
+                                            modifier = Modifier.size(32.dp).background(FocusSurfaceVariant, CircleShape)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Download,
+                                                contentDescription = "Download Schedule",
+                                                tint = FocusTextSecondary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        FilledTonalButton(
+                                            onClick = {
+                                                onNavigateToSessionRouter(session.id)
+                                            },
+                                            shape = RoundedCornerShape(10.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                            colors = ButtonDefaults.filledTonalButtonColors(
+                                                containerColor = FocusWarning.copy(alpha = 0.2f),
+                                                contentColor = FocusWarning
+                                            )
+                                        ) {
+                                            Text("START NOW", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                                        }
                                     }
                                 }
                             }
@@ -1269,31 +1306,8 @@ fun HomeScreen(
                 )
             }
         }
-        item { Spacer(modifier = Modifier.height(80.dp)) } // Extra padding for FAB
+        item { Spacer(modifier = Modifier.height(60.dp)) }
     }
-
-    // Modern Redesigned + FAB
-    FloatingActionButton(
-        onClick = onNavigateToScheduleCreate,
-        containerColor = FocusPrimary,
-        contentColor = Color(0xFF070E1F), // Dark navy for contrast
-        modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .padding(24.dp)
-            .size(64.dp),
-        shape = CircleShape,
-        elevation = FloatingActionButtonDefaults.elevation(
-            defaultElevation = 8.dp,
-            pressedElevation = 12.dp
-        )
-    ) {
-        Icon(
-            imageVector = Icons.Default.Add,
-            contentDescription = "Add New Schedule",
-            modifier = Modifier.size(32.dp)
-        )
-    }
-}
 }
 
 
