@@ -151,7 +151,17 @@ class FocusTimerService : Service() {
                     alertTicks++
                     if (alertTicks % 66 == 0) { // Repeat sound/vibe warning every ~20 seconds while schedule session is unstarted
                         val prefs = getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
-                        val soundKey = prefs.getString("NOTIF_SCHEDULE_SOUND", "PRIME_ZEN") ?: "PRIME_ZEN"
+                        val rawSoundKey = prefs.getString("NOTIF_SCHEDULE_SOUND", "IPHONE_TRITONE") ?: "IPHONE_TRITONE"
+                        val soundKey = if (rawSoundKey.startsWith("SAMSUNG_") ||
+                            rawSoundKey.startsWith("PIXEL_") ||
+                            rawSoundKey.startsWith("ONEPLUS_") ||
+                            rawSoundKey.startsWith("XIAOMI_") ||
+                            rawSoundKey.startsWith("PRIME_")
+                        ) {
+                            "IPHONE_TRITONE"
+                        } else {
+                            rawSoundKey
+                        }
                         val vibrateKey = prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
                         com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(this@FocusTimerService, soundKey, vibrateKey)
                     }

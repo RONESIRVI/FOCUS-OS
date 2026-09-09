@@ -48,7 +48,7 @@ data class UiSessionSetup(
     val requiresSelfie: Boolean = true,
     val startPhotoUri: String? = null,
     val endSelfieUri: String? = null,
-    val whitelistProfile: String = "STRICT"
+    val whitelistProfile: String = "MANUAL"
 )
 
 data class StudySummaryStats(

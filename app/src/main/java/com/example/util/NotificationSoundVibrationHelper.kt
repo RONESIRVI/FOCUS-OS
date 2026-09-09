@@ -275,6 +275,19 @@ object NotificationSoundVibrationHelper {
         )
     )
 
+    fun getSoundsForCategory(category: String): List<NotificationSoundItem> {
+        if (category == "SCHEDULE") {
+            return NOTIFICATION_SOUNDS_CATALOG.filterNot { sound ->
+                sound.brand.contains("Samsung", ignoreCase = true) ||
+                sound.brand.contains("Pixel", ignoreCase = true) ||
+                sound.brand.contains("OnePlus", ignoreCase = true) ||
+                sound.brand.contains("Xiaomi", ignoreCase = true) ||
+                sound.brand.contains("Prime", ignoreCase = true)
+            }
+        }
+        return NOTIFICATION_SOUNDS_CATALOG
+    }
+
     fun getNotificationSoundUri(context: Context, soundKey: String = "PRIME_SIREN"): Uri {
         if (soundKey.startsWith("content://")) {
             return Uri.parse(soundKey)

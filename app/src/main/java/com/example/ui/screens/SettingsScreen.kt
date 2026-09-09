@@ -70,7 +70,19 @@ fun SettingsScreen(
     var notifVibratePattern by remember { mutableStateOf(sharedPrefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE") }
     var notifDesignTheme by remember { mutableStateOf(sharedPrefs.getString("NOTIF_DESIGN_THEME", "DEEP_DARK") ?: "DEEP_DARK") }
 
-    var notifScheduleSound by remember { mutableStateOf(sharedPrefs.getString("NOTIF_SCHEDULE_SOUND", "PRIME_ZEN") ?: "PRIME_ZEN") }
+    var notifScheduleSound by remember {
+        val saved = sharedPrefs.getString("NOTIF_SCHEDULE_SOUND", "IPHONE_TRITONE") ?: "IPHONE_TRITONE"
+        val isDisallowed = saved.startsWith("SAMSUNG_") ||
+                saved.startsWith("PIXEL_") ||
+                saved.startsWith("ONEPLUS_") ||
+                saved.startsWith("XIAOMI_") ||
+                saved.startsWith("PRIME_")
+        val initial = if (isDisallowed) "IPHONE_TRITONE" else saved
+        if (isDisallowed) {
+            sharedPrefs.edit().putString("NOTIF_SCHEDULE_SOUND", "IPHONE_TRITONE").apply()
+        }
+        mutableStateOf(initial)
+    }
     var notifWarningSound by remember { mutableStateOf(sharedPrefs.getString("NOTIF_WARNING_SOUND", "PRIME_SIREN") ?: "PRIME_SIREN") }
     var notifCompleteSound by remember { mutableStateOf(sharedPrefs.getString("NOTIF_COMPLETE_SOUND", "PRIME_QUANTUM") ?: "PRIME_QUANTUM") }
     var notifSoftlockSound by remember { mutableStateOf(sharedPrefs.getString("NOTIF_SOFTLOCK_SOUND", "PRIME_STROBE") ?: "PRIME_STROBE") }
@@ -1108,29 +1120,43 @@ fun SettingsScreen(
             else -> "PRIME_SIREN"
         }
 
-        var selectedBrandFilter by remember { mutableStateOf("ALL") }
-        val allSounds = com.example.util.NotificationSoundVibrationHelper.NOTIFICATION_SOUNDS_CATALOG
+        val allSounds = remember(targetCat) {
+            com.example.util.NotificationSoundVibrationHelper.getSoundsForCategory(targetCat)
+        }
 
-        val brandFilters = listOf(
-            "ALL" to "All Sounds (${allSounds.size})",
-            "IPHONE" to "🍎 iPhone (iOS)",
-            "MOTO" to "📱 Motorola",
-            "SAMSUNG" to "🌟 Samsung Galaxy",
-            "PIXEL" to "🔵 Google Pixel",
-            "OTHER_OEM" to "🔴 OnePlus / Xiaomi",
-            "RETRO" to "☎️ Nokia",
-            "PRIME" to "📢 Prime Focus"
-        )
+        var selectedBrandFilter by remember(targetCat) { mutableStateOf("ALL") }
 
-        val filteredSounds = remember(selectedBrandFilter) {
+        val brandFilters = remember(targetCat, allSounds) {
+            if (targetCat == "SCHEDULE") {
+                listOf(
+                    "ALL" to "All Sounds (${allSounds.size})",
+                    "IPHONE" to "🍎 iPhone (iOS)",
+                    "MOTO" to "📱 Motorola",
+                    "RETRO" to "☎️ Nokia"
+                )
+            } else {
+                listOf(
+                    "ALL" to "All Sounds (${allSounds.size})",
+                    "IPHONE" to "🍎 iPhone (iOS)",
+                    "MOTO" to "📱 Motorola",
+                    "SAMSUNG" to "🌟 Samsung Galaxy",
+                    "PIXEL" to "🔵 Google Pixel",
+                    "OTHER_OEM" to "🔴 OnePlus / Xiaomi",
+                    "RETRO" to "☎️ Nokia",
+                    "PRIME" to "📢 Prime Focus"
+                )
+            }
+        }
+
+        val filteredSounds = remember(selectedBrandFilter, allSounds) {
             when (selectedBrandFilter) {
-                "IPHONE" -> allSounds.filter { it.brand.contains("iPhone") }
-                "MOTO" -> allSounds.filter { it.brand.contains("Motorola") }
-                "SAMSUNG" -> allSounds.filter { it.brand.contains("Samsung") }
-                "PIXEL" -> allSounds.filter { it.brand.contains("Pixel") }
-                "OTHER_OEM" -> allSounds.filter { it.brand.contains("OnePlus") || it.brand.contains("Xiaomi") }
-                "RETRO" -> allSounds.filter { it.brand.contains("Nokia") }
-                "PRIME" -> allSounds.filter { it.brand.contains("Prime") }
+                "IPHONE" -> allSounds.filter { it.brand.contains("iPhone", ignoreCase = true) }
+                "MOTO" -> allSounds.filter { it.brand.contains("Motorola", ignoreCase = true) }
+                "SAMSUNG" -> allSounds.filter { it.brand.contains("Samsung", ignoreCase = true) }
+                "PIXEL" -> allSounds.filter { it.brand.contains("Pixel", ignoreCase = true) }
+                "OTHER_OEM" -> allSounds.filter { it.brand.contains("OnePlus", ignoreCase = true) || it.brand.contains("Xiaomi", ignoreCase = true) }
+                "RETRO" -> allSounds.filter { it.brand.contains("Nokia", ignoreCase = true) }
+                "PRIME" -> allSounds.filter { it.brand.contains("Prime", ignoreCase = true) }
                 else -> allSounds
             }
         }

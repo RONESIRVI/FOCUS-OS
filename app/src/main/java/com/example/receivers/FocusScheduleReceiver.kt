@@ -42,7 +42,17 @@ class FocusScheduleReceiver : BroadcastReceiver() {
 
                 val prefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
                 val notifPrefix = prefs.getString("NOTIF_CUSTOM_PREFIX", "FOCUS OS") ?: "FOCUS OS"
-                val scheduleSoundKey = prefs.getString("NOTIF_SCHEDULE_SOUND", "PRIME_ZEN") ?: "PRIME_ZEN"
+                val rawSoundKey = prefs.getString("NOTIF_SCHEDULE_SOUND", "IPHONE_TRITONE") ?: "IPHONE_TRITONE"
+                val scheduleSoundKey = if (rawSoundKey.startsWith("SAMSUNG_") ||
+                    rawSoundKey.startsWith("PIXEL_") ||
+                    rawSoundKey.startsWith("ONEPLUS_") ||
+                    rawSoundKey.startsWith("XIAOMI_") ||
+                    rawSoundKey.startsWith("PRIME_")
+                ) {
+                    "IPHONE_TRITONE"
+                } else {
+                    rawSoundKey
+                }
                 val vibratePatternKey = prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
 
                 val vibrateArray = when (vibratePatternKey) {

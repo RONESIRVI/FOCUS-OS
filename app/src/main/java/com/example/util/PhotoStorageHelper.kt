@@ -51,7 +51,7 @@ object PhotoStorageHelper {
      * Saves the captured image file into the phone's public MediaStore (Pictures/FocusOS)
      * so it appears in the device's Gallery / Photos app.
      */
-    fun savePhotoToDeviceGallery(context: Context, sourceUri: Uri): Uri? {
+    fun savePhotoToDeviceGallery(context: Context, sourceUri: Uri, sessionName: String = "DEEP STUDY"): Uri? {
         var inputStream: InputStream? = null
         var outputStream: OutputStream? = null
         try {
@@ -93,23 +93,59 @@ object PhotoStorageHelper {
             if (finalBitmap != watermarkedBitmap) finalBitmap.recycle()
             
             val canvas = android.graphics.Canvas(watermarkedBitmap)
-            val paint = android.graphics.Paint().apply {
+            val baseUnit = (watermarkedBitmap.width / 32f).coerceAtLeast(24f)
+            
+            // Format date, day, session exactly like WatermarkOverlay in UI
+            val currentDate = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(java.util.Date()).uppercase()
+            val currentDay = java.text.SimpleDateFormat("EEEE", java.util.Locale.getDefault()).format(java.util.Date()).uppercase()
+            val currentSession = sessionName.trim().ifBlank { "DEEP STUDY" }.uppercase()
+
+            // Date Paint (white, bold)
+            val datePaint = android.graphics.Paint().apply {
                 color = android.graphics.Color.WHITE
-                textSize = (watermarkedBitmap.width / 25f).coerceAtLeast(30f)
+                textSize = baseUnit * 0.9f
                 isAntiAlias = true
-                setShadowLayer(8f, 2f, 2f, android.graphics.Color.BLACK)
+                setShadowLayer(8f, 2f, 2f, android.graphics.Color.argb(204, 0, 0, 0))
                 typeface = android.graphics.Typeface.create(android.graphics.Typeface.SANS_SERIF, android.graphics.Typeface.BOLD)
             }
+
+            // Day Paint (Electric Green #00FFA3, extra bold)
+            val dayPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.parseColor("#00FFA3")
+                textSize = baseUnit * 1.6f
+                isAntiAlias = true
+                setShadowLayer(8f, 2f, 2f, android.graphics.Color.argb(204, 0, 0, 0))
+                typeface = android.graphics.Typeface.create(android.graphics.Typeface.SANS_SERIF, android.graphics.Typeface.BOLD)
+            }
+
+            // Session Paint (white with slight opacity, medium bold)
+            val sessionPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.argb(230, 255, 255, 255)
+                textSize = baseUnit * 0.85f
+                isAntiAlias = true
+                setShadowLayer(8f, 2f, 2f, android.graphics.Color.argb(204, 0, 0, 0))
+                typeface = android.graphics.Typeface.create(android.graphics.Typeface.SANS_SERIF, android.graphics.Typeface.NORMAL)
+            }
+
+            val padding = watermarkedBitmap.width / 24f
             
-            val dateStr = java.text.SimpleDateFormat("MMM dd, yyyy • hh:mm a", java.util.Locale.getDefault()).format(java.util.Date())
-            val text = "$dateStr • FocusOS Proof"
-            val textWidth = paint.measureText(text)
-            
-            val padding = watermarkedBitmap.width / 30f
-            val x = watermarkedBitmap.width - textWidth - padding
-            val y = watermarkedBitmap.height - padding
-            
-            canvas.drawText(text, x, y, paint)
+            // Measure widths to align on the bottom-right just like WatermarkOverlay
+            val dateWidth = datePaint.measureText(currentDate)
+            val dayWidth = dayPaint.measureText(currentDay)
+            val sessionWidth = sessionPaint.measureText(currentSession)
+
+            val spacing = baseUnit * 0.35f
+            val sessionY = watermarkedBitmap.height - padding
+            val dayY = sessionY - (sessionPaint.fontSpacing + spacing)
+            val dateY = dayY - (dayPaint.fontSpacing + spacing)
+
+            val sessionX = watermarkedBitmap.width - sessionWidth - padding
+            val dayX = watermarkedBitmap.width - dayWidth - padding
+            val dateX = watermarkedBitmap.width - dateWidth - padding
+
+            canvas.drawText(currentDate, dateX, dateY, datePaint)
+            canvas.drawText(currentDay, dayX, dayY, dayPaint)
+            canvas.drawText(currentSession, sessionX, sessionY, sessionPaint)
             // --- END WATERMARK LOGIC ---
 
             val filename = "FocusOS_Proof_${System.currentTimeMillis()}.jpg"

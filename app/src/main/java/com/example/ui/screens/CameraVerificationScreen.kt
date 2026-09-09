@@ -79,7 +79,7 @@ fun CameraVerificationScreen(
         if (success && uri != null && PhotoStorageHelper.isPhotoFileValid(context, uri)) {
             isSavingToGallery = true
             // Save to device gallery in background thread
-            val savedGalleryUri = PhotoStorageHelper.savePhotoToDeviceGallery(context, uri) ?: uri
+            val savedGalleryUri = PhotoStorageHelper.savePhotoToDeviceGallery(context, uri, sessionName) ?: uri
             photoUriString = savedGalleryUri.toString()
             isSavingToGallery = false
 

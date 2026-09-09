@@ -70,6 +70,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -119,6 +120,11 @@ fun FocusSetupScreen(
     onNavigateToAppSelector: () -> Unit,
     onStartSession: () -> Unit
 ) {
+    LaunchedEffect(Unit) {
+        viewModel.setAppSelectorProfile("MANUAL")
+        viewModel.updateSetup(whitelistProfile = "MANUAL")
+    }
+
     val setup by viewModel.setupState.collectAsState()
     val subjects by viewModel.allSubjects.collectAsState()
     val customGoalsList by viewModel.customGoals.collectAsState()
@@ -623,6 +629,67 @@ fun FocusSetupScreen(
                         modifier = Modifier.padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        // Section 0: Allowed Apps for Quick Focus (Manual Whitelist)
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = FocusSurface),
+                            shape = RoundedCornerShape(22.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
+                                .clickable {
+                                    viewModel.setAppSelectorProfile("MANUAL")
+                                    onNavigateToAppSelector()
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(18.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(42.dp)
+                                            .background(FocusPrimary.copy(alpha = 0.15f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Apps,
+                                            contentDescription = null,
+                                            tint = FocusPrimary,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column {
+                                        Text(
+                                            text = "ALLOWED APPS (QUICK FOCUS)",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = Color.White
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        val allowedManualCount = whitelistedApps.count { it.isAllowed }
+                                        Text(
+                                            text = "$allowedManualCount apps whitelisted for Manual Session",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = FocusTextSecondary
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = "Select Apps",
+                                    tint = FocusPrimary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
+
                         // Section 1: Subject & Study Goal Customization
                         Card(
                             colors = CardDefaults.cardColors(containerColor = FocusSurface),
