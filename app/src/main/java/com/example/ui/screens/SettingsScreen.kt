@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -53,6 +55,11 @@ fun SettingsScreen(
     var showAccessibilityDisclosure by remember { mutableStateOf(false) }
     var showUsageAccessDisclosure by remember { mutableStateOf(false) }
     var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
+    var showManageCustomizations by remember { mutableStateOf(false) }
+    
+    val userSubjects by viewModel.allSubjects.collectAsState()
+    val customGoalsList by viewModel.customGoals.collectAsState()
+    
     val context = LocalContext.current
     val sharedPrefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
 
@@ -584,6 +591,19 @@ fun SettingsScreen(
                     isGranted = LockPermissionHelper.canScheduleExactAlarms(context),
                     actionLabel = "Allow Alarms",
                     onAction = { LockPermissionHelper.openExactAlarmSettings(context) }
+                )
+            }
+        }
+
+        // Custom Subjects & Goals
+        item {
+            SettingsSectionTitle("CUSTOM SUBJECTS & GOALS")
+            SettingsCard {
+                SettingsClickableItem(
+                    icon = Icons.Default.EditNote,
+                    title = "Manage Subjects & Goals",
+                    subtitle = "Add your own choices for quick pick dropdowns",
+                    onClick = { showManageCustomizations = true }
                 )
             }
         }
@@ -1440,6 +1460,99 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = { showNotifThemeDialog = false }) {
                     Text("Apply Theme", color = NavyPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = NavySurface
+        )
+    }
+
+    if (showManageCustomizations) {
+        var newSub by remember { mutableStateOf("") }
+        var newGoal by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showManageCustomizations = false },
+            title = {
+                Text("Manage Customizations", color = Color.White, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text("Subjects", color = NavyPrimary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = newSub,
+                            onValueChange = { newSub = it },
+                            placeholder = { Text("Add Subject...") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedBorderColor = NavyPrimary
+                            )
+                        )
+                        IconButton(onClick = {
+                            if (newSub.isNotBlank() && userSubjects.none { it.name.equals(newSub.trim(), ignoreCase = true) }) {
+                                viewModel.addCustomSubject(newSub.trim(), "#0284C7")
+                                newSub = ""
+                            }
+                        }) {
+                            Icon(Icons.Default.Add, contentDescription = "Add", tint = NavyPrimary)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    userSubjects.forEach { sub ->
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = sub.name, color = Color.White, modifier = Modifier.weight(1f))
+                            IconButton(onClick = { viewModel.deleteCustomSubject(sub) }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF5252), modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Divider(color = NavySurfaceVariant)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text("Goals", color = NavyPrimary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = newGoal,
+                            onValueChange = { newGoal = it },
+                            placeholder = { Text("Add Goal...") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedBorderColor = NavyPrimary
+                            )
+                        )
+                        IconButton(onClick = {
+                            if (newGoal.isNotBlank() && customGoalsList.none { it.equals(newGoal.trim(), ignoreCase = true) }) {
+                                viewModel.addCustomGoal(newGoal.trim())
+                                newGoal = ""
+                            }
+                        }) {
+                            Icon(Icons.Default.Add, contentDescription = "Add", tint = NavyPrimary)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    customGoalsList.forEach { goal ->
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = goal, color = Color.White, modifier = Modifier.weight(1f))
+                            IconButton(onClick = { viewModel.deleteCustomGoal(goal) }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF5252), modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showManageCustomizations = false }) {
+                    Text("Close", color = NavyPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             containerColor = NavySurface

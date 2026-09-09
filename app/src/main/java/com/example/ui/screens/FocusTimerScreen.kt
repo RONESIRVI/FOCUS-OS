@@ -323,21 +323,6 @@ fun FocusTimerScreen(
                             )
                         }
                     }
-
-                    // Test Preview Block Overlay Button
-                    Button(
-                        onClick = {
-                            viewModel.triggerDistractionWarning(
-                                blockedPackage = "com.google.android.youtube",
-                                showRedModal = true
-                            )
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                        modifier = Modifier.height(28.dp)
-                    ) {
-                        Text("TEST BLOCK CARD", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    }
                 }
             }
 
@@ -504,6 +489,30 @@ fun FocusTimerScreen(
                         color = if (timerState.isPaused) FocusWarning else FocusPrimary
                     )
                 }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Subject and Goal Text
+            if (timerState.subjectName.isNotBlank() || timerState.sessionName.isNotBlank()) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Text(
+                        text = timerState.subjectName.ifBlank { "Focus Session" }.uppercase(),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                        color = Color.White,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    if (timerState.sessionName.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = timerState.sessionName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = FocusTextSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             // ALLOWED STUDY APPS SECTION DIRECTLY UNDER THE TIMER
@@ -1239,18 +1248,21 @@ fun FocusTimerScreen(
             val sessionNameText = timerState.sessionName.ifBlank { "ACTIVE FOCUS SESSION" }
             val subjectNameText = timerState.subjectName.ifBlank { "Deep Study" }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.96f))
-                    .padding(14.dp)
-                    .clickable(
-                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}
-                    ),
-                contentAlignment = Alignment.Center
+            Dialog(
+                onDismissRequest = { /* Modal lock */ },
+                properties = androidx.compose.ui.window.DialogProperties(
+                    dismissOnBackPress = false,
+                    dismissOnClickOutside = false,
+                    usePlatformDefaultWidth = false
+                )
             ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.96f))
+                        .padding(14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     // Red Shield Frame Container
                     Card(
                         modifier = Modifier
@@ -1638,6 +1650,7 @@ fun FocusTimerScreen(
                     }
                 }
             }
+        }
         }
 
         // ==========================================

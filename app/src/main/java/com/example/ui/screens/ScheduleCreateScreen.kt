@@ -74,6 +74,7 @@ fun ScheduleCreateScreen(
     var validationConflicts by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
     var nextValidationSession by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<com.example.data.model.FocusSession?>(null) }
     val userSubjects by viewModel.allSubjects.collectAsState()
+    val customGoalsList by viewModel.customGoals.collectAsState()
     val context = LocalContext.current
 
     // Current time calendar base
@@ -456,7 +457,7 @@ fun ScheduleCreateScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = "Active Target Date",
                                         style = MaterialTheme.typography.labelSmall,
@@ -468,7 +469,9 @@ fun ScheduleCreateScreen(
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontWeight = FontWeight.Bold
                                         ),
-                                        color = Color.White
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
 
@@ -476,7 +479,8 @@ fun ScheduleCreateScreen(
                                     onClick = { openDatePicker() },
                                     shape = RoundedCornerShape(8.dp),
                                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                    border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.6f))
+                                    border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.6f)),
+                                    modifier = Modifier.padding(start = 8.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.EditCalendar,
@@ -489,7 +493,9 @@ fun ScheduleCreateScreen(
                                         text = "CHANGE",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = FocusPrimary
+                                        color = FocusPrimary,
+                                        maxLines = 1,
+                                        softWrap = false
                                     )
                                 }
                             }
@@ -879,6 +885,60 @@ fun ScheduleCreateScreen(
                             minLines = 1,
                             maxLines = 5
                         )
+
+                        // Quick Pick from user's previously saved goals (if any)
+                        if (customGoalsList.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Quick pick:",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = FocusTextSecondary.copy(alpha = 0.7f),
+                                    fontSize = 11.sp
+                                )
+                                customGoalsList.forEach { goalOption ->
+                                    val isSel = sessionName.equals(goalOption, ignoreCase = true)
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = if (isSel) FocusWarning.copy(alpha = 0.2f) else FocusBackground,
+                                        border = BorderStroke(1.dp, if (isSel) FocusWarning else FocusOutline.copy(alpha = 0.6f)),
+                                        modifier = Modifier.clickable {
+                                            sessionName = goalOption
+                                        }
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = goalOption,
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal
+                                                ),
+                                                color = if (isSel) FocusWarning else FocusTextSecondary
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Delete",
+                                                tint = if (isSel) FocusWarning else FocusTextSecondary.copy(alpha = 0.4f),
+                                                modifier = Modifier
+                                                    .size(12.dp)
+                                                    .clickable {
+                                                        viewModel.deleteCustomGoal(goalOption)
+                                                    }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1423,6 +1483,10 @@ fun ScheduleCreateScreen(
 
                     if (subjectName.isNotBlank() && userSubjects.none { it.name.equals(subjectName.trim(), ignoreCase = true) }) {
                         viewModel.addCustomSubject(subjectName.trim(), "#0284C7")
+                    }
+
+                    if (sessionName.isNotBlank() && customGoalsList.none { it.equals(sessionName.trim(), ignoreCase = true) }) {
+                        viewModel.addCustomGoal(sessionName.trim())
                     }
 
                     viewModel.updateSetup(

@@ -92,9 +92,13 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
     val allSubjects: StateFlow<List<SubjectTask>> = repository.allSubjects
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _customGoals = MutableStateFlow<List<String>>(emptyList())
+    val customGoals: StateFlow<List<String>> = _customGoals
+
     private val _setupState = MutableStateFlow(UiSessionSetup())
 
     init {
+        loadCustomGoals()
         viewModelScope.launch {
             scheduledSessions.collect { list ->
                 val now = System.currentTimeMillis()
@@ -881,6 +885,29 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.deleteSubject(subject)
         }
+    }
+
+    private fun loadCustomGoals() {
+        val prefs = getApplication<Application>().getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+        val goals = prefs.getStringSet("CUSTOM_GOALS", emptySet())?.toList()?.sorted() ?: emptyList()
+        _customGoals.value = goals
+    }
+
+    fun addCustomGoal(goal: String) {
+        if (goal.isBlank()) return
+        val prefs = getApplication<Application>().getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+        val current = prefs.getStringSet("CUSTOM_GOALS", emptySet())?.toMutableSet() ?: mutableSetOf()
+        current.add(goal.trim())
+        prefs.edit().putStringSet("CUSTOM_GOALS", current).apply()
+        loadCustomGoals()
+    }
+
+    fun deleteCustomGoal(goal: String) {
+        val prefs = getApplication<Application>().getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
+        val current = prefs.getStringSet("CUSTOM_GOALS", emptySet())?.toMutableSet() ?: mutableSetOf()
+        current.remove(goal)
+        prefs.edit().putStringSet("CUSTOM_GOALS", current).apply()
+        loadCustomGoals()
     }
 
     override fun onCleared() {

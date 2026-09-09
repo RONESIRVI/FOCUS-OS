@@ -121,6 +121,7 @@ fun FocusSetupScreen(
 ) {
     val setup by viewModel.setupState.collectAsState()
     val subjects by viewModel.allSubjects.collectAsState()
+    val customGoalsList by viewModel.customGoals.collectAsState()
     val whitelistedApps by viewModel.whitelistedAppsManual.collectAsState()
     val scheduledSessions by viewModel.scheduledSessions.collectAsState(initial = emptyList())
     var showValidationDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
@@ -508,6 +509,9 @@ fun FocusSetupScreen(
                                             if (customSubject.isNotBlank() && subjects.none { it.name.equals(customSubject.trim(), ignoreCase = true) }) {
                                                 viewModel.addCustomSubject(customSubject.trim(), "#0284C7")
                                             }
+                                            if (customGoal.isNotBlank() && customGoalsList.none { it.equals(customGoal.trim(), ignoreCase = true) }) {
+                                                viewModel.addCustomGoal(customGoal.trim())
+                                            }
                                             viewModel.updateSetup(
                                                 sessionName = finalGoal,
                                                 subjectName = finalSubject,
@@ -844,6 +848,61 @@ fun FocusSetupScreen(
                                     minLines = 1,
                                     maxLines = 5
                                 )
+
+                                // Quick pick from saved goals
+                                if (customGoalsList.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Quick pick:",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = FocusTextSecondary.copy(alpha = 0.7f),
+                                            fontSize = 11.sp
+                                        )
+                                        customGoalsList.forEach { goalOption ->
+                                            val isSel = customGoal.equals(goalOption, ignoreCase = true)
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = if (isSel) FocusWarning.copy(alpha = 0.2f) else FocusBackground,
+                                                border = BorderStroke(1.dp, if (isSel) FocusWarning else FocusSurfaceVariant),
+                                                modifier = Modifier.clickable {
+                                                    customGoal = goalOption
+                                                    viewModel.updateSetup(sessionName = goalOption)
+                                                }
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                ) {
+                                                    Text(
+                                                        text = goalOption,
+                                                        style = MaterialTheme.typography.labelSmall.copy(
+                                                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal
+                                                        ),
+                                                        color = if (isSel) FocusWarning else FocusTextSecondary
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Icon(
+                                                        imageVector = Icons.Default.Close,
+                                                        contentDescription = "Delete",
+                                                        tint = if (isSel) FocusWarning else FocusTextSecondary.copy(alpha = 0.4f),
+                                                        modifier = Modifier
+                                                            .size(12.dp)
+                                                            .clickable {
+                                                                viewModel.deleteCustomGoal(goalOption)
+                                                            }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -968,6 +1027,9 @@ fun FocusSetupScreen(
                 val finalGoal = if (customGoal.isNotBlank()) customGoal else "General Study"
                 if (customSubject.isNotBlank() && subjects.none { it.name.equals(customSubject.trim(), ignoreCase = true) }) {
                     viewModel.addCustomSubject(customSubject.trim(), "#0284C7")
+                }
+                if (customGoal.isNotBlank() && customGoalsList.none { it.equals(customGoal.trim(), ignoreCase = true) }) {
+                    viewModel.addCustomGoal(customGoal.trim())
                 }
                 viewModel.updateSetup(
                     sessionName = finalGoal,
