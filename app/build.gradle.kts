@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.focusos.kxmpzq"
     minSdk = 24
     targetSdk = 36
-    versionCode = 240
-    versionName = "2.2.20"
+    versionCode = 241
+    versionName = "2.2.21"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

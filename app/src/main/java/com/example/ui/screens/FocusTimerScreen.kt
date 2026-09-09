@@ -1028,41 +1028,16 @@ fun FocusTimerScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Actions: Stay on timer vs Emergency exit
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        // Actions: Stay on timer
+                        Button(
+                            onClick = { showExitAttemptDialog = false },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Button(
-                                onClick = { showExitAttemptDialog = false },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text("Stay on Timer", fontWeight = FontWeight.Bold)
-                            }
-
-                            if (timerState.isScheduled || timerState.lockMode == LockMode.MAXIMUM_LOCK) {
-                                OutlinedButton(
-                                    onClick = {
-                                        if (timerState.lockMode == LockMode.MAXIMUM_LOCK && timerState.remainingSeconds > 0) {
-                                            viewModel.addPenaltyTime(420)
-                                        }
-                                        showExitAttemptDialog = false
-                                        showEmergencyConfirm = true
-                                    },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(48.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = FocusDanger),
-                                    border = BorderStroke(1.dp, FocusDanger.copy(alpha = 0.5f)),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Text("Emergency Stop", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                }
-                            }
+                            Text("Stay on Timer", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
