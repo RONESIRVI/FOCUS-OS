@@ -118,101 +118,7 @@ object NotificationSoundVibrationHelper {
             badge = "SMOOTH"
         ),
 
-        // 3. Samsung Galaxy
-        NotificationSoundItem(
-            key = "SAMSUNG_HORIZON",
-            brand = "Samsung Galaxy",
-            brandEmoji = "🌟",
-            title = "Samsung Over the Horizon",
-            description = "Signature Galaxy 6-note orchestral motif",
-            badge = "FLAGSHIP"
-        ),
-        NotificationSoundItem(
-            key = "SAMSUNG_SPACELINE",
-            brand = "Samsung Galaxy",
-            brandEmoji = "🌟",
-            title = "Samsung Galaxy Spaceline",
-            description = "Crisp dual crystal bell chime",
-            badge = "GALAXY"
-        ),
-        NotificationSoundItem(
-            key = "SAMSUNG_HARP",
-            brand = "Samsung Galaxy",
-            brandEmoji = "🌟",
-            title = "Samsung Horizon Harp",
-            description = "Gentle arpeggiated harp melody",
-            badge = "HARP"
-        ),
-        NotificationSoundItem(
-            key = "SAMSUNG_WHISTLE",
-            brand = "Samsung Galaxy",
-            brandEmoji = "🌟",
-            title = "Samsung Iconic Whistle",
-            description = "Bright rising melodic whistle glide",
-            badge = "WHISTLE"
-        ),
-
-        // 4. Google Pixel
-        NotificationSoundItem(
-            key = "PIXEL_EUREKA",
-            brand = "Google Pixel",
-            brandEmoji = "🔵",
-            title = "Google Pixel Eureka",
-            description = "Modern 2-tone melodic bubble chime",
-            badge = "PIXEL"
-        ),
-        NotificationSoundItem(
-            key = "PIXEL_HEY",
-            brand = "Google Pixel",
-            brandEmoji = "🔵",
-            title = "Google Pixel Hey Bell",
-            description = "Warm 3-note ascending marimba alert",
-            badge = "MATERIAL"
-        ),
-        NotificationSoundItem(
-            key = "PIXEL_POP",
-            brand = "Google Pixel",
-            brandEmoji = "🔵",
-            title = "Google Pixel Pop",
-            description = "Deep resonant acoustic pop blip",
-            badge = "POP"
-        ),
-
-        // 5. OnePlus & Xiaomi
-        NotificationSoundItem(
-            key = "ONEPLUS_RHYTHM",
-            brand = "OnePlus (OxygenOS)",
-            brandEmoji = "🔴",
-            title = "OnePlus Oxygen Rhythm",
-            description = "Punchy energetic modern synth chime",
-            badge = "OXYGEN"
-        ),
-        NotificationSoundItem(
-            key = "ONEPLUS_MEET",
-            brand = "OnePlus (OxygenOS)",
-            brandEmoji = "🔴",
-            title = "OnePlus Meet Alert",
-            description = "Smooth descending 3-note melodic wave",
-            badge = "ONEPLUS"
-        ),
-        NotificationSoundItem(
-            key = "XIAOMI_DROP",
-            brand = "Xiaomi (MIUI/HyperOS)",
-            brandEmoji = "🟠",
-            title = "Xiaomi Water Droplet",
-            description = "Acoustic physical liquid drop ripple",
-            badge = "HYPEROS"
-        ),
-        NotificationSoundItem(
-            key = "XIAOMI_NATURE",
-            brand = "Xiaomi (MIUI/HyperOS)",
-            brandEmoji = "🟠",
-            title = "Xiaomi Nature Woodblock",
-            description = "Earthy organic acoustic block strike",
-            badge = "NATURE"
-        ),
-
-        // 6. Nokia Classic
+        // 3. Nokia Classic
         NotificationSoundItem(
             key = "NOKIA_SPECIAL",
             brand = "Nokia Retro",
@@ -222,41 +128,7 @@ object NotificationSoundVibrationHelper {
             badge = "RETRO"
         ),
 
-        // 7. Prime Focus Alert Tones
-        NotificationSoundItem(
-            key = "PRIME_SIREN",
-            brand = "Prime Focus Suite",
-            brandEmoji = "📢",
-            title = "Prime Dual Frequency Siren",
-            description = "High-urgency security focus siren alert",
-            badge = "PRIME"
-        ),
-        NotificationSoundItem(
-            key = "PRIME_QUANTUM",
-            brand = "Prime Focus Suite",
-            brandEmoji = "⚡",
-            title = "Prime Quantum Pulse Chime",
-            description = "Clean modern synthetic focus pulse",
-            badge = "PRIME"
-        ),
-        NotificationSoundItem(
-            key = "PRIME_ZEN",
-            brand = "Prime Focus Suite",
-            brandEmoji = "🔮",
-            title = "Prime Zen Solfeggio 528Hz Bell",
-            description = "Harmonic peaceful crystal meditation bowl",
-            badge = "ZEN"
-        ),
-        NotificationSoundItem(
-            key = "PRIME_STROBE",
-            brand = "Prime Focus Suite",
-            brandEmoji = "🚨",
-            title = "Prime High Strobe Warning Beep",
-            description = "Urgent high-pitch distraction security beep",
-            badge = "SECURITY"
-        ),
-
-        // 8. Device Native & Silent
+        // 4. Device Native & Silent
         NotificationSoundItem(
             key = "SYSTEM_DEFAULT",
             brand = "Device Default",
@@ -276,19 +148,10 @@ object NotificationSoundVibrationHelper {
     )
 
     fun getSoundsForCategory(category: String): List<NotificationSoundItem> {
-        if (category == "SCHEDULE") {
-            return NOTIFICATION_SOUNDS_CATALOG.filterNot { sound ->
-                sound.brand.contains("Samsung", ignoreCase = true) ||
-                sound.brand.contains("Pixel", ignoreCase = true) ||
-                sound.brand.contains("OnePlus", ignoreCase = true) ||
-                sound.brand.contains("Xiaomi", ignoreCase = true) ||
-                sound.brand.contains("Prime", ignoreCase = true)
-            }
-        }
         return NOTIFICATION_SOUNDS_CATALOG
     }
 
-    fun getNotificationSoundUri(context: Context, soundKey: String = "PRIME_SIREN"): Uri {
+    fun getNotificationSoundUri(context: Context, soundKey: String = "IPHONE_TRITONE"): Uri {
         if (soundKey.startsWith("content://")) {
             return Uri.parse(soundKey)
         }
@@ -722,7 +585,7 @@ object NotificationSoundVibrationHelper {
         }
     }
 
-    fun triggerNotificationSoundAndVibration(context: Context, soundKey: String = "PRIME_SIREN", patternKey: String? = null) {
+    fun triggerNotificationSoundAndVibration(context: Context, soundKey: String = "IPHONE_TRITONE", patternKey: String? = null) {
         val prefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
         val vibratePatternKey = patternKey ?: prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
         if (soundKey != "SILENT") {

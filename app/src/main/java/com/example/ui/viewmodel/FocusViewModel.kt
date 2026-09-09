@@ -633,7 +633,10 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
             val context = getApplication<Application>()
             val prefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
             val soundEnabled = prefs.getBoolean("NOTIF_SOFTLOCK_ENABLED", true)
-            val soundKey = if (soundEnabled) prefs.getString("NOTIF_SOFTLOCK_SOUND", "PRIME_STROBE") ?: "PRIME_STROBE" else "SILENT"
+            val soundKey = if (soundEnabled) {
+                val raw = prefs.getString("NOTIF_SOFTLOCK_SOUND", "MOTO_SPACELINE") ?: "MOTO_SPACELINE"
+                if (raw.startsWith("SAMSUNG_") || raw.startsWith("PIXEL_") || raw.startsWith("ONEPLUS_") || raw.startsWith("XIAOMI_") || raw.startsWith("PRIME_")) "MOTO_SPACELINE" else raw
+            } else "SILENT"
             val vibrateKey = prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
             com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, soundKey, vibrateKey)
         }
@@ -662,7 +665,10 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         val context = getApplication<Application>()
         val prefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
         val soundEnabled = prefs.getBoolean("NOTIF_SOFTLOCK_ENABLED", true)
-        val soundKey = if (soundEnabled) prefs.getString("NOTIF_SOFTLOCK_SOUND", "PRIME_STROBE") ?: "PRIME_STROBE" else "SILENT"
+        val soundKey = if (soundEnabled) {
+            val raw = prefs.getString("NOTIF_SOFTLOCK_SOUND", "MOTO_SPACELINE") ?: "MOTO_SPACELINE"
+            if (raw.startsWith("SAMSUNG_") || raw.startsWith("PIXEL_") || raw.startsWith("ONEPLUS_") || raw.startsWith("XIAOMI_") || raw.startsWith("PRIME_")) "MOTO_SPACELINE" else raw
+        } else "SILENT"
         val vibrateKey = prefs.getString("NOTIF_VIBRATE_PATTERN", "PULSE") ?: "PULSE"
         com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(context, soundKey, vibrateKey)
     }

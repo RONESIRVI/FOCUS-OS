@@ -83,9 +83,45 @@ fun SettingsScreen(
         }
         mutableStateOf(initial)
     }
-    var notifWarningSound by remember { mutableStateOf(sharedPrefs.getString("NOTIF_WARNING_SOUND", "PRIME_SIREN") ?: "PRIME_SIREN") }
-    var notifCompleteSound by remember { mutableStateOf(sharedPrefs.getString("NOTIF_COMPLETE_SOUND", "PRIME_QUANTUM") ?: "PRIME_QUANTUM") }
-    var notifSoftlockSound by remember { mutableStateOf(sharedPrefs.getString("NOTIF_SOFTLOCK_SOUND", "PRIME_STROBE") ?: "PRIME_STROBE") }
+    var notifWarningSound by remember {
+        val saved = sharedPrefs.getString("NOTIF_WARNING_SOUND", "MOTO_HELLO") ?: "MOTO_HELLO"
+        val isDisallowed = saved.startsWith("SAMSUNG_") ||
+                saved.startsWith("PIXEL_") ||
+                saved.startsWith("ONEPLUS_") ||
+                saved.startsWith("XIAOMI_") ||
+                saved.startsWith("PRIME_")
+        val initial = if (isDisallowed) "MOTO_HELLO" else saved
+        if (isDisallowed) {
+            sharedPrefs.edit().putString("NOTIF_WARNING_SOUND", "MOTO_HELLO").apply()
+        }
+        mutableStateOf(initial)
+    }
+    var notifCompleteSound by remember {
+        val saved = sharedPrefs.getString("NOTIF_COMPLETE_SOUND", "IPHONE_AURORA") ?: "IPHONE_AURORA"
+        val isDisallowed = saved.startsWith("SAMSUNG_") ||
+                saved.startsWith("PIXEL_") ||
+                saved.startsWith("ONEPLUS_") ||
+                saved.startsWith("XIAOMI_") ||
+                saved.startsWith("PRIME_")
+        val initial = if (isDisallowed) "IPHONE_AURORA" else saved
+        if (isDisallowed) {
+            sharedPrefs.edit().putString("NOTIF_COMPLETE_SOUND", "IPHONE_AURORA").apply()
+        }
+        mutableStateOf(initial)
+    }
+    var notifSoftlockSound by remember {
+        val saved = sharedPrefs.getString("NOTIF_SOFTLOCK_SOUND", "MOTO_SPACELINE") ?: "MOTO_SPACELINE"
+        val isDisallowed = saved.startsWith("SAMSUNG_") ||
+                saved.startsWith("PIXEL_") ||
+                saved.startsWith("ONEPLUS_") ||
+                saved.startsWith("XIAOMI_") ||
+                saved.startsWith("PRIME_")
+        val initial = if (isDisallowed) "MOTO_SPACELINE" else saved
+        if (isDisallowed) {
+            sharedPrefs.edit().putString("NOTIF_SOFTLOCK_SOUND", "MOTO_SPACELINE").apply()
+        }
+        mutableStateOf(initial)
+    }
 
     var notifWarningEnabled by remember { mutableStateOf(sharedPrefs.getBoolean("NOTIF_WARNING_ENABLED", true)) }
     var notifSoftlockEnabled by remember { mutableStateOf(sharedPrefs.getBoolean("NOTIF_SOFTLOCK_ENABLED", true)) }
@@ -1117,7 +1153,7 @@ fun SettingsScreen(
             "WARNING" -> notifWarningSound
             "COMPLETE" -> notifCompleteSound
             "SOFTLOCK" -> notifSoftlockSound
-            else -> "PRIME_SIREN"
+            else -> "MOTO_HELLO"
         }
 
         val allSounds = remember(targetCat) {
@@ -1126,37 +1162,20 @@ fun SettingsScreen(
 
         var selectedBrandFilter by remember(targetCat) { mutableStateOf("ALL") }
 
-        val brandFilters = remember(targetCat, allSounds) {
-            if (targetCat == "SCHEDULE") {
-                listOf(
-                    "ALL" to "All Sounds (${allSounds.size})",
-                    "IPHONE" to "🍎 iPhone (iOS)",
-                    "MOTO" to "📱 Motorola",
-                    "RETRO" to "☎️ Nokia"
-                )
-            } else {
-                listOf(
-                    "ALL" to "All Sounds (${allSounds.size})",
-                    "IPHONE" to "🍎 iPhone (iOS)",
-                    "MOTO" to "📱 Motorola",
-                    "SAMSUNG" to "🌟 Samsung Galaxy",
-                    "PIXEL" to "🔵 Google Pixel",
-                    "OTHER_OEM" to "🔴 OnePlus / Xiaomi",
-                    "RETRO" to "☎️ Nokia",
-                    "PRIME" to "📢 Prime Focus"
-                )
-            }
+        val brandFilters = remember(allSounds) {
+            listOf(
+                "ALL" to "All Sounds (${allSounds.size})",
+                "IPHONE" to "🍎 iPhone (iOS)",
+                "MOTO" to "📱 Motorola",
+                "RETRO" to "☎️ Nokia"
+            )
         }
 
         val filteredSounds = remember(selectedBrandFilter, allSounds) {
             when (selectedBrandFilter) {
                 "IPHONE" -> allSounds.filter { it.brand.contains("iPhone", ignoreCase = true) }
                 "MOTO" -> allSounds.filter { it.brand.contains("Motorola", ignoreCase = true) }
-                "SAMSUNG" -> allSounds.filter { it.brand.contains("Samsung", ignoreCase = true) }
-                "PIXEL" -> allSounds.filter { it.brand.contains("Pixel", ignoreCase = true) }
-                "OTHER_OEM" -> allSounds.filter { it.brand.contains("OnePlus", ignoreCase = true) || it.brand.contains("Xiaomi", ignoreCase = true) }
                 "RETRO" -> allSounds.filter { it.brand.contains("Nokia", ignoreCase = true) }
-                "PRIME" -> allSounds.filter { it.brand.contains("Prime", ignoreCase = true) }
                 else -> allSounds
             }
         }
@@ -1700,7 +1719,7 @@ fun getSoundLabel(key: String): String {
     if (item != null) {
         return "${item.brandEmoji} ${item.title}"
     }
-    return "📢 Prime Dual Siren Alert"
+    return "🍎 iPhone Classic Tri-Tone"
 }
 
 @Composable

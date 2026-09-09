@@ -366,7 +366,7 @@ class FocusTimerService : Service() {
                 // Timer complete
                 audioEngine.stopSound()
                 val prefs = getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
-                val completeSoundKey = prefs.getString("NOTIF_COMPLETE_SOUND", "PRIME_QUANTUM") ?: "PRIME_QUANTUM"
+                val completeSoundKey = prefs.getString("NOTIF_COMPLETE_SOUND", "IPHONE_AURORA") ?: "IPHONE_AURORA"
                 com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(this@FocusTimerService, completeSoundKey)
                 if (_timerState.value.requiresSelfie) {
                     _timerState.value = _timerState.value.copy(
@@ -419,7 +419,7 @@ class FocusTimerService : Service() {
         recordEvent("DISTRACTION")
         val prefs = getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
         val soundEnabled = prefs.getBoolean("NOTIF_WARNING_ENABLED", true)
-        val warningSoundKey = if (soundEnabled) prefs.getString("NOTIF_WARNING_SOUND", "PRIME_SIREN") ?: "PRIME_SIREN" else "SILENT"
+        val warningSoundKey = if (soundEnabled) prefs.getString("NOTIF_WARNING_SOUND", "MOTO_HELLO") ?: "MOTO_HELLO" else "SILENT"
         com.example.util.NotificationSoundVibrationHelper.triggerNotificationSoundAndVibration(this, warningSoundKey)
         updateNotification()
     }
