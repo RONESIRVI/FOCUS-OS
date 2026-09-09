@@ -252,8 +252,7 @@ fun FocusTimerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Top Status Bar
             Row(
@@ -326,7 +325,15 @@ fun FocusTimerScreen(
                 }
             }
 
-            // Central Ring Clock Timer
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Central Ring Clock Timer
             Box(
                 modifier = Modifier
                     .size(260.dp)
@@ -774,6 +781,8 @@ fun FocusTimerScreen(
                         }
                     }
                 }
+            }
+
             }
 
             Spacer(modifier = Modifier.height(16.dp))
