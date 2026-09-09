@@ -88,14 +88,31 @@ object FocusLockManager {
 
     private fun isSystemUtilityOrKeyboard(packageName: String): Boolean {
         val lower = packageName.lowercase()
-        return lower == "android" ||
+        
+        // Base system components and keyboards are ALWAYS allowed
+        val isBaseSystem = lower == "android" ||
                 lower == "com.android.systemui" ||
-                lower == "com.android.settings" ||
                 lower.contains("inputmethod") ||
                 lower.contains("keyboard") ||
                 lower.contains("honeyboard") ||
-                lower.contains("permissioncontroller") ||
+                lower.contains("permissioncontroller")
+                
+        if (isBaseSystem) return true
+        
+        // Settings and PackageInstaller are conditionally allowed.
+        // We BLOCK them during Active Strict/Maximum Sessions or Pending Schedules to prevent uninstallation.
+        val isSettingsOrInstaller = lower == "com.android.settings" ||
                 lower.contains("packageinstaller")
+                
+        if (isSettingsOrInstaller) {
+            val isStrictOrMax = isFocusActive && (currentLockMode == LockMode.SOFT_LOCK || currentLockMode == LockMode.MAXIMUM_LOCK)
+            if (isStrictOrMax || hasPendingSchedule()) {
+                return false // Blocked!
+            }
+            return true // Allowed otherwise
+        }
+        
+        return false
     }
 
     private fun isPhoneCallActive(context: Context): Boolean {

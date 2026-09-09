@@ -408,8 +408,8 @@ fun CameraVerificationScreen(
 
 @Composable
 fun WatermarkOverlay(sessionName: String, modifier: Modifier = Modifier) {
-    val currentDate = remember { java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy")) }
-    val currentDay = remember { java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EEEE")) }
+    val currentDate = remember { java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault()).format(java.util.Date()) }
+    val currentDay = remember { java.text.SimpleDateFormat("EEEE", java.util.Locale.getDefault()).format(java.util.Date()) }
     
     Column(
         modifier = modifier

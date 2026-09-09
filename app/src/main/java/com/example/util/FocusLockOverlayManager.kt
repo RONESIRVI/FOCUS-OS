@@ -176,7 +176,11 @@ object FocusLockOverlayManager {
 
         // Subtitle / Subject message
         val subtitleView = TextView(context).apply {
-            text = "Deep Work Mode (Maximum Lock) is active. Distracting apps are completely restricted during your focus session!"
+            text = if (isSoftLock) {
+                "Focus Session is active. You are supposed to be studying!"
+            } else {
+                "Strict Focus Mode is active. Distracting apps are completely restricted during your focus session!"
+            }
             textSize = 14f
             setTextColor(android.graphics.Color.parseColor("#94A3B8")) // Slate 400
             gravity = Gravity.CENTER

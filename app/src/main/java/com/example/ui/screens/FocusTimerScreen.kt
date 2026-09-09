@@ -1044,22 +1044,24 @@ fun FocusTimerScreen(
                                 Text("Stay on Timer", fontWeight = FontWeight.Bold)
                             }
 
-                            OutlinedButton(
-                                onClick = {
-                                    if (timerState.lockMode == LockMode.MAXIMUM_LOCK && timerState.remainingSeconds > 0) {
-                                        viewModel.addPenaltyTime(420)
-                                    }
-                                    showExitAttemptDialog = false
-                                    showEmergencyConfirm = true
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(48.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = FocusDanger),
-                                border = BorderStroke(1.dp, FocusDanger.copy(alpha = 0.5f)),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text("Emergency Stop", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            if (timerState.isScheduled || timerState.lockMode == LockMode.MAXIMUM_LOCK) {
+                                OutlinedButton(
+                                    onClick = {
+                                        if (timerState.lockMode == LockMode.MAXIMUM_LOCK && timerState.remainingSeconds > 0) {
+                                            viewModel.addPenaltyTime(420)
+                                        }
+                                        showExitAttemptDialog = false
+                                        showEmergencyConfirm = true
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = FocusDanger),
+                                    border = BorderStroke(1.dp, FocusDanger.copy(alpha = 0.5f)),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("Emergency Stop", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                }
                             }
                         }
                     }

@@ -56,7 +56,61 @@ object PhotoStorageHelper {
         var outputStream: OutputStream? = null
         try {
             val contentResolver = context.contentResolver
-            inputStream = contentResolver.openInputStream(sourceUri) ?: return null
+            
+            // --- WATERMARK LOGIC ---
+            inputStream = contentResolver.openInputStream(sourceUri)
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+            
+            if (originalBitmap == null) return null
+            
+            // Handle EXIF orientation (Camera photos might be rotated)
+            var finalBitmap = originalBitmap
+            try {
+                contentResolver.openInputStream(sourceUri)?.use { exis ->
+                    val exif = android.media.ExifInterface(exis)
+                    val orientation = exif.getAttributeInt(
+                        android.media.ExifInterface.TAG_ORIENTATION,
+                        android.media.ExifInterface.ORIENTATION_NORMAL
+                    )
+                    val matrix = android.graphics.Matrix()
+                    when (orientation) {
+                        android.media.ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
+                        android.media.ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
+                        android.media.ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
+                    }
+                    if (!matrix.isIdentity) {
+                        finalBitmap = Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true)
+                        if (finalBitmap != originalBitmap) originalBitmap.recycle()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Exif parsing error", e)
+            }
+
+            // Create mutable copy and draw watermark
+            val watermarkedBitmap = finalBitmap.copy(Bitmap.Config.ARGB_8888, true)
+            if (finalBitmap != watermarkedBitmap) finalBitmap.recycle()
+            
+            val canvas = android.graphics.Canvas(watermarkedBitmap)
+            val paint = android.graphics.Paint().apply {
+                color = android.graphics.Color.WHITE
+                textSize = (watermarkedBitmap.width / 25f).coerceAtLeast(30f)
+                isAntiAlias = true
+                setShadowLayer(8f, 2f, 2f, android.graphics.Color.BLACK)
+                typeface = android.graphics.Typeface.create(android.graphics.Typeface.SANS_SERIF, android.graphics.Typeface.BOLD)
+            }
+            
+            val dateStr = java.text.SimpleDateFormat("MMM dd, yyyy • hh:mm a", java.util.Locale.getDefault()).format(java.util.Date())
+            val text = "$dateStr • FocusOS Proof"
+            val textWidth = paint.measureText(text)
+            
+            val padding = watermarkedBitmap.width / 30f
+            val x = watermarkedBitmap.width - textWidth - padding
+            val y = watermarkedBitmap.height - padding
+            
+            canvas.drawText(text, x, y, paint)
+            // --- END WATERMARK LOGIC ---
 
             val filename = "FocusOS_Proof_${System.currentTimeMillis()}.jpg"
             val imageCollection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -78,9 +132,11 @@ object PhotoStorageHelper {
             if (savedUri != null) {
                 outputStream = contentResolver.openOutputStream(savedUri)
                 if (outputStream != null) {
-                    inputStream.copyTo(outputStream)
+                    watermarkedBitmap.compress(Bitmap.CompressFormat.JPEG, 95, outputStream)
                     outputStream.flush()
                 }
+                
+                watermarkedBitmap.recycle()
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     contentValues.clear()
