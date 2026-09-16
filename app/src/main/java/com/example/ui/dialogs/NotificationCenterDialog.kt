@@ -150,7 +150,7 @@ fun NotificationCenterDialog(
                                     fontWeight = FontWeight.Black,
                                     letterSpacing = 1.sp
                                 ),
-                                color = Color.White
+                                color = FocusTextPrimary
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
@@ -180,7 +180,7 @@ fun NotificationCenterDialog(
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = FocusSurface,
-                        titleContentColor = Color.White
+                        titleContentColor = FocusTextPrimary
                     )
                 )
             },
@@ -230,7 +230,7 @@ fun NotificationCenterDialog(
                                     Text(
                                         text = notif.title,
                                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White
+                                        color = FocusTextPrimary
                                     )
                                 }
 
@@ -312,7 +312,7 @@ fun NotificationCenterDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = FocusSurfaceVariant),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("CLOSE NOTIFICATIONS", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("CLOSE NOTIFICATIONS", color = FocusTextPrimary, fontWeight = FontWeight.Bold)
                     }
                     Spacer(modifier = Modifier.height(32.dp))
                 }

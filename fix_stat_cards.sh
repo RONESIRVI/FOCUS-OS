@@ -1,0 +1,11 @@
+sed -i '566s/modifier = Modifier/modifier = Modifier.neumorphic(10.dp)/' app/src/main/java/com/example/ui/screens/StatisticsScreen.kt
+sed -i '719s/modifier = Modifier/modifier = Modifier.neumorphic(14.dp)/' app/src/main/java/com/example/ui/screens/StatisticsScreen.kt
+sed -i '1819s/modifier = Modifier/modifier = Modifier.neumorphic(16.dp)/' app/src/main/java/com/example/ui/screens/StatisticsScreen.kt
+sed -i '411s/modifier = Modifier.fillMaxWidth()/modifier = Modifier.fillMaxWidth().neumorphic(12.dp)/' app/src/main/java/com/example/ui/screens/StatisticsScreen.kt
+sed -i '471s/modifier = Modifier.fillMaxWidth()/modifier = Modifier.fillMaxWidth().neumorphic(12.dp)/' app/src/main/java/com/example/ui/screens/StatisticsScreen.kt
+sed -i '509s/modifier = Modifier.fillMaxWidth()/modifier = Modifier.fillMaxWidth().neumorphic(12.dp)/' app/src/main/java/com/example/ui/screens/StatisticsScreen.kt
+sed -i '969s/modifier = Modifier.fillMaxWidth()/modifier = Modifier.fillMaxWidth().neumorphic(14.dp)/' app/src/main/java/com/example/ui/screens/StatisticsScreen.kt
+sed -i '1358s/modifier = Modifier.fillMaxWidth()/modifier = Modifier.fillMaxWidth().neumorphic(16.dp)/' app/src/main/java/com/example/ui/screens/StatisticsScreen.kt
+sed -i '1447s/modifier = Modifier.fillMaxWidth()/modifier = Modifier.fillMaxWidth().neumorphic(16.dp)/' app/src/main/java/com/example/ui/screens/StatisticsScreen.kt
+sed -i '1522s/modifier = Modifier.fillMaxWidth()/modifier = Modifier.fillMaxWidth().neumorphic(16.dp)/' app/src/main/java/com/example/ui/screens/StatisticsScreen.kt
+sed -i '1600s/modifier = Modifier.fillMaxWidth()/modifier = Modifier.fillMaxWidth().neumorphic(16.dp)/' app/src/main/java/com/example/ui/screens/StatisticsScreen.kt

@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.Manifest
+import com.example.ui.theme.FocusTextPrimary
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
@@ -163,7 +164,7 @@ fun CameraVerificationScreen(
                     Text(
                         text = if (isStart) "ANTI-CHEAT PHOTO VERIFICATION" else "SESSION COMPLETION VERIFICATION",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
+                        color = FocusTextPrimary
                     )
                 }
 
@@ -175,7 +176,7 @@ fun CameraVerificationScreen(
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 1.sp
                     ),
-                    color = Color.White,
+                    color = FocusTextPrimary,
                     textAlign = TextAlign.Center
                 )
 
@@ -242,7 +243,7 @@ fun CameraVerificationScreen(
                                 Text(
                                     text = "SAVED TO GALLERY ✓",
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
+                                    color = FocusTextPrimary
                                 )
                             }
                         }
@@ -256,7 +257,7 @@ fun CameraVerificationScreen(
                                 .size(44.dp)
                                 .background(Color.Black.copy(alpha = 0.8f), CircleShape)
                         ) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Retake", tint = Color.White)
+                            Icon(Icons.Default.Refresh, contentDescription = "Retake", tint = FocusTextPrimary)
                         }
                         
                         // Premium Watermark Overlay
@@ -296,7 +297,7 @@ fun CameraVerificationScreen(
                             Text(
                                 text = "TAP TO OPEN PHONE CAMERA",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                                color = Color.White
+                                color = FocusTextPrimary
                             )
     
                             Spacer(modifier = Modifier.height(6.dp))
@@ -333,12 +334,12 @@ fun CameraVerificationScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color.White)
+                        Icon(Icons.Default.CameraAlt, contentDescription = null, tint = FocusTextPrimary)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "OPEN CAMERA & TAKE PHOTO",
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
+                            color = FocusTextPrimary
                         )
                     }
 
@@ -372,12 +373,12 @@ fun CameraVerificationScreen(
                     enabled = hasCapturedPhoto
                 ) {
                     if (hasCapturedPhoto) {
-                        Icon(Icons.Default.Check, contentDescription = null, tint = Color.White)
+                        Icon(Icons.Default.Check, contentDescription = null, tint = FocusTextPrimary)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (isStart) "VERIFY & START FOCUS SESSION" else "VERIFY & FINISH SESSION",
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.ExtraBold),
-                            color = Color.White
+                            color = FocusTextPrimary
                         )
                     } else {
                         Icon(Icons.Default.Lock, contentDescription = null, tint = FocusTextSecondary)
@@ -422,7 +423,7 @@ fun WatermarkOverlay(sessionName: String, modifier: Modifier = Modifier) {
             fontFamily = SpaceGroteskFontFamily,
             fontWeight = FontWeight.Bold,
             fontSize = 12.sp,
-            color = Color.White,
+            color = FocusTextPrimary,
             style = androidx.compose.ui.text.TextStyle(
                 shadow = androidx.compose.ui.graphics.Shadow(
                     color = Color.Black.copy(alpha = 0.8f),
@@ -448,7 +449,7 @@ fun WatermarkOverlay(sessionName: String, modifier: Modifier = Modifier) {
             fontFamily = SpaceGroteskFontFamily,
             fontWeight = FontWeight.Medium,
             fontSize = 11.sp,
-            color = Color.White.copy(alpha = 0.9f),
+            color = FocusTextPrimary.copy(alpha = 0.9f),
             style = androidx.compose.ui.text.TextStyle(
                 shadow = androidx.compose.ui.graphics.Shadow(
                     color = Color.Black.copy(alpha = 0.8f),

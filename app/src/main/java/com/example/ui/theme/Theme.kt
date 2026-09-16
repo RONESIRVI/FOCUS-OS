@@ -62,7 +62,7 @@ private fun getDynamicColorScheme(themeKey: String) = when (themeKey) {
         error = FocusDanger,
         onError = FocusDangerDark
     )
-    else -> darkColorScheme( // DEEP_DARK (Default Emerald Green)
+    else -> androidx.compose.material3.lightColorScheme( // NEUMORPHIC LIGHT
         primary = FocusPrimary,
         onPrimary = FocusOnPrimary,
         primaryContainer = FocusPrimaryDark,
@@ -89,7 +89,9 @@ fun FocusOSTheme(
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("FocusPrefs", Context.MODE_PRIVATE)
     val themeKey = prefs.getString("NOTIF_DESIGN_THEME", "DEEP_DARK") ?: "DEEP_DARK"
-    val colorScheme = getDynamicColorScheme(themeKey)
+    
+    // Always use Neumorphic light for this update, ignoring old Dark Theme keys
+    val colorScheme = getDynamicColorScheme("LIGHT_3D")
 
     MaterialTheme(
         colorScheme = colorScheme,

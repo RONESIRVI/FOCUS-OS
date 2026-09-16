@@ -1,6 +1,10 @@
 package com.example.ui.screens
 import androidx.compose.ui.draw.scale
 
+import com.example.ui.theme.FocusOutline
+import com.example.ui.theme.neumorphic
+import com.example.ui.theme.FocusTextPrimary
+import com.example.ui.theme.FocusTextPrimary
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -74,6 +78,8 @@ fun HomeScreen(
     var showQuickDurationDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var showValidationDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var validationConflicts by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
+    var previousValidationSessions by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
+    var nextValidationSessions by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
     var nextValidationSession by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<com.example.data.model.FocusSession?>(null) }
     var pendingDuration by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     var selectedSpecialWhitelist by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
@@ -144,15 +150,29 @@ fun HomeScreen(
                 showQuickDurationDialog = false
                 val userStart = System.currentTimeMillis()
                 val userEnd = userStart + (duration * 60 * 1000L)
-                val conflicts = scheduledSessions.filter { it.status == "SCHEDULED" }.filter { s ->
+                val activeSchedules = scheduledSessions.filter { it.status == "SCHEDULED" }
+                val conflicts = activeSchedules.filter { s ->
                     val sStart = s.scheduledStartTime ?: return@filter false
                     val sEnd = s.scheduledEndTime ?: return@filter false
                     userStart < sEnd && userEnd > sStart
                 }
                 
                 if (conflicts.isNotEmpty()) {
+                    val prevSessions = activeSchedules
+                        .filter { (it.scheduledEndTime ?: 0) <= userStart }
+                        .sortedByDescending { it.scheduledEndTime ?: 0 }
+                        .take(3)
+                        .reversed()
+
+                    val nextSessions = activeSchedules
+                        .filter { (it.scheduledStartTime ?: 0) >= userEnd }
+                        .sortedBy { it.scheduledStartTime ?: 0 }
+                        .take(3)
+
                     validationConflicts = conflicts
-                    nextValidationSession = scheduledSessions.filter { it.status == "SCHEDULED" && (it.scheduledStartTime ?: 0) >= userEnd }.minByOrNull { it.scheduledStartTime ?: 0 }
+                    previousValidationSessions = prevSessions
+                    nextValidationSessions = nextSessions
+                    nextValidationSession = nextSessions.firstOrNull()
                     pendingDuration = duration
                     showValidationDialog = true
                 } else {
@@ -171,6 +191,8 @@ fun HomeScreen(
             conflicts = validationConflicts,
             userStart = userStart,
             userEnd = userEnd,
+            previousSessions = previousValidationSessions,
+            nextSessions = nextValidationSessions,
             nextSession = nextValidationSession,
             onChangeTime = { showValidationDialog = false },
             onSave = { 
@@ -260,7 +282,7 @@ fun HomeScreen(
                         ),
                     shape = RoundedCornerShape(32.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF131722)
+                        containerColor = FocusBackground
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 20.dp)
                 ) {
@@ -302,7 +324,7 @@ fun HomeScreen(
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 1.sp
                             ),
-                            color = Color.White,
+                            color = FocusTextPrimary,
                             textAlign = TextAlign.Center
                         )
 
@@ -312,7 +334,7 @@ fun HomeScreen(
                         Text(
                             text = "Your scheduled focus session has not been started yet.",
                             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                            color = Color.White.copy(alpha = 0.75f),
+                            color = FocusTextPrimary.copy(alpha = 0.75f),
                             textAlign = TextAlign.Center
                         )
 
@@ -322,10 +344,10 @@ fun HomeScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .border(1.dp, Color(0xFF2E364A), RoundedCornerShape(16.dp)),
+                                .border(1.dp, FocusPrimary.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = Color(0xFF1B2130)
+                                containerColor = FocusSurface
                             )
                         ) {
                             Column(
@@ -342,7 +364,7 @@ fun HomeScreen(
                                     Box(
                                         modifier = Modifier
                                             .size(34.dp)
-                                            .background(Color(0xFF252D3F), RoundedCornerShape(8.dp)),
+                                            .background(FocusSurfaceVariant, RoundedCornerShape(8.dp)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(text = "📖", fontSize = 16.sp)
@@ -353,13 +375,13 @@ fun HomeScreen(
                                             fontWeight = FontWeight.Bold,
                                             letterSpacing = 0.5.sp
                                         ),
-                                        color = Color.White,
+                                        color = FocusTextPrimary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }
 
-                                Divider(color = Color(0xFF2E364A), thickness = 1.dp)
+                                Divider(color = FocusPrimary.copy(alpha = 0.2f), thickness = 1.dp)
 
                                 // Time Range Row
                                 Row(
@@ -369,7 +391,7 @@ fun HomeScreen(
                                     Box(
                                         modifier = Modifier
                                             .size(34.dp)
-                                            .background(Color(0xFF252D3F), RoundedCornerShape(8.dp)),
+                                            .background(FocusSurfaceVariant, RoundedCornerShape(8.dp)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(text = "🕒", fontSize = 16.sp)
@@ -395,7 +417,7 @@ fun HomeScreen(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.2.sp
                             ),
-                            color = Color.White.copy(alpha = 0.5f)
+                            color = FocusTextPrimary.copy(alpha = 0.5f)
                         )
 
                         Spacer(modifier = Modifier.height(6.dp))
@@ -459,10 +481,10 @@ fun HomeScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .border(1.dp, Color(0xFF2E364A), RoundedCornerShape(14.dp)),
+                                        .border(1.dp, FocusPrimary.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
                                     shape = RoundedCornerShape(14.dp),
                                     colors = CardDefaults.cardColors(
-                                        containerColor = Color(0xFF1B2130)
+                                        containerColor = FocusSurface
                                     )
                                 ) {
                                     Row(
@@ -492,14 +514,14 @@ fun HomeScreen(
                                                     style = MaterialTheme.typography.titleMedium.copy(
                                                         fontWeight = FontWeight.Bold
                                                     ),
-                                                    color = Color.White,
+                                                    color = FocusTextPrimary,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
                                                 Text(
                                                     text = attempt.packageName,
                                                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                                    color = Color.White.copy(alpha = 0.5f),
+                                                    color = FocusTextPrimary.copy(alpha = 0.5f),
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
@@ -528,10 +550,10 @@ fun HomeScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .border(1.dp, Color(0xFF374151), RoundedCornerShape(14.dp)),
+                                .border(1.dp, FocusPrimary.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
                             shape = RoundedCornerShape(14.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = Color(0xFF1B2130).copy(alpha = 0.7f)
+                                containerColor = FocusSurface.copy(alpha = 0.7f)
                             )
                         ) {
                             Row(
@@ -548,7 +570,7 @@ fun HomeScreen(
                                 Text(
                                     text = "You tried to open $latestAppName. This app is restricted because your scheduled focus session is still pending.",
                                     style = MaterialTheme.typography.bodySmall.copy(lineHeight = 17.sp),
-                                    color = Color.White.copy(alpha = 0.85f)
+                                    color = FocusTextPrimary.copy(alpha = 0.85f)
                                 )
                             }
                         }
@@ -580,7 +602,7 @@ fun HomeScreen(
                                 ),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.Transparent,
-                                contentColor = Color.White
+                                contentColor = FocusTextPrimary
                             ),
                             shape = CircleShape
                         ) {
@@ -614,10 +636,10 @@ fun HomeScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(46.dp)
-                                .border(1.dp, Color(0xFF2E364A), CircleShape),
+                                .border(1.dp, FocusPrimary.copy(alpha = 0.2f), CircleShape),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF1B2130),
-                                contentColor = Color.White
+                                containerColor = FocusSurface,
+                                contentColor = FocusTextPrimary
                             ),
                             shape = CircleShape
                         ) {
@@ -628,7 +650,7 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = Icons.Default.Home,
                                     contentDescription = null,
-                                    tint = Color.White.copy(alpha = 0.7f),
+                                    tint = FocusTextPrimary.copy(alpha = 0.7f),
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -637,7 +659,7 @@ fun HomeScreen(
                                     style = MaterialTheme.typography.bodyLarge.copy(
                                         fontWeight = FontWeight.SemiBold
                                     ),
-                                    color = Color.White.copy(alpha = 0.85f)
+                                    color = FocusTextPrimary.copy(alpha = 0.85f)
                                 )
                             }
                         }
@@ -692,7 +714,7 @@ fun HomeScreen(
                                 fontSize = 26.sp,
                                 letterSpacing = 0.5.sp
                             ),
-                            color = Color.White
+                            color = FocusTextPrimary
                         )
                         Text(
                             text = "PRODUCTIVITY ENGINE",
@@ -724,7 +746,7 @@ fun HomeScreen(
                             Icon(
                                 imageVector = Icons.Default.MenuBook,
                                 contentDescription = "App Complete Guide",
-                                tint = Color.White.copy(alpha = 0.9f),
+                                tint = FocusTextPrimary.copy(alpha = 0.9f),
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -746,7 +768,7 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.Notifications,
                             contentDescription = "Notifications & Alerts",
-                            tint = Color.White.copy(alpha = 0.9f),
+                            tint = FocusTextPrimary.copy(alpha = 0.9f),
                             modifier = Modifier.size(24.dp)
                         )
                         
@@ -790,7 +812,7 @@ fun HomeScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 28.sp
                         ),
-                        color = Color.White
+                        color = FocusTextPrimary
                     )
                     Text(
                         text = "100% Distraction-free Study Environment",
@@ -883,7 +905,7 @@ fun HomeScreen(
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold
                                     ),
-                                    color = Color.White
+                                    color = FocusTextPrimary
                                 )
                                 Text(
                                     text = reminderText,
@@ -926,12 +948,11 @@ fun HomeScreen(
             val minutes = (stats.todayFocusSeconds % 3600) / 60
             val goalHours = 5
             val goalProgress = (stats.todayFocusSeconds.toFloat() / (goalHours * 3600f)).coerceIn(0f, 1f)
-
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().neumorphic(20.dp),
                 colors = CardDefaults.cardColors(containerColor = FocusSurface),
                 shape = RoundedCornerShape(20.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, FocusOutline)
+                border = androidx.compose.foundation.BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f))
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Row(
@@ -1019,12 +1040,11 @@ fun HomeScreen(
                     else -> "No active streak yet. Complete a study session today to start your streak!"
                 }
             }
-
             Card(
-                modifier = Modifier.fillMaxWidth().testTag("streak_card"),
+                modifier = Modifier.fillMaxWidth().neumorphic(20.dp).testTag("streak_card"),
                 colors = CardDefaults.cardColors(containerColor = FocusSurface),
                 shape = RoundedCornerShape(20.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, FocusOutline)
+                border = androidx.compose.foundation.BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f))
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Row(
@@ -1075,7 +1095,7 @@ fun HomeScreen(
                     Text(
                         text = motivationalMessage,
                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                        color = if (streakDays > 0 || stats.todayFocusSeconds > 0) Color.White else FocusTextSecondary,
+                        color = if (streakDays > 0 || stats.todayFocusSeconds > 0) FocusTextPrimary else FocusTextSecondary,
                         lineHeight = 18.sp
                     )
                 }
@@ -1150,12 +1170,11 @@ fun HomeScreen(
                             isTomorrow -> "TOMORROW"
                             else -> SimpleDateFormat("EEE, d MMM", Locale.getDefault()).format(sessionDate).uppercase()
                         }
-                        
                         Card(
                             colors = CardDefaults.cardColors(containerColor = FocusSurface),
                             shape = RoundedCornerShape(16.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, FocusOutline),
-                            modifier = Modifier.fillMaxWidth()
+                            border = androidx.compose.foundation.BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
+                            modifier = Modifier.fillMaxWidth().neumorphic(16.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Row(
@@ -1262,7 +1281,7 @@ fun HomeScreen(
                     Text(
                         text = "Special Whitelist Switch",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
+                        color = FocusTextPrimary
                     )
                 }
                 val isSpecialRunning = timerState.isRunning && timerState.isSpecialSession
@@ -1277,9 +1296,9 @@ fun HomeScreen(
                         }
                     },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
+                        checkedThumbColor = FocusTextPrimary,
                         checkedTrackColor = FocusPrimary,
-                        uncheckedThumbColor = Color.White,
+                        uncheckedThumbColor = FocusTextPrimary,
                         uncheckedTrackColor = FocusSurfaceVariant
                     )
                 )
@@ -1298,7 +1317,7 @@ fun AppBlockingSystemDialog(
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         androidx.compose.material3.Surface(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-            color = androidx.compose.ui.graphics.Color(0xFF0F172A), // Dark Navy
+            color = FocusSurface, // Dark Navy
             modifier = androidx.compose.ui.Modifier
                 .fillMaxWidth()
                 .aspectRatio(3f / 4f)
@@ -1329,7 +1348,7 @@ fun AppBlockingSystemDialog(
                 
                 androidx.compose.material3.Text(
                     text = "APP BLOCKING SYSTEM",
-                    color = androidx.compose.ui.graphics.Color.White,
+                    color = FocusTextPrimary,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                     fontSize = 20.sp,
                     modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
@@ -1343,14 +1362,14 @@ fun AppBlockingSystemDialog(
                     subtitle = "Allowed apps during Quick Focus sessions",
                     onClick = { onSelectWhitelist("MANUAL") }
                 )
-                androidx.compose.material3.Divider(color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.1f))
+                androidx.compose.material3.Divider(color = FocusTextPrimary.copy(alpha = 0.1f))
                 
                 AppBlockingOption(
                     title = "Strict Schedule Whitelist",
                     subtitle = "Allowed apps during Strict Scheduled Focus",
                     onClick = { onSelectWhitelist("STRICT") }
                 )
-                androidx.compose.material3.Divider(color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.1f))
+                androidx.compose.material3.Divider(color = FocusTextPrimary.copy(alpha = 0.1f))
                 
                 AppBlockingOption(
                     title = "Special Whitelist",
@@ -1379,7 +1398,7 @@ fun AppBlockingOption(
         androidx.compose.foundation.layout.Column(modifier = androidx.compose.ui.Modifier.weight(1f)) {
             androidx.compose.material3.Text(
                 text = title,
-                color = androidx.compose.ui.graphics.Color.White,
+                color = FocusTextPrimary,
                 fontSize = 14.sp,
                 fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
             )
@@ -1422,7 +1441,7 @@ fun QuickDurationDialog(
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismissRequest) {
         androidx.compose.material3.Surface(
             shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-            color = androidx.compose.ui.graphics.Color(0xFFF8FAFC),
+            color = FocusSurface,
             shadowElevation = 12.dp,
             modifier = androidx.compose.ui.Modifier.width(340.dp)
         ) {
@@ -1436,7 +1455,7 @@ fun QuickDurationDialog(
                     text = "कितने वक़्त के लिए?",
                     style = androidx.compose.material3.MaterialTheme.typography.titleLarge.copy(
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        color = androidx.compose.ui.graphics.Color(0xFF0F172A)
+                        color = FocusSurface
                     )
                 )
                 androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.height(20.dp))
@@ -1465,7 +1484,7 @@ fun QuickDurationDialog(
                                     androidx.compose.material3.Text(
                                         text = label,
                                         style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
-                                        color = if (isSelected) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color(0xFF334155),
+                                        color = if (isSelected) FocusTextPrimary else FocusTextSecondary,
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                     )
                                 }
@@ -1490,7 +1509,7 @@ fun QuickDurationDialog(
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFF2563EB))
                 ) {
-                    androidx.compose.material3.Text("Submit", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 16.sp)
+                    androidx.compose.material3.Text("Submit", color = FocusTextPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         }

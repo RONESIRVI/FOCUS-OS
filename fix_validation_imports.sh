@@ -1,0 +1,1 @@
+sed -i '12a \import com.example.ui.theme.FocusDanger\nimport com.example.ui.theme.FocusDangerDark\nimport com.example.ui.theme.FocusPrimary\nimport com.example.ui.theme.FocusPrimaryDark\nimport com.example.ui.theme.FocusSurfaceVariant\nimport com.example.ui.theme.FocusTextSecondary\n' app/src/main/java/com/example/ui/screens/ScheduleValidationDialog.kt

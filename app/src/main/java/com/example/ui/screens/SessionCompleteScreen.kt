@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import com.example.ui.theme.FocusTextPrimary
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -89,7 +90,7 @@ fun SessionCompleteScreen(
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 1.sp
                 ),
-                color = Color.White
+                color = FocusTextPrimary
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -126,7 +127,7 @@ fun SessionCompleteScreen(
                     Text(
                         text = "${hrs}h ${mins}m",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
+                        color = FocusTextPrimary
                     )
                 }
 

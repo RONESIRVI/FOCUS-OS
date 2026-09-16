@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import com.example.ui.theme.FocusTextPrimary
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -112,7 +113,7 @@ fun AppSelectorScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = Color.White
+                    tint = FocusTextPrimary
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
@@ -123,7 +124,7 @@ fun AppSelectorScreen(
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 0.5.sp
                     ),
-                    color = Color.White
+                    color = FocusTextPrimary
                 )
                 Text(
                     text = when(currentProfile) { "STRICT" -> "Allowed apps during Scheduled Study Focus"; "SPECIAL" -> "Allowed apps during Special Whitelist Focus"; else -> "Allowed apps during Manual Quick Focus" },
@@ -164,7 +165,7 @@ fun AppSelectorScreen(
                     Text(
                         text = profLabel,
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = if (isSel) Color.White else FocusTextSecondary
+                        color = if (isSel) FocusTextPrimary else FocusTextSecondary
                     )
                 }
             }
@@ -190,8 +191,8 @@ fun AppSelectorScreen(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = FocusPrimary,
                 unfocusedBorderColor = FocusSurfaceVariant,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White
+                focusedTextColor = FocusTextPrimary,
+                unfocusedTextColor = FocusTextPrimary
             ),
             singleLine = true,
             shape = RoundedCornerShape(16.dp)
@@ -225,7 +226,7 @@ fun AppSelectorScreen(
                         Text(
                             text = label,
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = if (isSelected) Color.Black else Color.White
+                            color = if (isSelected) Color.Black else FocusTextPrimary
                         )
                     }
                 }
@@ -283,7 +284,7 @@ fun AppSelectorScreen(
                                 Text(
                                     text = app.appName,
                                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
+                                    color = FocusTextPrimary
                                 )
                                 Text(
                                     text = if (app.isAllowed) "✓ ALLOWED FOR STUDY" else "🔒 BLOCKED DURING SESSION",

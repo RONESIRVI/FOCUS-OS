@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.content.Context
+import com.example.ui.theme.FocusTextPrimary
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -743,7 +744,7 @@ fun SettingsScreen(
                         Text(
                             text = "📚 Physics • Chapter 4 Deep Study",
                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
+                            color = FocusTextPrimary
                         )
                         Text(
                             text = "⏱️ 25:00 Remaining (100%)",
@@ -913,7 +914,7 @@ fun SettingsScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(imageVector = Icons.Default.Shield, contentDescription = null, tint = NavyPrimary)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("App-Blocking Architecture", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("App-Blocking Architecture", color = FocusTextPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             text = {
@@ -948,14 +949,14 @@ fun SettingsScreen(
         var tempName by remember { mutableStateOf(userName) }
         AlertDialog(
             onDismissRequest = { showEditProfileDialog = false },
-            title = { Text("Edit Profile Name", color = Color.White, fontWeight = FontWeight.Bold) },
+            title = { Text("Edit Profile Name", color = FocusTextPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 OutlinedTextField(
                     value = tempName,
                     onValueChange = { tempName = it },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = FocusTextPrimary,
+                        unfocusedTextColor = FocusTextPrimary,
                         focusedBorderColor = NavyPrimary
                     ),
                     singleLine = true
@@ -994,7 +995,7 @@ fun SettingsScreen(
             title = {
                 Text(
                     text = "Usage Access Disclosure",
-                    color = Color.White,
+                    color = FocusTextPrimary,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleLarge
                 )
@@ -1053,7 +1054,7 @@ fun SettingsScreen(
             title = {
                 Text(
                     text = "Privacy & Policy Compliance",
-                    color = Color.White,
+                    color = FocusTextPrimary,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleLarge
                 )
@@ -1091,7 +1092,7 @@ fun SettingsScreen(
         var tempTitle by remember { mutableStateOf(notifCustomPrefix) }
         AlertDialog(
             onDismissRequest = { showNotifTitleDialog = false },
-            title = { Text("Custom Notification Title Header", color = Color.White, fontWeight = FontWeight.Bold) },
+            title = { Text("Custom Notification Title Header", color = FocusTextPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text("Enter the header title displayed on focus notifications:", style = MaterialTheme.typography.bodySmall, color = NavyTextSecondary)
@@ -1101,8 +1102,8 @@ fun SettingsScreen(
                         onValueChange = { if (it.length <= 20) tempTitle = it },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
+                            focusedTextColor = FocusTextPrimary,
+                            unfocusedTextColor = FocusTextPrimary,
                             focusedBorderColor = NavyPrimary
                         ),
                         modifier = Modifier.fillMaxWidth()
@@ -1187,7 +1188,7 @@ fun SettingsScreen(
             },
             title = {
                 Column {
-                    Text(text = catTitle, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(text = catTitle, color = FocusTextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(text = "Tap to listen & select default OEM notification sounds", color = NavyPrimary, fontSize = 11.sp)
                 }
@@ -1303,7 +1304,7 @@ fun SettingsScreen(
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
                                                 text = "${soundItem.brandEmoji} ${soundItem.title}",
-                                                color = if (isSelected) NavyPrimary else Color.White,
+                                                color = if (isSelected) NavyPrimary else FocusTextPrimary,
                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                                 fontSize = 13.sp
                                             )
@@ -1421,7 +1422,7 @@ fun SettingsScreen(
         )
         AlertDialog(
             onDismissRequest = { showNotifVibrateDialog = false },
-            title = { Text("📳 Mobile Vibration System", color = Color.White, fontWeight = FontWeight.Bold) },
+            title = { Text("📳 Mobile Vibration System", color = FocusTextPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     patterns.forEach { (key, label) ->
@@ -1448,7 +1449,7 @@ fun SettingsScreen(
                                 colors = RadioButtonDefaults.colors(selectedColor = NavyPrimary, unselectedColor = NavyTextSecondary)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text(text = label, color = if (isSelected) NavyPrimary else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                            Text(text = label, color = if (isSelected) NavyPrimary else FocusTextPrimary, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                         }
                     }
 
@@ -1472,7 +1473,7 @@ fun SettingsScreen(
         )
         AlertDialog(
             onDismissRequest = { showNotifThemeDialog = false },
-            title = { Text("Notification Design Theme", color = Color.White, fontWeight = FontWeight.Bold) },
+            title = { Text("Notification Design Theme", color = FocusTextPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     themes.forEach { (key, label) ->
@@ -1496,7 +1497,7 @@ fun SettingsScreen(
                                 colors = RadioButtonDefaults.colors(selectedColor = NavyPrimary, unselectedColor = NavyTextSecondary)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text(text = label, color = if (isSelected) NavyPrimary else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                            Text(text = label, color = if (isSelected) NavyPrimary else FocusTextPrimary, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                         }
                     }
 
@@ -1518,7 +1519,7 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showManageCustomizations = false },
             title = {
-                Text("Manage Customizations", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Manage Customizations", color = FocusTextPrimary, fontWeight = FontWeight.Bold)
             },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
@@ -1532,8 +1533,8 @@ fun SettingsScreen(
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
+                                focusedTextColor = FocusTextPrimary,
+                                unfocusedTextColor = FocusTextPrimary,
                                 focusedBorderColor = NavyPrimary
                             )
                         )
@@ -1549,7 +1550,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     userSubjects.forEach { sub ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = sub.name, color = Color.White, modifier = Modifier.weight(1f))
+                            Text(text = sub.name, color = FocusTextPrimary, modifier = Modifier.weight(1f))
                             IconButton(onClick = { viewModel.deleteCustomSubject(sub) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF5252), modifier = Modifier.size(18.dp))
                             }
@@ -1570,8 +1571,8 @@ fun SettingsScreen(
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
+                                focusedTextColor = FocusTextPrimary,
+                                unfocusedTextColor = FocusTextPrimary,
                                 focusedBorderColor = NavyPrimary
                             )
                         )
@@ -1587,7 +1588,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     customGoalsList.forEach { goal ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = goal, color = Color.White, modifier = Modifier.weight(1f))
+                            Text(text = goal, color = FocusTextPrimary, modifier = Modifier.weight(1f))
                             IconButton(onClick = { viewModel.deleteCustomGoal(goal) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF5252), modifier = Modifier.size(18.dp))
                             }
@@ -1690,7 +1691,7 @@ fun PermissionRowItem(
                     onClick = onAction,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFFF5252),
-                        contentColor = Color.White
+                        contentColor = FocusTextPrimary
                     ),
                     shape = RoundedCornerShape(20.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),

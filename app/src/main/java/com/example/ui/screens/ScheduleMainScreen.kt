@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import com.example.ui.theme.FocusTextPrimary
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -67,7 +68,7 @@ fun ScheduleMainScreen(
                             fontWeight = FontWeight.Black,
                             letterSpacing = 1.sp
                         ),
-                        color = Color.White
+                        color = FocusTextPrimary
                     )
                 },
                 actions = {
@@ -97,7 +98,7 @@ fun ScheduleMainScreen(
                             }
                         }
                     ) {
-                        Icon(Icons.Default.Download, contentDescription = "Download Schedule Image", tint = Color.White)
+                        Icon(Icons.Default.Download, contentDescription = "Download Schedule Image", tint = FocusTextPrimary)
                     }
                     Button(
                         onClick = onNavigateToCreate,
@@ -106,14 +107,14 @@ fun ScheduleMainScreen(
                         modifier = Modifier.padding(end = 8.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Add, contentDescription = null, tint = FocusTextPrimary, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("NEW SCHEDULE", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("NEW SCHEDULE", color = FocusTextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = FocusBackground,
-                    titleContentColor = Color.White
+                    titleContentColor = FocusTextPrimary
                 )
             )
         },
@@ -218,7 +219,7 @@ fun EmptyScheduleState(onCreateClick: () -> Unit) {
         Text(
             text = "No Upcoming Sessions",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            color = Color.White
+            color = FocusTextPrimary
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -233,7 +234,7 @@ fun EmptyScheduleState(onCreateClick: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = FocusSurfaceVariant),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text("CREATE SCHEDULE", color = Color.White, fontWeight = FontWeight.Bold)
+            Text("CREATE SCHEDULE", color = FocusTextPrimary, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -257,7 +258,7 @@ fun ScheduleCard(
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2633)),
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.1f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, FocusTextPrimary.copy(alpha = 0.1f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -271,26 +272,26 @@ fun ScheduleCard(
                     Icon(
                         imageVector = Icons.Default.MenuBook,
                         contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.7f),
+                        tint = FocusTextPrimary.copy(alpha = 0.7f),
                         modifier = Modifier.size(40.dp).padding(end = 12.dp)
                     )
                     Column {
                         Text(
                             text = if (session.sessionName.isNotBlank()) session.sessionName else "Study Session",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 16.sp),
-                            color = Color.White
+                            color = FocusTextPrimary
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "$dateString • $timeString",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.6f)
+                            color = FocusTextPrimary.copy(alpha = 0.6f)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = durationString,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.6f)
+                            color = FocusTextPrimary.copy(alpha = 0.6f)
                         )
                     }
                 }
@@ -310,7 +311,7 @@ fun ScheduleCard(
             }
             
             Spacer(modifier = Modifier.height(12.dp))
-            androidx.compose.material3.Divider(color = Color.White.copy(alpha = 0.1f))
+            androidx.compose.material3.Divider(color = FocusTextPrimary.copy(alpha = 0.1f))
             Spacer(modifier = Modifier.height(12.dp))
             
             // Middle section (Features)
@@ -359,14 +360,14 @@ fun ScheduleCard(
                         Icon(
                             imageVector = Icons.Default.Lock,
                             contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.4f),
+                            tint = FocusTextPrimary.copy(alpha = 0.4f),
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Cancel Locked",
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                            color = Color.White.copy(alpha = 0.4f)
+                            color = FocusTextPrimary.copy(alpha = 0.4f)
                         )
                     }
                 }

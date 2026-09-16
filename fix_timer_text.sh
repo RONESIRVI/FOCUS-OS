@@ -1,0 +1,1 @@
+sed -i 's/contentColor = FocusTextPrimary/contentColor = if (timerState.isPaused) androidx.compose.ui.graphics.Color.White else FocusTextPrimary/g' app/src/main/java/com/example/ui/screens/FocusTimerScreen.kt

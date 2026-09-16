@@ -1,12 +1,16 @@
 package com.example.ui.screens
 
 
+import com.example.ui.theme.FocusOutline
+import com.example.ui.theme.FocusTextPrimary
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import com.example.ui.theme.neumorphic
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,7 +22,9 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -66,12 +72,15 @@ fun ScheduleCreateScreen(
     onScheduleCreated: () -> Unit
 ) {
     val setup by viewModel.setupState.collectAsState()
+    val timerState by viewModel.timerState.collectAsState()
     val whitelistedAppsStrict by viewModel.whitelistedAppsStrict.collectAsState()
     val whitelistedAppsSpecial by viewModel.whitelistedAppsSpecial.collectAsState()
     val whitelistedAppsManual by viewModel.whitelistedAppsManual.collectAsState()
     val scheduledSessions by viewModel.scheduledSessions.collectAsState(initial = emptyList())
     var showValidationDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var validationConflicts by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
+    var previousValidationSessions by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
+    var nextValidationSessions by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
     var nextValidationSession by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<com.example.data.model.FocusSession?>(null) }
     val userSubjects by viewModel.allSubjects.collectAsState()
     val customGoalsList by viewModel.customGoals.collectAsState()
@@ -80,38 +89,64 @@ fun ScheduleCreateScreen(
     // Current time calendar base
     val nowCalendar = remember { Calendar.getInstance() }
 
-    // Date State
-    var selectedPreset by remember { mutableStateOf(DatePresetType.TODAY) }
-    var selectedCalendar by remember {
-        mutableStateOf(
-            Calendar.getInstance().apply {
-                add(Calendar.MINUTE, 5)
-            }
-        )
+    // Date & Time State persisted across recompositions & navigation
+    var selectedPresetName by rememberSaveable { mutableStateOf(DatePresetType.TODAY.name) }
+    var selectedDateMillis by rememberSaveable {
+        val initialCal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        mutableLongStateOf(initialCal.timeInMillis)
     }
 
-    // Time State
-    var startHour by remember { mutableStateOf(selectedCalendar.get(Calendar.HOUR_OF_DAY)) }
-    var startMinute by remember { mutableStateOf(selectedCalendar.get(Calendar.MINUTE)) }
+    val defaultStartCal = remember {
+        Calendar.getInstance().apply {
+            add(Calendar.MINUTE, 5)
+        }
+    }
+    var startHour by rememberSaveable { mutableIntStateOf(defaultStartCal.get(Calendar.HOUR_OF_DAY)) }
+    var startMinute by rememberSaveable { mutableIntStateOf(defaultStartCal.get(Calendar.MINUTE)) }
 
-    var endHour by remember {
-        val nextHourCal = Calendar.getInstance().apply {
+    val defaultEndCal = remember(startHour, startMinute) {
+        Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, startHour)
             set(Calendar.MINUTE, startMinute)
             add(Calendar.MINUTE, 60)
         }
-        mutableStateOf(nextHourCal.get(Calendar.HOUR_OF_DAY))
     }
-    var endMinute by remember { mutableStateOf(startMinute) }
+    var endHour by rememberSaveable { mutableIntStateOf(defaultEndCal.get(Calendar.HOUR_OF_DAY)) }
+    var endMinute by rememberSaveable { mutableIntStateOf(startMinute) }
 
-    var showDatePicker by remember { mutableStateOf(false) }
-    var showStartTimePicker by remember { mutableStateOf(false) }
-    var showEndTimePicker by remember { mutableStateOf(false) }
-    var showTwoStepTimeDialog by remember { mutableStateOf(false) }
-    var showReminderDialog by remember { mutableStateOf(false) }
+    // Derive selectedCalendar dynamically from the persisted date millis and start time
+    val selectedCalendar by remember(selectedDateMillis, startHour, startMinute) {
+        derivedStateOf {
+            Calendar.getInstance().apply {
+                timeInMillis = selectedDateMillis
+                set(Calendar.HOUR_OF_DAY, startHour)
+                set(Calendar.MINUTE, startMinute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+        }
+    }
+    val selectedPreset = remember(selectedPresetName) {
+        try {
+            DatePresetType.valueOf(selectedPresetName)
+        } catch (e: Exception) {
+            DatePresetType.TODAY
+        }
+    }
+
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
+    var showStartTimePicker by rememberSaveable { mutableStateOf(false) }
+    var showEndTimePicker by rememberSaveable { mutableStateOf(false) }
+    var showTwoStepTimeDialog by rememberSaveable { mutableStateOf(false) }
+    var showReminderDialog by rememberSaveable { mutableStateOf(false) }
 
     @OptIn(ExperimentalMaterial3Api::class)
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedCalendar.timeInMillis)
+    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDateMillis)
     
     @OptIn(ExperimentalMaterial3Api::class)
     val startTimePickerState = rememberTimePickerState(initialHour = startHour, initialMinute = startMinute, is24Hour = false)
@@ -119,16 +154,16 @@ fun ScheduleCreateScreen(
     @OptIn(ExperimentalMaterial3Api::class)
     val endTimePickerState = rememberTimePickerState(initialHour = endHour, initialMinute = endMinute, is24Hour = false)
 
-    // Session & Subject details - clean, user writes according to their preference
-    var subjectName by remember {
+    // Session & Subject details - clean, persisted so user inputs never reset
+    var subjectName by rememberSaveable {
         mutableStateOf(setup.subjectName)
     }
-    var sessionName by remember {
+    var sessionName by rememberSaveable {
         mutableStateOf(setup.sessionName)
     }
-    var selectedLockMode by remember { mutableStateOf(setup.lockMode) }
-    var selectedWhitelistProfile by remember { mutableStateOf(setup.whitelistProfile) }
-    var selectedModeId by remember { 
+    var selectedLockMode by rememberSaveable { mutableStateOf(setup.lockMode) }
+    var selectedWhitelistProfile by rememberSaveable { mutableStateOf(setup.whitelistProfile) }
+    var selectedModeId by rememberSaveable { 
         mutableStateOf(
             when {
                 setup.lockMode == LockMode.SOFT_LOCK -> "MINDFUL"
@@ -137,7 +172,7 @@ fun ScheduleCreateScreen(
             }
         )
     }
-    var selectedSound by remember { mutableStateOf(setup.selectedSound) }
+    var selectedSound by rememberSaveable { mutableStateOf(setup.selectedSound) }
     
     val audioPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
@@ -157,8 +192,8 @@ fun ScheduleCreateScreen(
             }
         }
     )
-    var requiresPhoto by remember { mutableStateOf(setup.requiresPhoto) }
-    var requiresSelfie by remember { mutableStateOf(setup.requiresSelfie) }
+    var requiresPhoto by rememberSaveable { mutableStateOf(setup.requiresPhoto) }
+    var requiresSelfie by rememberSaveable { mutableStateOf(setup.requiresSelfie) }
 
     // Duration calculation
     val calculatedDurationMinutes = remember(startHour, startMinute, endHour, endMinute) {
@@ -190,7 +225,7 @@ fun ScheduleCreateScreen(
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 1.sp
                             ),
-                            color = Color.White
+                            color = FocusTextPrimary
                         )
                         Text(
                             text = "Set Custom Date & Strict Time Slots",
@@ -204,7 +239,7 @@ fun ScheduleCreateScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color.White
+                            tint = FocusTextPrimary
                         )
                     }
                 },
@@ -246,7 +281,7 @@ fun ScheduleCreateScreen(
         bottomBar = {
             Surface(
                 color = FocusSurface,
-                border = BorderStroke(1.dp, FocusOutline),
+                border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -281,18 +316,49 @@ fun ScheduleCreateScreen(
 
                     Button(
                         onClick = {
-                            if (selectedModeId == "SPECIAL" && selectedWhitelistProfile.isBlank()) {
+                            val isCurrentlyFocusActive = com.example.util.FocusLockManager.isFocusActive ||
+                                    timerState.isRunning ||
+                                    com.example.util.FocusLockManager.hasPendingSchedule()
+                            if (isCurrentlyFocusActive) {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "⚠️ A Focus Session is already running or pending! Please complete or wait for the current session before creating new schedules.",
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            } else if (selectedCalendar.timeInMillis < System.currentTimeMillis()) {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "⚠️ Cannot schedule a session in the past! Please select a future time.",
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            } else if (selectedModeId == "SPECIAL" && selectedWhitelistProfile.isBlank()) {
                                 android.widget.Toast.makeText(context, "Please select an App Blocking System", android.widget.Toast.LENGTH_SHORT).show()
                             } else {
                                 val userStart = selectedCalendar.timeInMillis
                                 val userEnd = userStart + (calculatedDurationMinutes * 60 * 1000L)
-                                val conflicts = scheduledSessions.filter { it.status == "SCHEDULED" }.filter { s ->
+                                val activeSchedules = scheduledSessions.filter { it.status == "SCHEDULED" }
+                                
+                                val conflicts = activeSchedules.filter { s ->
                                     val sStart = s.scheduledStartTime ?: return@filter false
                                     val sEnd = s.scheduledEndTime ?: return@filter false
                                     userStart < sEnd && userEnd > sStart
                                 }
+                                
+                                val prevSessions = activeSchedules
+                                    .filter { (it.scheduledEndTime ?: 0) <= userStart }
+                                    .sortedByDescending { it.scheduledEndTime ?: 0 }
+                                    .take(3)
+                                    .reversed()
+
+                                val nextSessions = activeSchedules
+                                    .filter { (it.scheduledStartTime ?: 0) >= userEnd }
+                                    .sortedBy { it.scheduledStartTime ?: 0 }
+                                    .take(3)
+
                                 validationConflicts = conflicts
-                                nextValidationSession = scheduledSessions.filter { it.status == "SCHEDULED" && (it.scheduledStartTime ?: 0) >= userEnd }.minByOrNull { it.scheduledStartTime ?: 0 }
+                                previousValidationSessions = prevSessions
+                                nextValidationSessions = nextSessions
+                                nextValidationSession = nextSessions.firstOrNull()
                                 showValidationDialog = true
                             }
                         },
@@ -302,7 +368,7 @@ fun ScheduleCreateScreen(
                             .testTag("confirm_schedule_button"),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = FocusWarning,
-                            contentColor = Color.Black
+                            contentColor = FocusTextPrimary
                         ),
                         shape = RoundedCornerShape(14.dp)
                     ) {
@@ -314,7 +380,7 @@ fun ScheduleCreateScreen(
                                 imageVector = Icons.Default.AlarmOn,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
-                                tint = Color.Black
+                                tint = FocusTextPrimary
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
@@ -323,7 +389,7 @@ fun ScheduleCreateScreen(
                                     fontWeight = FontWeight.Black,
                                     letterSpacing = 0.5.sp
                                 ),
-                                color = Color.Black
+                                color = FocusTextPrimary
                             )
                         }
                     }
@@ -348,8 +414,8 @@ fun ScheduleCreateScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = FocusSurface),
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.4f)),
-                    modifier = Modifier.fillMaxWidth()
+                    border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
+                    modifier = Modifier.fillMaxWidth().neumorphic(20.dp)
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(
@@ -371,7 +437,7 @@ fun ScheduleCreateScreen(
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.5.sp
                                     ),
-                                    color = Color.White
+                                    color = FocusTextPrimary
                                 )
                             }
 
@@ -405,12 +471,15 @@ fun ScheduleCreateScreen(
                                             if (preset == DatePresetType.CUSTOM) {
                                                 openDatePicker()
                                             } else {
-                                                selectedPreset = preset
-                                                selectedCalendar = Calendar.getInstance().apply {
+                                                selectedPresetName = preset.name
+                                                val cal = Calendar.getInstance().apply {
                                                     add(Calendar.DAY_OF_YEAR, preset.offsetDays)
-                                                    set(Calendar.HOUR_OF_DAY, startHour)
-                                                    set(Calendar.MINUTE, startMinute)
+                                                    set(Calendar.HOUR_OF_DAY, 0)
+                                                    set(Calendar.MINUTE, 0)
+                                                    set(Calendar.SECOND, 0)
+                                                    set(Calendar.MILLISECOND, 0)
                                                 }
+                                                selectedDateMillis = cal.timeInMillis
                                             }
                                         }
                                 ) {
@@ -445,7 +514,7 @@ fun ScheduleCreateScreen(
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = FocusBackground,
-                            border = BorderStroke(1.dp, FocusOutline),
+                            border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { openDatePicker() }
@@ -469,7 +538,7 @@ fun ScheduleCreateScreen(
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontWeight = FontWeight.Bold
                                         ),
-                                        color = Color.White,
+                                        color = FocusTextPrimary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -511,8 +580,8 @@ fun ScheduleCreateScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = FocusSurface),
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, FocusOutline),
-                    modifier = Modifier.fillMaxWidth()
+                    border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
+                    modifier = Modifier.fillMaxWidth().neumorphic(20.dp)
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(
@@ -534,7 +603,7 @@ fun ScheduleCreateScreen(
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.5.sp
                                     ),
-                                    color = Color.White
+                                    color = FocusTextPrimary
                                 )
                             }
 
@@ -580,7 +649,7 @@ fun ScheduleCreateScreen(
                                             Icon(
                                                 imageVector = Icons.Default.AccessTime,
                                                 contentDescription = null,
-                                                tint = Color.White,
+                                                tint = FocusTextPrimary,
                                                 modifier = Modifier.size(18.dp)
                                             )
                                         }
@@ -590,7 +659,7 @@ fun ScheduleCreateScreen(
                                         Text(
                                             text = "SELECT TIME & DURATION",
                                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
-                                            color = Color.White
+                                            color = FocusTextPrimary
                                         )
                                         Text(
                                             text = "Time Picker ➔ कितने वक़्त के लिए? ⏱️",
@@ -636,7 +705,7 @@ fun ScheduleCreateScreen(
                                         style = MaterialTheme.typography.titleLarge.copy(
                                             fontWeight = FontWeight.ExtraBold
                                         ),
-                                        color = Color.White
+                                        color = FocusTextPrimary
                                     )
                                     Text(
                                         text = "SCHEDULED START ⏱️",
@@ -668,7 +737,7 @@ fun ScheduleCreateScreen(
                                         style = MaterialTheme.typography.titleLarge.copy(
                                             fontWeight = FontWeight.ExtraBold
                                         ),
-                                        color = Color.White
+                                        color = FocusTextPrimary
                                     )
                                     Text(
                                         text = "SCHEDULED END 🔔",
@@ -689,8 +758,8 @@ fun ScheduleCreateScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = FocusSurface),
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, FocusOutline),
-                    modifier = Modifier.fillMaxWidth()
+                    border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
+                    modifier = Modifier.fillMaxWidth().neumorphic(20.dp)
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(
@@ -712,7 +781,7 @@ fun ScheduleCreateScreen(
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.5.sp
                                     ),
-                                    color = Color.White
+                                    color = FocusTextPrimary
                                 )
                             }
 
@@ -741,52 +810,59 @@ fun ScheduleCreateScreen(
                             color = FocusTextSecondary
                         )
                         Spacer(modifier = Modifier.height(6.dp))
-                        OutlinedTextField(
-                            value = subjectName,
-                            onValueChange = { subjectName = it },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("schedule_subject_input"),
-                            placeholder = {
-                                Text(
-                                    "e.g. Mathematics, Physics, History, UPSC, Coding...",
-                                    color = FocusTextSecondary.copy(alpha = 0.45f),
-                                    fontSize = 14.sp
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.School,
-                                    contentDescription = null,
-                                    tint = FocusPrimary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            trailingIcon = {
-                                if (subjectName.isNotBlank()) {
-                                    IconButton(onClick = { subjectName = "" }) {
-                                        Icon(
-                                            Icons.Default.Clear,
-                                            contentDescription = "Clear Subject",
-                                            tint = FocusTextSecondary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .neumorphic(14.dp)
+                                        .background(FocusBackground, RoundedCornerShape(14.dp))
+                                ) {
+                            OutlinedTextField(
+                                value = subjectName,
+                                onValueChange = { subjectName = it },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("schedule_subject_input"),
+                                placeholder = {
+                                    Text(
+                                        "e.g. Mathematics, Physics, History, UPSC, Coding...",
+                                        color = FocusTextSecondary.copy(alpha = 0.45f),
+                                        fontSize = 14.sp
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.School,
+                                        contentDescription = null,
+                                        tint = FocusPrimary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                trailingIcon = {
+                                    if (subjectName.isNotBlank()) {
+                                        IconButton(onClick = { subjectName = "" }) {
+                                            Icon(
+                                                Icons.Default.Clear,
+                                                contentDescription = "Clear Subject",
+                                                tint = FocusTextSecondary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
-                                }
-                            },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = FocusPrimary,
-                                unfocusedBorderColor = FocusOutline,
-                                focusedContainerColor = FocusBackground,
-                                unfocusedContainerColor = FocusBackground,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = false,
-                            minLines = 1,
-                            maxLines = 5
-                        )
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color.Transparent,
+                                    unfocusedBorderColor = Color.Transparent,
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedTextColor = FocusTextPrimary,
+                                    unfocusedTextColor = FocusTextPrimary
+                                ),
+                                shape = RoundedCornerShape(14.dp),
+                                singleLine = false,
+                                minLines = 1,
+                                maxLines = 5
+                            )
+                        }
 
                         // Quick Pick from user's previously saved subjects (if any)
                         if (userSubjects.isNotEmpty()) {
@@ -839,52 +915,59 @@ fun ScheduleCreateScreen(
                             color = FocusTextSecondary
                         )
                         Spacer(modifier = Modifier.height(6.dp))
-                        OutlinedTextField(
-                            value = sessionName,
-                            onValueChange = { sessionName = it },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("schedule_session_input"),
-                            placeholder = {
-                                Text(
-                                    "e.g. Chapter 4 Numericals, Solve 30 MCQs, Revise notes...",
-                                    color = FocusTextSecondary.copy(alpha = 0.45f),
-                                    fontSize = 14.sp
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.TrackChanges,
-                                    contentDescription = null,
-                                    tint = FocusWarning,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            trailingIcon = {
-                                if (sessionName.isNotBlank()) {
-                                    IconButton(onClick = { sessionName = "" }) {
-                                        Icon(
-                                            Icons.Default.Clear,
-                                            contentDescription = "Clear Goal",
-                                            tint = FocusTextSecondary,
-                                            modifier = Modifier.size(18.dp)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .neumorphic(14.dp)
+                                        .background(FocusBackground, RoundedCornerShape(14.dp))
+                                ) {
+                                OutlinedTextField(
+                                    value = sessionName,
+                                    onValueChange = { sessionName = it },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("schedule_session_input"),
+                                    placeholder = {
+                                        Text(
+                                            "e.g. Chapter 4 Numericals, Solve 30 MCQs, Revise notes...",
+                                            color = FocusTextSecondary.copy(alpha = 0.45f),
+                                            fontSize = 14.sp
                                         )
+                                    },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.TrackChanges,
+                                        contentDescription = null,
+                                        tint = FocusWarning,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                trailingIcon = {
+                                    if (sessionName.isNotBlank()) {
+                                        IconButton(onClick = { sessionName = "" }) {
+                                            Icon(
+                                                Icons.Default.Clear,
+                                                contentDescription = "Clear Goal",
+                                                tint = FocusTextSecondary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
-                                }
-                            },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = FocusWarning,
-                                unfocusedBorderColor = FocusOutline,
-                                focusedContainerColor = FocusBackground,
-                                unfocusedContainerColor = FocusBackground,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = false,
-                            minLines = 1,
-                            maxLines = 5
-                        )
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color.Transparent,
+                                    unfocusedBorderColor = Color.Transparent,
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    focusedTextColor = FocusTextPrimary,
+                                    unfocusedTextColor = FocusTextPrimary
+                                ),
+                                shape = RoundedCornerShape(14.dp),
+                                singleLine = false,
+                                minLines = 1,
+                                maxLines = 5
+                            )
+                        }
 
                         // Quick Pick from user's previously saved goals (if any)
                         if (customGoalsList.isNotEmpty()) {
@@ -950,8 +1033,8 @@ fun ScheduleCreateScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = FocusSurface),
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, FocusOutline),
-                    modifier = Modifier.fillMaxWidth()
+                    border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
+                    modifier = Modifier.fillMaxWidth().neumorphic(20.dp)
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -968,7 +1051,7 @@ fun ScheduleCreateScreen(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.5.sp
                                 ),
-                                color = Color.White
+                                color = FocusTextPrimary
                             )
                         }
 
@@ -1026,7 +1109,7 @@ fun ScheduleCreateScreen(
                                         Text(
                                             text = option.title,
                                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = if (isSelected) Color.White else FocusTextSecondary
+                                            color = if (isSelected) FocusTextPrimary else FocusTextSecondary
                                         )
                                         Text(
                                             text = option.desc,
@@ -1077,7 +1160,7 @@ fun ScheduleCreateScreen(
                                                     lineHeight = 16.sp,
                                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                                 ),
-                                                color = if (isSelected) FocusPrimary else Color.White
+                                                color = if (isSelected) FocusPrimary else FocusTextPrimary
                                             )
                                         }
                                     }
@@ -1090,7 +1173,7 @@ fun ScheduleCreateScreen(
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = FocusSurfaceVariant,
-                            border = BorderStroke(1.dp, FocusOutline),
+                            border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
@@ -1123,7 +1206,7 @@ fun ScheduleCreateScreen(
                                         Text(
                                             text = currentAppsTitle,
                                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = Color.White
+                                            color = FocusTextPrimary
                                         )
                                         if (selectedWhitelistProfile.isNotBlank()) {
                                             val currentAppsCount = when (selectedWhitelistProfile) {
@@ -1163,8 +1246,8 @@ fun ScheduleCreateScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = FocusSurface),
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, FocusOutline),
-                    modifier = Modifier.fillMaxWidth()
+                    border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
+                    modifier = Modifier.fillMaxWidth().neumorphic(20.dp)
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1181,7 +1264,7 @@ fun ScheduleCreateScreen(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.5.sp
                                 ),
-                                color = Color.White
+                                color = FocusTextPrimary
                             )
                         }
 
@@ -1197,7 +1280,7 @@ fun ScheduleCreateScreen(
                                 Text(
                                     text = "📸 Study Desk Snapshot",
                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
+                                    color = FocusTextPrimary
                                 )
                                 Text(
                                     text = "Requires photo of books/desk before timer unlocks",
@@ -1209,7 +1292,7 @@ fun ScheduleCreateScreen(
                                 checked = requiresPhoto,
                                 onCheckedChange = { requiresPhoto = it },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
+                                    checkedThumbColor = FocusTextPrimary,
                                     checkedTrackColor = FocusAccent,
                                     uncheckedTrackColor = FocusSurfaceVariant
                                 )
@@ -1228,7 +1311,7 @@ fun ScheduleCreateScreen(
                                 Text(
                                     text = "🤳 Completion Proof Selfie",
                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
+                                    color = FocusTextPrimary
                                 )
                                 Text(
                                     text = "Take proof selfie after session finishes to log streak",
@@ -1240,7 +1323,7 @@ fun ScheduleCreateScreen(
                                 checked = requiresSelfie,
                                 onCheckedChange = { requiresSelfie = it },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
+                                    checkedThumbColor = FocusTextPrimary,
                                     checkedTrackColor = FocusAccent,
                                     uncheckedTrackColor = FocusSurfaceVariant
                                 )
@@ -1257,8 +1340,8 @@ fun ScheduleCreateScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = FocusSurface),
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, FocusOutline),
-                    modifier = Modifier.fillMaxWidth()
+                    border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
+                    modifier = Modifier.fillMaxWidth().neumorphic(20.dp)
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1275,7 +1358,7 @@ fun ScheduleCreateScreen(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.5.sp
                                 ),
-                                color = Color.White
+                                color = FocusTextPrimary
                             )
                         }
 
@@ -1330,7 +1413,7 @@ fun ScheduleCreateScreen(
                                                 Text(
                                                     text = sound.label,
                                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                                    color = if (isSelected) FocusPrimary else Color.White
+                                                    color = if (isSelected) FocusPrimary else FocusTextPrimary
                                                 )
                                             }
                                         }
@@ -1364,10 +1447,8 @@ fun ScheduleCreateScreen(
                 confirmButton = {
                     TextButton(onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            selectedCalendar.timeInMillis = millis
-                            selectedCalendar.set(java.util.Calendar.HOUR_OF_DAY, startHour)
-                            selectedCalendar.set(java.util.Calendar.MINUTE, startMinute)
-                            selectedPreset = DatePresetType.CUSTOM
+                            selectedDateMillis = millis
+                            selectedPresetName = DatePresetType.CUSTOM.name
                         }
                         showDatePicker = false
                     }) {
@@ -1394,8 +1475,6 @@ fun ScheduleCreateScreen(
                     TextButton(onClick = {
                         startHour = startTimePickerState.hour
                         startMinute = startTimePickerState.minute
-                        selectedCalendar.set(java.util.Calendar.HOUR_OF_DAY, startHour)
-                        selectedCalendar.set(java.util.Calendar.MINUTE, startMinute)
                         showStartTimePicker = false
                     }) {
                         Text("OK", color = FocusPrimary)
@@ -1441,8 +1520,6 @@ fun ScheduleCreateScreen(
                 onTimeAndDurationSelected = { h, m, durationMins ->
                     startHour = h
                     startMinute = m
-                    selectedCalendar.set(java.util.Calendar.HOUR_OF_DAY, startHour)
-                    selectedCalendar.set(java.util.Calendar.MINUTE, startMinute)
 
                     val endCal = java.util.Calendar.getInstance().apply {
                         set(java.util.Calendar.HOUR_OF_DAY, startHour)
@@ -1464,6 +1541,8 @@ fun ScheduleCreateScreen(
                 conflicts = validationConflicts,
                 userStart = userStart,
                 userEnd = userEnd,
+                previousSessions = previousValidationSessions,
+                nextSessions = nextValidationSessions,
                 nextSession = nextValidationSession,
                 onChangeTime = { showValidationDialog = false },
                 onSave = { 
@@ -1539,7 +1618,7 @@ fun SetReminderDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(28.dp),
-            color = Color.White,
+            color = FocusTextPrimary,
             shadowElevation = 16.dp,
             modifier = Modifier
                 .fillMaxWidth()
@@ -1556,7 +1635,7 @@ fun SetReminderDialog(
                         fontWeight = FontWeight.Bold,
                         fontSize = 22.sp
                     ),
-                    color = Color(0xFF0F172A)
+                    color = FocusTextPrimary
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -1564,7 +1643,7 @@ fun SetReminderDialog(
                 Text(
                     text = "How long in advance do you want to be notified? (Select all that apply)",
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                    color = Color(0xFF475569)
+                    color = FocusTextSecondary
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -1574,10 +1653,10 @@ fun SetReminderDialog(
                         val isSelected = selectedOffsets.contains(minutes)
                         Surface(
                             shape = RoundedCornerShape(16.dp),
-                            color = if (isSelected) Color(0xFFEFF6FF) else Color.White,
+                            color = if (isSelected) FocusSurfaceVariant else FocusTextPrimary,
                             border = BorderStroke(
                                 1.5.dp,
-                                if (isSelected) Color(0xFF2563EB) else Color(0xFFE2E8F0)
+                                if (isSelected) FocusPrimary else FocusSurfaceVariant
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1600,13 +1679,13 @@ fun SetReminderDialog(
                                         modifier = Modifier
                                             .size(24.dp)
                                             .clip(CircleShape)
-                                            .background(Color(0xFF10B981)),
+                                            .background(Color(0xFF22C55E)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Check,
                                             contentDescription = null,
-                                            tint = Color.White,
+                                            tint = FocusTextPrimary,
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
@@ -1615,7 +1694,7 @@ fun SetReminderDialog(
                                         modifier = Modifier
                                             .size(24.dp)
                                             .clip(CircleShape)
-                                            .border(2.dp, Color(0xFF94A3B8), CircleShape)
+                                            .border(2.dp, FocusTextDisabled, CircleShape)
                                     )
                                 }
 
@@ -1627,7 +1706,7 @@ fun SetReminderDialog(
                                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                         fontSize = 15.sp
                                     ),
-                                    color = Color(0xFF1E293B)
+                                    color = FocusTextPrimary
                                 )
                             }
                         }
@@ -1648,8 +1727,8 @@ fun SetReminderDialog(
                             .height(48.dp),
                         shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFE2E8F0),
-                            contentColor = Color(0xFF475569)
+                            containerColor = FocusSurfaceVariant,
+                            contentColor = FocusTextSecondary
                         )
                     ) {
                         Text(
@@ -1672,8 +1751,8 @@ fun SetReminderDialog(
                             .height(48.dp),
                         shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF2563EB),
-                            contentColor = Color.White
+                            containerColor = FocusPrimary,
+                            contentColor = FocusTextPrimary
                         )
                     ) {
                         Text(
@@ -1703,8 +1782,8 @@ fun VerticalListPicker(
     Box(
         modifier = modifier
             .height(170.dp)
-            .background(Color(0xFFF8FAFC), RoundedCornerShape(12.dp))
-            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp)),
+            .background(FocusSurface, RoundedCornerShape(12.dp))
+            .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
     ) {
         androidx.compose.foundation.lazy.LazyColumn(
@@ -1718,7 +1797,7 @@ fun VerticalListPicker(
                 val isSelected = index == selectedIndex
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = if (isSelected) Color(0xFFE0E7FF) else Color.Transparent,
+                    color = if (isSelected) FocusSurfaceVariant else Color.Transparent,
                     modifier = Modifier
                         .fillMaxWidth(0.85f)
                         .padding(vertical = 4.dp)
@@ -1729,12 +1808,12 @@ fun VerticalListPicker(
                         style = if (isSelected) {
                             MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF3730A3)
+                                color = FocusPrimaryDark
                             )
                         } else {
                             MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = FontWeight.Medium,
-                                color = Color(0xFF64748B)
+                                color = FocusTextSecondary
                             )
                         },
                         modifier = Modifier
@@ -1798,7 +1877,7 @@ fun TwoStepTimeAndDurationDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(28.dp),
-            color = Color.White,
+            color = FocusTextPrimary,
             shadowElevation = 16.dp,
             modifier = Modifier
                 .fillMaxWidth()
@@ -1819,7 +1898,7 @@ fun TwoStepTimeAndDurationDialog(
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 22.sp
                             ),
-                            color = Color(0xFF0F172A)
+                            color = FocusTextPrimary
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -1834,14 +1913,14 @@ fun TwoStepTimeAndDurationDialog(
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFFF1F5F9), RoundedCornerShape(12.dp))
+                                .background(FocusSurface, RoundedCornerShape(12.dp))
                                 .padding(vertical = 12.dp)
                         ) {
                             Text(
                                 text = "$formattedHour : $formattedMin $amPmStr",
                                 style = MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = Color(0xFF0F172A),
+                                    color = FocusTextPrimary,
                                     letterSpacing = 2.sp
                                 )
                             )
@@ -1884,7 +1963,7 @@ fun TwoStepTimeAndDurationDialog(
                                 Text(
                                     text = "CANCEL",
                                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = Color(0xFF64748B)
+                                    color = FocusTextSecondary
                                 )
                             }
 
@@ -1892,8 +1971,8 @@ fun TwoStepTimeAndDurationDialog(
                                 onClick = { step = 2 },
                                 shape = CircleShape,
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF2563EB),
-                                    contentColor = Color.White
+                                    containerColor = FocusPrimary,
+                                    contentColor = FocusTextPrimary
                                 ),
                                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 10.dp)
                             ) {
@@ -1914,7 +1993,7 @@ fun TwoStepTimeAndDurationDialog(
                             text = "Select Duration",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF64748B)
+                                color = FocusTextSecondary
                             )
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -1924,7 +2003,7 @@ fun TwoStepTimeAndDurationDialog(
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 22.sp
                             ),
-                            color = Color(0xFF0F172A)
+                            color = FocusTextPrimary
                         )
 
                         Spacer(modifier = Modifier.height(20.dp))
@@ -1943,10 +2022,10 @@ fun TwoStepTimeAndDurationDialog(
                                         val isSelected = selectedDuration == mins
                                         Surface(
                                             shape = RoundedCornerShape(16.dp),
-                                            color = if (isSelected) Color(0xFF2563EB) else Color(0xFFF1F5F9),
+                                            color = if (isSelected) FocusPrimary else FocusSurface,
                                             border = BorderStroke(
                                                 1.dp,
-                                                if (isSelected) Color(0xFF1D4ED8) else Color(0xFFCBD5E1)
+                                                if (isSelected) FocusPrimaryDark else FocusTextDisabled
                                             ),
                                             modifier = Modifier
                                                 .weight(1f)
@@ -1963,7 +2042,7 @@ fun TwoStepTimeAndDurationDialog(
                                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                                                         fontSize = 14.sp
                                                     ),
-                                                    color = if (isSelected) Color.White else Color(0xFF1E293B)
+                                                    color = if (isSelected) FocusTextPrimary else FocusTextPrimary
                                                 )
                                             }
                                         }
@@ -1981,8 +2060,8 @@ fun TwoStepTimeAndDurationDialog(
                                 .height(50.dp),
                             shape = CircleShape,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF2563EB),
-                                contentColor = Color.White
+                                containerColor = FocusPrimary,
+                                contentColor = FocusTextPrimary
                             )
                         ) {
                             Text(
@@ -2002,14 +2081,14 @@ fun TwoStepTimeAndDurationDialog(
                             modifier = Modifier
                                 .size(72.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFDCFCE7))
+                                .background(Color(0xFF22C55E).copy(alpha = 0.1f))
                                 .border(2.dp, Color(0xFF22C55E), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Success",
-                                tint = Color(0xFF16A34A),
+                                tint = Color(0xFF166534),
                                 modifier = Modifier.size(40.dp)
                             )
                         }
@@ -2019,7 +2098,7 @@ fun TwoStepTimeAndDurationDialog(
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold
                             ),
-                            color = Color(0xFF0F172A)
+                            color = FocusTextPrimary
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                     }

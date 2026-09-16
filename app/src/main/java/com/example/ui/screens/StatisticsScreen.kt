@@ -1,6 +1,10 @@
 package com.example.ui.screens
 
 import android.widget.Toast
+import com.example.ui.theme.FocusOutline
+import com.example.ui.theme.neumorphic
+import com.example.ui.theme.FocusTextPrimary
+import com.example.ui.theme.FocusTextPrimary
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -328,12 +332,12 @@ fun StatisticsScreen(
                 title = { Text("Statistics", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = FocusTextPrimary)
                     }
                 },
                 actions = {
                     IconButton(onClick = { showCompareDialog = true }) {
-                        Icon(Icons.Default.Tune, contentDescription = "Period Filter & Compare", tint = Color.White)
+                        Icon(Icons.Default.Tune, contentDescription = "Period Filter & Compare", tint = FocusTextPrimary)
                     }
                     IconButton(onClick = { 
                         com.example.util.ComposeViewExporter.captureAndSaveComposeView(context = context, width = view.width) {
@@ -350,7 +354,7 @@ fun StatisticsScreen(
                             }
                         }
                     }) {
-                        Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White)
+                        Icon(Icons.Default.Download, contentDescription = "Download", tint = FocusTextPrimary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = FocusBackground)
@@ -405,7 +409,7 @@ fun StatisticsScreen(
                     Card(
                         colors = CardDefaults.cardColors(containerColor = FocusSurface),
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().neumorphic(12.dp)
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Row(
@@ -417,7 +421,7 @@ fun StatisticsScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         formatSecondsToHms(period1TotalSeconds),
-                                        color = Color.White,
+                                        color = FocusTextPrimary,
                                         style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Light)
                                     )
                                 }
@@ -426,7 +430,7 @@ fun StatisticsScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         formatSecondsToHms(period1DailyAvg),
-                                        color = Color.White,
+                                        color = FocusTextPrimary,
                                         style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Light)
                                     )
                                 }
@@ -444,7 +448,7 @@ fun StatisticsScreen(
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
                                             formatSecondsToHms(period2TotalSeconds),
-                                            color = Color.White,
+                                            color = FocusTextPrimary,
                                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Light)
                                         )
                                     }
@@ -453,7 +457,7 @@ fun StatisticsScreen(
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
                                             formatSecondsToHms(period2DailyAvg),
-                                            color = Color.White,
+                                            color = FocusTextPrimary,
                                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Light)
                                         )
                                     }
@@ -465,13 +469,13 @@ fun StatisticsScreen(
                     Card(
                         colors = CardDefaults.cardColors(containerColor = FocusSurface),
                         shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().neumorphic(12.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.TrendingUp, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.TrendingUp, contentDescription = null, tint = FocusTextPrimary, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Cumulative focus time", color = Color.White, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+                                Text("Cumulative focus time", color = FocusTextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
                             }
                             Spacer(modifier = Modifier.height(12.dp))
                             Box(modifier = Modifier.fillMaxWidth().height(250.dp)) {
@@ -503,13 +507,13 @@ fun StatisticsScreen(
                     Card(
                         colors = CardDefaults.cardColors(containerColor = FocusSurface),
                         shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().neumorphic(12.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.BarChart, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.BarChart, contentDescription = null, tint = FocusTextPrimary, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Subject time per day", color = Color.White, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+                                Text("Subject time per day", color = FocusTextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
                             }
                             Spacer(modifier = Modifier.height(12.dp))
                             DailyStackedBarChart(
@@ -578,7 +582,7 @@ fun PeriodCard(
                 )
                 Spacer(modifier = Modifier.width(14.dp))
                 Column {
-                    Text(title, color = Color.White, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
+                    Text(title, color = FocusTextPrimary, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(subtitle, color = FocusTextSecondary, style = MaterialTheme.typography.bodyMedium)
                 }
@@ -591,7 +595,7 @@ fun PeriodCard(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White)
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = FocusTextPrimary)
             }
         }
     }
@@ -720,7 +724,7 @@ fun SubjectRatioCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     "Subject ratio – $periodTitle",
-                    color = Color.White,
+                    color = FocusTextPrimary,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
                 )
             }
@@ -769,7 +773,7 @@ fun SubjectRatioCard(
                             }
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(formatSecondsToReadable(totalSeconds), color = Color.White, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                            Text(formatSecondsToReadable(totalSeconds), color = FocusTextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
                         }
                     }
 
@@ -793,7 +797,7 @@ fun SubjectRatioCard(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         name,
-                                        color = Color.White,
+                                        color = FocusTextPrimary,
                                         style = MaterialTheme.typography.bodySmall,
                                         maxLines = 1
                                     )
@@ -917,7 +921,7 @@ fun DailyStackedBarChart(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.size(8.dp).background(subjectColorMap[sub] ?: StatBlue, CircleShape))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(sub, color = Color.White, style = MaterialTheme.typography.labelSmall)
+                        Text(sub, color = FocusTextPrimary, style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -976,7 +980,7 @@ fun CompareDialog(
                 ) {
                     Text(
                         "Period & Compare",
-                        color = Color.White,
+                        color = FocusTextPrimary,
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -986,7 +990,7 @@ fun CompareDialog(
                             checked = compareModeEnabled,
                             onCheckedChange = { onCompareModeChanged(it) },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
+                                checkedThumbColor = FocusTextPrimary,
                                 checkedTrackColor = StatGreen,
                                 uncheckedTrackColor = FocusSurfaceVariant
                             )
@@ -1112,7 +1116,7 @@ fun CompareDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = StatBlue),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Apply", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Apply", color = FocusTextPrimary, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -1182,7 +1186,7 @@ fun CompareOptionCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    color = if (enabled) (if (isSelected) Color.White else FocusTextSecondary) else FocusTextSecondary.copy(alpha = 0.4f),
+                    color = if (enabled) (if (isSelected) FocusTextPrimary else FocusTextSecondary) else FocusTextSecondary.copy(alpha = 0.4f),
                     style = MaterialTheme.typography.bodySmall.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal),
                     maxLines = 1
                 )
@@ -1257,7 +1261,7 @@ fun CustomDateRangePickerDialog(
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = targetColor)
             ) {
-                Text("Select Range", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Select Range", color = FocusTextPrimary, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -1276,7 +1280,7 @@ fun CustomDateRangePickerDialog(
                     text = "Select Date Range",
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = Color.White
+                    color = FocusTextPrimary
                 )
             },
             headline = {
@@ -1301,19 +1305,19 @@ fun CustomDateRangePickerDialog(
             },
             colors = DatePickerDefaults.colors(
                 containerColor = FocusSurface,
-                titleContentColor = Color.White,
-                headlineContentColor = Color.White,
+                titleContentColor = FocusTextPrimary,
+                headlineContentColor = FocusTextPrimary,
                 weekdayContentColor = FocusTextSecondary,
-                subheadContentColor = Color.White,
-                yearContentColor = Color.White,
+                subheadContentColor = FocusTextPrimary,
+                yearContentColor = FocusTextPrimary,
                 currentYearContentColor = targetColor,
-                selectedYearContentColor = Color.White,
+                selectedYearContentColor = FocusTextPrimary,
                 selectedYearContainerColor = targetColor,
-                dayContentColor = Color.White,
+                dayContentColor = FocusTextPrimary,
                 selectedDayContainerColor = targetColor,
-                selectedDayContentColor = Color.White,
+                selectedDayContentColor = FocusTextPrimary,
                 dayInSelectionRangeContainerColor = targetColor.copy(alpha = 0.25f),
-                dayInSelectionRangeContentColor = Color.White
+                dayInSelectionRangeContentColor = FocusTextPrimary
             )
         )
     }
@@ -1352,7 +1356,7 @@ fun DayTabContent(allSessions: List<FocusSession>) {
     Card(
         colors = CardDefaults.cardColors(containerColor = FocusSurface),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().neumorphic(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Month Header
@@ -1364,13 +1368,13 @@ fun DayTabContent(allSessions: List<FocusSession>) {
                 IconButton(onClick = {
                     viewedCal = (viewedCal.clone() as Calendar).apply { add(Calendar.MONTH, -1) }
                 }) {
-                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Previous Month", tint = Color.White)
+                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Previous Month", tint = FocusTextPrimary)
                 }
-                Text(monthName, color = Color.White, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                Text(monthName, color = FocusTextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                 IconButton(onClick = {
                     viewedCal = (viewedCal.clone() as Calendar).apply { add(Calendar.MONTH, 1) }
                 }) {
-                    Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Next Month", tint = Color.White)
+                    Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Next Month", tint = FocusTextPrimary)
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -1411,7 +1415,7 @@ fun DayTabContent(allSessions: List<FocusSession>) {
                                     .background(bgIntensity)
                                     .border(
                                         width = if (isSelected) 2.dp else 0.dp,
-                                        color = if (isSelected) Color.White else Color.Transparent,
+                                        color = if (isSelected) FocusTextPrimary else Color.Transparent,
                                         shape = RoundedCornerShape(8.dp)
                                     )
                                     .clickable {
@@ -1421,7 +1425,7 @@ fun DayTabContent(allSessions: List<FocusSession>) {
                             ) {
                                 Text(
                                     text = "$dayNumber",
-                                    color = if (isSelected || daySec > 0) Color.White else FocusTextSecondary,
+                                    color = if (isSelected || daySec > 0) FocusTextPrimary else FocusTextSecondary,
                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                                 )
                             }
@@ -1441,7 +1445,7 @@ fun DayTabContent(allSessions: List<FocusSession>) {
     Card(
         colors = CardDefaults.cardColors(containerColor = FocusSurface),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().neumorphic(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -1451,7 +1455,7 @@ fun DayTabContent(allSessions: List<FocusSession>) {
             ) {
                 Text(
                     SimpleDateFormat("EEEE, MMM d, yyyy", Locale.getDefault()).format(selectedDayCal.time),
-                    color = Color.White,
+                    color = FocusTextPrimary,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
                 Text(
@@ -1484,7 +1488,7 @@ fun DayTabContent(allSessions: List<FocusSession>) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {
-                                    Text(session.subjectName, color = Color.White, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                                    Text(session.subjectName, color = FocusTextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                                     Text(
                                         SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(session.timestamp)),
                                         color = FocusTextSecondary,
@@ -1516,7 +1520,7 @@ fun WeekTabContent(allSessions: List<FocusSession>) {
     Card(
         colors = CardDefaults.cardColors(containerColor = FocusSurface),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().neumorphic(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -1527,13 +1531,13 @@ fun WeekTabContent(allSessions: List<FocusSession>) {
                 IconButton(onClick = {
                     viewedCal = (viewedCal.clone() as Calendar).apply { add(Calendar.MONTH, -3) }
                 }) {
-                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = null, tint = Color.White)
+                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = null, tint = FocusTextPrimary)
                 }
-                Text("$year Q$quarter", color = Color.White, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                Text("$year Q$quarter", color = FocusTextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                 IconButton(onClick = {
                     viewedCal = (viewedCal.clone() as Calendar).apply { add(Calendar.MONTH, 3) }
                 }) {
-                    Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = Color.White)
+                    Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = FocusTextPrimary)
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -1568,7 +1572,7 @@ fun WeekTabContent(allSessions: List<FocusSession>) {
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(label, color = Color.White, style = MaterialTheme.typography.labelSmall)
+                                        Text(label, color = FocusTextPrimary, style = MaterialTheme.typography.labelSmall)
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
                                             if (sec > 0) formatSecondsToReadable(sec) else "0h",
@@ -1594,7 +1598,7 @@ fun MonthTabContent(allSessions: List<FocusSession>) {
     Card(
         colors = CardDefaults.cardColors(containerColor = FocusSurface),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().neumorphic(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -1605,13 +1609,13 @@ fun MonthTabContent(allSessions: List<FocusSession>) {
                 IconButton(onClick = {
                     viewedCal = (viewedCal.clone() as Calendar).apply { add(Calendar.YEAR, -1) }
                 }) {
-                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = null, tint = Color.White)
+                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = null, tint = FocusTextPrimary)
                 }
-                Text("$year", color = Color.White, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                Text("$year", color = FocusTextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                 IconButton(onClick = {
                     viewedCal = (viewedCal.clone() as Calendar).apply { add(Calendar.YEAR, 1) }
                 }) {
-                    Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = Color.White)
+                    Icon(Icons.Default.KeyboardArrowRight, contentDescription = null, tint = FocusTextPrimary)
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -1653,7 +1657,7 @@ fun MonthTabContent(allSessions: List<FocusSession>) {
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(mName, color = Color.White, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                                    Text(mName, color = FocusTextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         if (sec > 0) formatSecondsToReadable(sec) else "0h",
@@ -1675,7 +1679,7 @@ fun TabButton(text: String, isSelected: Boolean, onClick: () -> Unit) {
     androidx.compose.material3.TextButton(
         onClick = onClick,
         colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
-            contentColor = if (isSelected) androidx.compose.ui.graphics.Color.White else FocusTextSecondary
+            contentColor = if (isSelected) FocusTextPrimary else FocusTextSecondary
         ),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
         modifier = androidx.compose.ui.Modifier.background(
@@ -1815,7 +1819,7 @@ fun WeeklySummaryCard(allSessions: List<FocusSession>) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Weekly Summary", color = Color.White, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+            Text("Weekly Summary", color = FocusTextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
             Spacer(modifier = Modifier.height(16.dp))
             
             Row(
@@ -1848,7 +1852,7 @@ fun WeeklySummaryCard(allSessions: List<FocusSession>) {
                         .background(StatBlue)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("This Wk", color = Color.White, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                    Text("This Wk", color = FocusTextPrimary, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                 }
             }
             

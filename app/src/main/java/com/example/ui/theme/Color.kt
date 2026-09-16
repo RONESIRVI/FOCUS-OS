@@ -2,35 +2,39 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Premium Dark + Security Focused Theme Colors
-val FocusBackground = Color(0xFF090B10)      // Deep Navy / Near Black
-val FocusSurface = Color(0xFF141824)         // Dark Glass Card
-val FocusSurfaceVariant = Color(0xFF1E2436)  // Elevated Surface
-val FocusOutline = Color(0xFF2A3249)         // Subtle Border
+// Light 3D / Neumorphism Theme Colors
+val FocusBackground = Color(0xFFF4F7FB)      // Soft Light Gray
+val FocusSurface = Color(0xFFF4F7FB)         // Same as Background for Neumorphism
+val FocusSurfaceVariant = Color(0xFFD1D9E6)  // Elevated Surface
+val FocusOutline = Color(0xFFFFFFFF)         // White for highlight edges
 
-val FocusPrimary = Color(0xFF00FFA3)         // Electric Green (Active, Verified, Progress)
-val FocusPrimaryDark = Color(0xFF004D31)     // Electric Green Dimmed (Backgrounds)
-val FocusOnPrimary = Color(0xFF000000)       // Text on Primary
+val FocusPrimary = Color(0xFF38BDF8)         // Vibrant Light Blue
+val FocusPrimaryDark = Color(0xFF0284C7)     // Darker Blue for depth
+val FocusOnPrimary = Color(0xFFFFFFFF)       // White text on Primary
 
-val FocusWarning = Color(0xFFFF9500)         // Amber / Orange (Upcoming, Warning)
-val FocusAccent = Color(0xFF38BDF8)          // Neon Cyan / Indigo Accent
-val FocusDanger = Color(0xFFFF2A2A)          // Red Accent (Security Alert, Blocked)
-val FocusDangerDark = Color(0xFF4A0C0C)      // Deep Red Container
+val FocusWarning = Color(0xFFFF9500)         // Amber / Orange
+val FocusAccent = Color(0xFF818CF8)          // Indigo Accent
+val FocusDanger = Color(0xFFEF4444)          // Red Accent
+val FocusDangerDark = Color(0xFF991B1B)      // Deep Red
 
-val FocusTextPrimary = Color(0xFFF0F2F5)     // Crisp White Text
-val FocusTextSecondary = Color(0xFF9BA1B0)   // Muted Text
-val FocusTextDisabled = Color(0xFF5A6175)    // Disabled Text
+val FocusTextPrimary = Color(0xFF2D3748)     // Dark Slate Gray Text
+val FocusTextSecondary = Color(0xFF718096)   // Muted Text
+val FocusTextDisabled = Color(0xFFA0AEC0)    // Disabled Text
+
+// 3D Shadow Colors
+val ShadowLight = Color(0xFFFFFFFF)
+val ShadowDark = Color(0xFFC3D0E2)
 
 // Dedicated Navy Blue Theme Colors (Settings Section)
-val NavyBackground = Color(0xFF070E1F)          // Deep Midnight Navy Canvas
-val NavySurface = Color(0xFF0F1B38)             // Rich Navy Blue Card Surface
-val NavySurfaceVariant = Color(0xFF182952)      // Elevated Navy Slate Surface
-val NavyOutline = Color(0xFF1E376D)             // Subtle Navy Blue Border
-val NavyPrimary = Color(0xFF38BDF8)             // Vivid Electric Cyan-Blue Accent
-val NavyPrimaryDark = Color(0xFF0C4A6E)         // Deep Navy Blue Container
-val NavyAccent = Color(0xFF60A5FA)              // Soft Sky/Royal Blue
-val NavyTextPrimary = Color(0xFFF1F5F9)         // Crisp Ice-White Text
-val NavyTextSecondary = Color(0xFF94A3B8)       // Muted Navy-Slate Text
+val NavyBackground = Color(0xFFF4F7FB)
+val NavySurface = Color(0xFFF4F7FB)             
+val NavySurfaceVariant = Color(0xFFD1D9E6)      
+val NavyOutline = Color(0xFFFFFFFF)             
+val NavyPrimary = Color(0xFF38BDF8)             
+val NavyPrimaryDark = Color(0xFF0284C7)         
+val NavyAccent = Color(0xFF818CF8)              
+val NavyTextPrimary = Color(0xFF2D3748)         
+val NavyTextSecondary = Color(0xFF718096)       
 
 
 

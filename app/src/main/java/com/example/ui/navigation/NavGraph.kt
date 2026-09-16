@@ -136,6 +136,9 @@ fun FocusNavGraph(
                     navController.navigate(FocusRoutes.TIMER) {
                         popUpTo(FocusRoutes.HOME)
                     }
+                },
+                onCancel = {
+                    navController.popBackStack()
                 }
             )
         }

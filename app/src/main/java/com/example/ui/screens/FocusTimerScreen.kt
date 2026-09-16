@@ -1,6 +1,9 @@
 package com.example.ui.screens
 
 import com.example.services.SoundType
+import com.example.ui.theme.FocusOutline
+import com.example.ui.theme.neumorphic
+import com.example.ui.theme.FocusTextPrimary
 
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Headphones
@@ -34,7 +37,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Add
@@ -95,6 +97,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.animation.core.animateFloat
+
+import androidx.compose.material.icons.filled.Clear
+
+
+import androidx.compose.material.icons.filled.Clear
+
 import com.example.data.model.AllowedApp
 import com.example.data.model.LockMode
 import com.example.ui.theme.FocusBackground
@@ -121,6 +133,16 @@ fun FocusTimerScreen(
     val showLockOverlay by viewModel.showLockOverlay.collectAsState()
     val showSoftLockOverlay by viewModel.showSoftLockOverlay.collectAsState()
     val lastBlockedPackage by viewModel.lastBlockedPackage.collectAsState()
+    val showPendingLockOverlay by viewModel.showPendingLockOverlay.collectAsState()
+    val pendingSessionNameOverlay by viewModel.pendingSessionNameOverlay.collectAsState()
+    val pendingSessionIdOverlay by viewModel.pendingSessionIdOverlay.collectAsState()
+    var isFinishing by remember { mutableStateOf(false) }
+    LaunchedEffect(isFinishing) {
+        if (isFinishing) {
+            delay(1000)
+            onSessionComplete()
+        }
+    }
     val context = LocalContext.current
 
     val whitelistedAppsManual by viewModel.whitelistedAppsManual.collectAsState()
@@ -191,7 +213,7 @@ fun FocusTimerScreen(
     // Auto navigate when timer reaches zero or is waiting for verification
     LaunchedEffect(timerState.isRunning, timerState.isWaitingVerification, timerState.remainingSeconds) {
         if ((!timerState.isRunning || timerState.isWaitingVerification) && timerState.remainingSeconds <= 0 && timerState.totalSeconds > 0) {
-            onSessionComplete()
+            isFinishing = true
         }
     }
 
@@ -209,9 +231,9 @@ fun FocusTimerScreen(
             drawRect(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF070B14),
-                        Color(0xFF0F172A),
-                        Color(0xFF1E293B)
+                        FocusSurface,
+                        FocusBackground,
+                        FocusSurfaceVariant
                     )
                 )
             )
@@ -224,7 +246,7 @@ fun FocusTimerScreen(
                 val starRadius = random.nextFloat() * 2.5f + 0.5f
                 val starAlpha = random.nextFloat() * 0.7f + 0.3f
                 drawCircle(
-                    color = Color.White.copy(alpha = starAlpha),
+                    color = FocusTextPrimary.copy(alpha = starAlpha),
                     radius = starRadius,
                     center = Offset(x, y)
                 )
@@ -243,7 +265,7 @@ fun FocusTimerScreen(
             }
             drawPath(
                 path = mountainPath,
-                color = Color(0xFF030712)
+                color = FocusBackground
             )
         }
 
@@ -279,7 +301,7 @@ fun FocusTimerScreen(
                         Text(
                             text = timerState.subjectName.ifBlank { "Active Session" },
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
+                            color = FocusTextPrimary
                         )
                     }
                 }
@@ -344,6 +366,29 @@ fun FocusTimerScreen(
                     timerState.remainingSeconds.toFloat() / timerState.totalSeconds.toFloat()
                 } else 1.0f
 
+                val isTimerStopped = !timerState.isRunning || timerState.remainingSeconds <= 0 || isFinishing
+                val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "wave")
+                val phaseOffset by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = (2.0 * Math.PI).toFloat(),
+                    animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                        animation = androidx.compose.animation.core.tween(2000, easing = androidx.compose.animation.core.LinearEasing),
+                        repeatMode = androidx.compose.animation.core.RepeatMode.Restart
+                    ),
+                    label = "phase"
+                )
+                val graphScaleY by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (isTimerStopped) 0f else 1f,
+                    animationSpec = androidx.compose.animation.core.tween(1500, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                    label = "graphScaleY"
+                )
+                
+                val graphColor by androidx.compose.animation.animateColorAsState(
+                    targetValue = if (isTimerStopped) Color(0xFFE53935) else FocusWarning,
+                    animationSpec = androidx.compose.animation.core.tween(1000),
+                    label = "graphColor"
+                )
+
                 // Animated Circular Ring Canvas
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val strokeWidth = 12.dp.toPx()
@@ -353,7 +398,7 @@ fun FocusTimerScreen(
 
                     // Track Ring background
                     drawArc(
-                        color = Color.White.copy(alpha = 0.1f),
+                        color = FocusTextPrimary.copy(alpha = 0.1f),
                         startAngle = 0f,
                         sweepAngle = 360f,
                         useCenter = false,
@@ -374,7 +419,7 @@ fun FocusTimerScreen(
                         val endX = (cx + r2 * cos(angle)).toFloat()
                         val endY = (cy + r2 * sin(angle)).toFloat()
                         drawLine(
-                            color = Color.White.copy(alpha = if (i % 5 == 0) 0.4f else 0.15f),
+                            color = FocusTextPrimary.copy(alpha = if (i % 5 == 0) 0.4f else 0.15f),
                             start = Offset(startX, startY),
                             end = Offset(endX, endY),
                             strokeWidth = if (i % 5 == 0) 3f else 1.5f
@@ -394,76 +439,49 @@ fun FocusTimerScreen(
                         style = Stroke(width = strokeWidth)
                     )
 
-                    // Background Live Activity Graph
-                    val events = timerState.timelineEvents
+                    // Background Live Activity Graph (Animated Wave)
                     if (timerState.totalSeconds > 0) {
-                        val graphPath = Path()
-                        val graphHeight = 80.dp.toPx()
+                        val innerRadius = (diameter / 2) - 16.dp.toPx()
+                        val graphWidth = innerRadius * 1.5f
+                        val startXOffset = (size.width - graphWidth) / 2
+                        val graphHeight = 50.dp.toPx()
                         val baseY = size.height / 2 + 30.dp.toPx()
                         
-                        val dataPoints = mutableListOf<Pair<Float, Float>>()
-                        var lastX = 0f
-                        var currentY = 0.5f // Baseline
+                        val wavePath = androidx.compose.ui.graphics.Path()
+                        val pointsCount = 50
                         
-                        dataPoints.add(lastX to currentY)
-                        
-                        events.forEach { evStr ->
-                            val parts = evStr.split("|")
-                            if (parts.size == 3) {
-                                val type = parts[1]
-                                val remSecs = parts[2].toIntOrNull() ?: 0
-                                val elapsedSecs = timerState.totalSeconds - remSecs
-                                val xProgress = (elapsedSecs.toFloat() / timerState.totalSeconds).coerceIn(0f, 1f)
-                                
-                                dataPoints.add(xProgress to currentY)
-                                
-                                when(type) {
-                                    "PAUSE" -> currentY = 0.1f // drop down
-                                    "RESUME" -> currentY = 0.5f // return to base
-                                    "DISTRACTION" -> {
-                                        dataPoints.add(xProgress to 0.9f) // sharp spike up
-                                        currentY = 0.5f
-                                        dataPoints.add(xProgress to currentY)
-                                    }
-                                }
-                                lastX = xProgress
+                        val amplitude = (graphHeight / 2) * graphScaleY
+
+                        for (i in 0..pointsCount) {
+                            val fraction = i.toFloat() / pointsCount
+                            val x = startXOffset + (fraction * graphWidth)
+                            
+                            val wave1 = kotlin.math.sin((fraction * 4f * Math.PI) + phaseOffset)
+                            val wave2 = kotlin.math.sin((fraction * 2f * Math.PI) - (phaseOffset * 1.5f))
+                            val combinedWave = (wave1 + wave2) / 2f
+                            
+                            val y = baseY + (combinedWave * amplitude).toFloat()
+                            
+                            if (i == 0) {
+                                wavePath.moveTo(x, y)
+                            } else {
+                                wavePath.lineTo(x, y)
                             }
                         }
                         
-                        val currentElapsed = timerState.totalSeconds - timerState.remainingSeconds
-                        val liveX = (currentElapsed.toFloat() / timerState.totalSeconds).coerceIn(0f, 1f)
-                        dataPoints.add(liveX to currentY)
-                        
-                        val innerRadius = (diameter / 2) - 16.dp.toPx()
-                        val graphWidth = innerRadius * 1.5f // keep it inside the ring
-                        val startXOffset = (size.width - graphWidth) / 2
-                        
-                        graphPath.moveTo(startXOffset, baseY - (dataPoints.first().second * graphHeight) + (graphHeight / 2))
-                        dataPoints.forEach { (xP, yP) ->
-                            val px = startXOffset + (xP * graphWidth)
-                            val py = baseY - (yP * graphHeight) + (graphHeight / 2)
-                            graphPath.lineTo(px, py)
-                        }
-                        
-                        drawPath(
-                            path = graphPath,
-                            color = FocusWarning.copy(alpha = 0.5f),
-                            style = Stroke(width = 6f, join = androidx.compose.ui.graphics.StrokeJoin.Round)
-                        )
-                        
-                        // Fill under graph to make it look nicer
-                        val fillPath = Path().apply {
-                            addPath(graphPath)
-                            lineTo(startXOffset + (liveX * graphWidth), baseY + (graphHeight / 2))
-                            lineTo(startXOffset, baseY + (graphHeight / 2))
+                        val fillPath = androidx.compose.ui.graphics.Path().apply {
+                            addPath(wavePath)
+                            lineTo(startXOffset + graphWidth, baseY + graphHeight)
+                            lineTo(startXOffset, baseY + graphHeight)
                             close()
                         }
+                        
                         drawPath(
                             path = fillPath,
-                            brush = Brush.verticalGradient(
-                                colors = listOf(FocusWarning.copy(alpha = 0.2f), Color.Transparent),
-                                startY = baseY - (graphHeight / 2),
-                                endY = baseY + (graphHeight / 2)
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(graphColor.copy(alpha = 0.8f), graphColor.copy(alpha = 0.1f)),
+                                startY = baseY - amplitude,
+                                endY = baseY + graphHeight
                             )
                         )
                     }
@@ -486,7 +504,7 @@ fun FocusTimerScreen(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 2.sp
                         ),
-                        color = Color.White
+                        color = FocusTextPrimary
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -506,7 +524,7 @@ fun FocusTimerScreen(
                     Text(
                         text = timerState.subjectName.ifBlank { "Focus Session" }.uppercase(),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-                        color = Color.White,
+                        color = FocusTextPrimary,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                     if (timerState.sessionName.isNotBlank()) {
@@ -526,10 +544,11 @@ fun FocusTimerScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .neumorphic(20.dp)
                     .testTag("allowed_apps_container"),
-                colors = CardDefaults.cardColors(containerColor = FocusSurface.copy(alpha = 0.95f)),
+                colors = CardDefaults.cardColors(containerColor = FocusSurface),
                 shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.35f))
+                border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f))
             ) {
                 Column(
                     modifier = Modifier.padding(14.dp),
@@ -554,7 +573,7 @@ fun FocusTimerScreen(
                                     fontWeight = FontWeight.ExtraBold,
                                     letterSpacing = 0.5.sp
                                 ),
-                                color = Color.White
+                                color = FocusTextPrimary
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
@@ -636,7 +655,7 @@ fun FocusTimerScreen(
                                             Text(
                                                 text = app.appName,
                                                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                                                color = Color.White,
+                                                color = FocusTextPrimary,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
@@ -672,7 +691,7 @@ fun FocusTimerScreen(
                             if (!isScheduled) {
                                 Button(
                                 onClick = { showManageWhitelistDialog = true }, enabled = !isScheduled,
-                                colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black),
+                                colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = FocusTextPrimary),
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.height(36.dp)
                             ) {
@@ -686,13 +705,13 @@ fun FocusTimerScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Section 2: Ambient Focus Sound Generator (for Active Session)
             Card(
                 colors = CardDefaults.cardColors(containerColor = FocusSurface),
                 shape = RoundedCornerShape(22.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
+                    .neumorphic(22.dp),
+                border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f))
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -706,7 +725,7 @@ fun FocusTimerScreen(
                         Text(
                             text = "Ambient Focus Sound",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
+                            color = FocusTextPrimary
                         )
                     }
                     Spacer(modifier = Modifier.height(14.dp))
@@ -757,7 +776,7 @@ fun FocusTimerScreen(
                                         Text(
                                             text = st.label,
                                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                            color = if (isSel) FocusPrimary else Color.White
+                                            color = if (isSel) FocusPrimary else FocusTextPrimary
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(10.dp))
@@ -805,9 +824,8 @@ fun FocusTimerScreen(
                         .testTag("pause_resume_btn"),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (timerState.isPaused) FocusPrimary else FocusSurface,
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(16.dp)
+                        contentColor = if (timerState.isPaused) FocusTextPrimary else FocusTextPrimary
+                    )
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -838,7 +856,7 @@ fun FocusTimerScreen(
                                 showExitAttemptDialog = false
                                 showEmergencyConfirm = true
                             } else {
-                                onSessionComplete()
+                                isFinishing = true
                             }
                         },
                         modifier = Modifier
@@ -847,7 +865,7 @@ fun FocusTimerScreen(
                             .testTag("finish_session_btn"),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = FocusWarning,
-                            contentColor = Color.White
+                            contentColor = FocusTextPrimary
                         ),
                         shape = RoundedCornerShape(16.dp)
                     ) {
@@ -901,7 +919,7 @@ fun FocusTimerScreen(
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 0.5.sp
                             ),
-                            color = Color.White,
+                            color = FocusTextPrimary,
                             textAlign = TextAlign.Center
                         )
 
@@ -972,7 +990,7 @@ fun FocusTimerScreen(
                                                 Text(
                                                     text = app.appName,
                                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                                    color = Color.White
+                                                    color = FocusTextPrimary
                                                 )
                                             }
 
@@ -1016,7 +1034,7 @@ fun FocusTimerScreen(
                                             showExitAttemptDialog = false
                                             showManageWhitelistDialog = true
                                         }, enabled = !isScheduled,
-                                        colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black),
+                                        colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = FocusTextPrimary),
                                         shape = RoundedCornerShape(10.dp)
                                     ) {
                                         Text("+ Select Study Apps", fontWeight = FontWeight.Bold)
@@ -1034,7 +1052,7 @@ fun FocusTimerScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black),
+                            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = FocusTextPrimary),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text("Stay on Timer", fontWeight = FontWeight.Bold)
@@ -1080,7 +1098,7 @@ fun FocusTimerScreen(
                                 Text(
                                     text = "SELECT ALLOWED STUDY APPS",
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                                    color = Color.White
+                                    color = FocusTextPrimary
                                 )
                                 Text(
                                     text = "Toggle apps you want to use during this session",
@@ -1089,7 +1107,7 @@ fun FocusTimerScreen(
                                 )
                             }
                             IconButton(onClick = { showManageWhitelistDialog = false }) {
-                                Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                                Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = FocusTextPrimary)
                             }
                         }
 
@@ -1106,8 +1124,8 @@ fun FocusTimerScreen(
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = FocusPrimary,
                                 unfocusedBorderColor = FocusSurfaceVariant,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
+                                focusedTextColor = FocusTextPrimary,
+                                unfocusedTextColor = FocusTextPrimary
                             )
                         )
 
@@ -1158,7 +1176,7 @@ fun FocusTimerScreen(
                                                 Text(
                                                     text = app.appName,
                                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                                    color = Color.White,
+                                                    color = FocusTextPrimary,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
@@ -1195,7 +1213,7 @@ fun FocusTimerScreen(
                                 .fillMaxWidth()
                                 .height(48.dp),
                             shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = Color.Black)
+                            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = FocusTextPrimary)
                         ) {
                             Text("SAVE & CONTINUE STUDY", fontWeight = FontWeight.Bold)
                         }
@@ -1309,7 +1327,7 @@ fun FocusTimerScreen(
                                     fontWeight = FontWeight.ExtraBold,
                                     letterSpacing = 1.sp
                                 ),
-                                color = Color.White,
+                                color = FocusTextPrimary,
                                 textAlign = TextAlign.Center
                             )
 
@@ -1319,7 +1337,7 @@ fun FocusTimerScreen(
                             Text(
                                 text = "Distracting apps are completely restricted during your active focus session.",
                                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                                color = Color.White.copy(alpha = 0.75f),
+                                color = FocusTextPrimary.copy(alpha = 0.75f),
                                 textAlign = TextAlign.Center
                             )
 
@@ -1360,7 +1378,7 @@ fun FocusTimerScreen(
                                                 fontWeight = FontWeight.Bold,
                                                 letterSpacing = 0.5.sp
                                             ),
-                                            color = Color.White,
+                                            color = FocusTextPrimary,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -1402,7 +1420,7 @@ fun FocusTimerScreen(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 1.2.sp
                                 ),
-                                color = Color.White.copy(alpha = 0.5f)
+                                color = FocusTextPrimary.copy(alpha = 0.5f)
                             )
 
                             Spacer(modifier = Modifier.height(6.dp))
@@ -1487,14 +1505,14 @@ fun FocusTimerScreen(
                                                         style = MaterialTheme.typography.titleMedium.copy(
                                                             fontWeight = FontWeight.Bold
                                                         ),
-                                                        color = Color.White,
+                                                        color = FocusTextPrimary,
                                                         maxLines = 1,
                                                         overflow = TextOverflow.Ellipsis
                                                     )
                                                     Text(
                                                         text = attempt.packageName,
                                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                                        color = Color.White.copy(alpha = 0.5f),
+                                                        color = FocusTextPrimary.copy(alpha = 0.5f),
                                                         maxLines = 1,
                                                         overflow = TextOverflow.Ellipsis
                                                     )
@@ -1542,7 +1560,7 @@ fun FocusTimerScreen(
                                     Text(
                                         text = "You tried to open $latestAppName. This app is restricted because your focus session is currently active.",
                                         style = MaterialTheme.typography.bodySmall.copy(lineHeight = 17.sp),
-                                        color = Color.White.copy(alpha = 0.85f)
+                                        color = FocusTextPrimary.copy(alpha = 0.85f)
                                     )
                                 }
                             }
@@ -1570,7 +1588,7 @@ fun FocusTimerScreen(
                                     ),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color.Transparent,
-                                    contentColor = Color.White
+                                    contentColor = FocusTextPrimary
                                 ),
                                 shape = CircleShape
                             ) {
@@ -1608,7 +1626,7 @@ fun FocusTimerScreen(
                                     .border(1.dp, Color(0xFF2E364A), CircleShape),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(0xFF1B2130),
-                                    contentColor = Color.White
+                                    contentColor = FocusTextPrimary
                                 ),
                                 shape = CircleShape
                             ) {
@@ -1619,7 +1637,7 @@ fun FocusTimerScreen(
                                     Icon(
                                         imageVector = Icons.Default.Apps,
                                         contentDescription = null,
-                                        tint = Color.White.copy(alpha = 0.7f),
+                                        tint = FocusTextPrimary.copy(alpha = 0.7f),
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
@@ -1628,7 +1646,7 @@ fun FocusTimerScreen(
                                         style = MaterialTheme.typography.bodyLarge.copy(
                                             fontWeight = FontWeight.SemiBold
                                         ),
-                                        color = Color.White.copy(alpha = 0.85f)
+                                        color = FocusTextPrimary.copy(alpha = 0.85f)
                                     )
                                 }
                             }
@@ -1668,7 +1686,7 @@ fun FocusTimerScreen(
                         Text(
                             text = "Emergency Early Exit",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
+                            color = FocusTextPrimary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -1692,7 +1710,7 @@ fun FocusTimerScreen(
                             onClick = {
                                 if (emergencyPenaltyCountdown <= 0) {
                                     showEmergencyConfirm = false
-                                    onSessionComplete()
+                                    isFinishing = true
                                 }
                             },
                             enabled = emergencyPenaltyCountdown <= 0,
@@ -1720,6 +1738,36 @@ fun FocusTimerScreen(
                             Text("RESUME STUDYING", fontWeight = FontWeight.Bold)
                         }
                     }
+
+        // In-Session Notification for overlapping scheduled sessions
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showPendingLockOverlay,
+            enter = androidx.compose.animation.slideInVertically(initialOffsetY = { -it }) + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { -it }) + androidx.compose.animation.fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 48.dp, start = 16.dp, end = 16.dp)
+        ) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = FocusSurface.copy(alpha = 0.95f)),
+                border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.5f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = FocusWarning, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Scheduled Session Starting", color = FocusPrimary, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                            Text(pendingSessionNameOverlay, color = FocusTextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold))
+                        }
+                        IconButton(onClick = { viewModel.dismissLockOverlay() }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Dismiss", tint = FocusTextSecondary)
+                        }
+                    }
+                }
+            }
+        }
                 }
             }
         }
