@@ -116,7 +116,7 @@ data class PresetOption(
     val sublabel: String,
     val icon: ImageVector,
     val color: Color
-}
+
 )
 
 @Composable
@@ -125,7 +125,7 @@ fun FocusSetupScreen(
     onBack: () -> Unit,
     onNavigateToAppSelector: () -> Unit,
     onStartSession: () -> Unit
-}
+
 ) {
     LaunchedEffect(Unit) {
         viewModel.setAppSelectorProfile("MANUAL")
@@ -138,8 +138,18 @@ fun FocusSetupScreen(
     val whitelistedApps by viewModel.whitelistedAppsManual.collectAsState()
     val scheduledSessions by viewModel.scheduledSessions.collectAsState(initial = emptyList())
     val context = LocalContext.current
+    val hasOverlay = remember { LockPermissionHelper.hasOverlayPermission(context) }
+    val hasUsage = remember { LockPermissionHelper.hasUsageStatsPermission(context) }
 
-    
+    var customDuration by remember { mutableFloatStateOf(25f) }
+    var customSubject by remember { mutableStateOf("") }
+    var customGoal by remember { mutableStateOf("") }
+    var showValidationDialog by remember { mutableStateOf(false) }
+    var validationConflicts by remember { mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
+    var previousValidationSessions by remember { mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
+    var nextValidationSessions by remember { mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
+    var nextValidationSession by remember { mutableStateOf<com.example.data.model.FocusSession?>(null) }
+
     val audioPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
         onResult = { uri: android.net.Uri? ->
@@ -149,6 +159,7 @@ fun FocusSetupScreen(
                         uri,
                         android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                     )
+                } catch (e: Exception) {
                     e.printStackTrace()
                 }
                 val prefs = context.getSharedPreferences("FocusPrefs", android.content.Context.MODE_PRIVATE)
@@ -156,7 +167,6 @@ fun FocusSetupScreen(
                 viewModel.updateSetup(soundType = com.example.services.SoundType.CUSTOM_AUDIO)
             }
         }
-    }
     )
 
 
@@ -171,14 +181,14 @@ fun FocusSetupScreen(
         PresetOption(45, "45m", "STUDY", Icons.Default.MenuBook, FocusPrimary),
         PresetOption(60, "60m", "DEEP WORK", Icons.Default.Psychology, Color(0xFF38BDF8)),
         PresetOption(90, "90m", "SPRINT", Icons.Default.DirectionsRun, FocusPrimary)
-    }
+    
     )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(FocusBackground)
-    }
+    
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -190,30 +200,26 @@ fun FocusSetupScreen(
                         Brush.verticalGradient(
                             colors = listOf(FocusSurface, FocusBackground)
                         )
-                    }
+                    
                     )
                     .padding(horizontal = 16.dp, vertical = 12.dp)
-                }
-            }
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
-                }
                 ) {
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .background(FocusSurfaceVariant, CircleShape)
+                            .background(FocusSurfaceVariant, CircleShape),
                         contentAlignment = Alignment.Center
-                    }
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = FocusTextPrimary,
                             modifier = Modifier.size(20.dp)
-                        }
+                        
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
@@ -223,16 +229,16 @@ fun FocusSetupScreen(
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 1.sp
-                            }
+                            
                             ),
                             color = FocusTextPrimary
-                        }
+                        
                         )
                         Text(
                             text = "Configure parameters & lock settings",
                             style = MaterialTheme.typography.labelSmall,
                             color = FocusTextSecondary
-                        }
+                        
                         )
                     }
                     Box(
@@ -240,7 +246,7 @@ fun FocusSetupScreen(
                             .background(FocusPrimary.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
                             .border(1.dp, FocusPrimary.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
                             .padding(horizontal = 10.dp, vertical = 4.dp)
-                    }
+                    
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
@@ -248,7 +254,7 @@ fun FocusSetupScreen(
                                 contentDescription = null,
                                 tint = FocusPrimary,
                                 modifier = Modifier.size(12.dp)
-                            }
+                            
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("PRO MODE", style = MaterialTheme.typography.labelSmall, color = FocusPrimary)
@@ -263,7 +269,7 @@ fun FocusSetupScreen(
                     .weight(1f)
                     .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
-            }
+            
             ) {
                 // HERO SECTION: Holographic Shield Mesh, Digital Time, Slider, Presets & Glowing Launch Button
                 item {
@@ -276,18 +282,16 @@ fun FocusSetupScreen(
                                         FocusSurface,
                                         FocusSurfaceVariant
                                     )
-                                }
+                                
                                 )
-                            }
+                            
                             )
                             .padding(horizontal = 16.dp, vertical = 12.dp)
-                        }
-                    }
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.fillMaxWidth()
-                        }
+                        
                         ) {
 
                             // Holographic Mesh / Shield Barrier Canvas Illustration
@@ -296,7 +300,7 @@ fun FocusSetupScreen(
                                     .fillMaxWidth()
                                     .height(110.dp),
                                 contentAlignment = Alignment.Center
-                            }
+                            
                             ) {
                                 Canvas(modifier = Modifier.fillMaxSize()) {
                                     val strokeWidth = 1.dp.toPx()
@@ -311,7 +315,7 @@ fun FocusSetupScreen(
                                             end = Offset(size.width, y),
                                             strokeWidth = strokeWidth,
                                             pathEffect = pathEffect
-                                        }
+                                        
                                         )
                                     }
                                     for (i in 1..8) {
@@ -322,7 +326,7 @@ fun FocusSetupScreen(
                                             end = Offset(x, size.height),
                                             strokeWidth = strokeWidth,
                                             pathEffect = pathEffect
-                                        }
+                                        
                                         )
 
                                     }
@@ -334,7 +338,7 @@ fun FocusSetupScreen(
                                         .padding(horizontal = 24.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
-                                }
+                                
                                 ) {
                                     // Left Distraction Apps (Blocked)
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -344,7 +348,7 @@ fun FocusSetupScreen(
                                                 .background(Color(0xFF1877F2).copy(alpha = 0.2f), CircleShape)
                                                 .border(1.dp, Color(0xFF1877F2).copy(alpha = 0.6f), CircleShape),
                                             contentAlignment = Alignment.Center
-                                        }
+                                        
                                         ) {
                                             Text("f", color = FocusTextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                                         }
@@ -354,7 +358,7 @@ fun FocusSetupScreen(
                                                 .background(Color(0xFFE4405F).copy(alpha = 0.2f), CircleShape)
                                                 .border(1.dp, Color(0xFFE4405F).copy(alpha = 0.6f), CircleShape),
                                             contentAlignment = Alignment.Center
-                                        }
+                                        
                                         ) {
                                             Text("ig", color = FocusTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
 
@@ -370,22 +374,20 @@ fun FocusSetupScreen(
                                                         FocusPrimary.copy(alpha = 0.35f),
                                                         Color.Transparent
                                                     )
-                                                }
+                                                
                                                 ),
                                                 CircleShape
-                                            }
+                                            
                                             )
                                             .border(1.5.dp, FocusPrimary, CircleShape),
-                                        }
                                         contentAlignment = Alignment.Center
-                                    }
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Shield,
                                             contentDescription = null,
                                             tint = FocusPrimary,
                                             modifier = Modifier.size(28.dp)
-                                        }
+                                        
                                         )
 
                                     }
@@ -397,7 +399,7 @@ fun FocusSetupScreen(
                                                 .background(Color(0xFF25D366).copy(alpha = 0.2f), CircleShape)
                                                 .border(1.dp, Color(0xFF25D366).copy(alpha = 0.6f), CircleShape),
                                             contentAlignment = Alignment.Center
-                                        }
+                                        
                                         ) {
                                             Text("wa", color = FocusTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                         }
@@ -407,7 +409,7 @@ fun FocusSetupScreen(
                                                 .background(Color(0xFFFF0000).copy(alpha = 0.2f), CircleShape)
                                                 .border(1.dp, Color(0xFFFF0000).copy(alpha = 0.6f), CircleShape),
                                             contentAlignment = Alignment.Center
-                                        }
+                                        
                                         ) {
                                             Text("yt", color = FocusTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
 
@@ -426,10 +428,10 @@ fun FocusSetupScreen(
                                 style = MaterialTheme.typography.displayMedium.copy(
                                     fontWeight = FontWeight.ExtraBold,
                                     letterSpacing = 2.sp
-                                }
+                                
                                 ),
                                 color = FocusTextPrimary
-                            }
+                            
                             )
 
                             Spacer(modifier = Modifier.height(8.dp))
@@ -441,24 +443,24 @@ fun FocusSetupScreen(
                                     onValueChange = {
                                         customDuration = it
                                         viewModel.updateSetup(durationMinutes = it.toInt())
-                                    }
+                                    },
                                     valueRange = 5f..180f,
                                     steps = 34,
                                     colors = SliderDefaults.colors(
                                         thumbColor = FocusTextPrimary,
                                         activeTrackColor = FocusPrimary,
                                         inactiveTrackColor = FocusSurfaceVariant
-                                    }
+                                    
                                     ),
                                     modifier = Modifier.fillMaxWidth()
-                                }
+                                
                                 )
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(horizontal = 8.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween
-                                }
+                                
                                 ) {
                                     Text("5 minutes", style = MaterialTheme.typography.labelSmall, color = FocusTextSecondary)
                                     Text("180 minutes", style = MaterialTheme.typography.labelSmall, color = FocusTextSecondary)
@@ -471,7 +473,7 @@ fun FocusSetupScreen(
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            }
+                            
                             ) {
                                 presetList.forEach { preset ->
                                     val isSel = setup.durationMinutes == preset.minutes
@@ -493,34 +495,32 @@ fun FocusSetupScreen(
                                                 viewModel.updateSetup(durationMinutes = preset.minutes)
                                             }
                                             .padding(6.dp),
-                                        }
                                         contentAlignment = Alignment.Center
-                                    }
                                     ) {
                                         Column(
                                             horizontalAlignment = Alignment.CenterHorizontally,
                                             verticalArrangement = Arrangement.Center
-                                        }
+                                        
                                         ) {
                                             Icon(
                                                 imageVector = preset.icon,
                                                 contentDescription = null,
                                                 tint = if (isSel) FocusPrimary else preset.color,
                                                 modifier = Modifier.size(20.dp)
-                                            }
+                                            
                                             )
                                             Spacer(modifier = Modifier.height(4.dp))
                                             Text(
                                                 text = preset.label,
                                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                                 color = FocusTextPrimary
-                                            }
+                                            
                                             )
                                             Text(
                                                 text = preset.sublabel,
                                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                                 color = if (isSel) FocusPrimary else FocusTextSecondary
-                                            }
+                                            
                                             )
 
                                         }
@@ -533,7 +533,7 @@ fun FocusSetupScreen(
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalAlignment = Alignment.CenterHorizontally
-                            }
+                            
                             ) {
                                 // 3D Glowing Button Box
                                 Box(
@@ -546,10 +546,10 @@ fun FocusSetupScreen(
                                                     FocusWarning,
                                                     FocusPrimaryDark
                                                 )
-                                            }
+                                            
                                             ),
                                             RoundedCornerShape(20.dp)
-                                        }
+                                        
                                         )
                                         .border(2.dp, FocusTextPrimary.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
                                         .clickable {
@@ -561,22 +561,23 @@ fun FocusSetupScreen(
                                                 sessionName = finalGoal,
                                                 subjectName = finalSubject,
                                                 durationMinutes = customDuration.toInt()
-                                            }
+                                            
                                             )
 
                                             val userStart = System.currentTimeMillis()
                                             val userEnd = userStart + (customDuration.toInt() * 60 * 1000L)
-                                            val conflicts = activeSchedules.filter { s ->
+                                            val conflicts = scheduledSessions.filter { s ->
                                                 val sStart = s.scheduledStartTime ?: return@filter false
                                                 val sEnd = s.scheduledEndTime ?: return@filter false
                                                 userStart < sEnd && userEnd > sStart
+                                            }
 
                                             if (conflicts.isNotEmpty()) {
-                                                val prevSessions = activeSchedules
+                                                val prevSessions = scheduledSessions
                                                     .take(3)
                                                     .reversed()
 
-                                                val nextSessions = activeSchedules
+                                                val nextSessions = scheduledSessions
                                                     .take(3)
 
                                                 validationConflicts = conflicts
@@ -584,32 +585,31 @@ fun FocusSetupScreen(
                                                 nextValidationSessions = nextSessions
                                                 nextValidationSession = nextSessions.firstOrNull()
                                                 showValidationDialog = true
+                                            } else {
                                                 onStartSession()
                                             }
                                         }
                                         .testTag("start_session_confirm_btn"),
-                                    }
                                     contentAlignment = Alignment.Center
-                                }
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.Center
-                                    }
+                                    
                                     ) {
                                         Box(
                                             modifier = Modifier
                                                 .size(38.dp)
                                                 .background(FocusTextPrimary.copy(alpha = 0.2f), CircleShape),
                                             contentAlignment = Alignment.Center
-                                        }
+                                        
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Shield,
                                                 contentDescription = null,
                                                 tint = androidx.compose.ui.graphics.Color.White,
                                                 modifier = Modifier.size(22.dp)
-                                            }
+                                            
                                             )
                                         }
                                         Spacer(modifier = Modifier.width(12.dp))
@@ -618,10 +618,10 @@ fun FocusSetupScreen(
                                             style = MaterialTheme.typography.titleMedium.copy(
                                                 fontWeight = FontWeight.ExtraBold,
                                                 letterSpacing = 1.sp
-                                            }
+                                            
                                             ),
                                             color = androidx.compose.ui.graphics.Color.White
-                                        }
+                                        
                                         )
 
                                     }
@@ -638,8 +638,7 @@ fun FocusSetupScreen(
                                         .clickable {
                                             if (!hasOverlay) LockPermissionHelper.openOverlaySettings(context)
                                             else if (!hasUsage) LockPermissionHelper.openUsageStatsSettings(context)
-                                    }
-                                }
+                                        }
                                 ) {
                                     Row(
                                         modifier = Modifier
@@ -647,7 +646,6 @@ fun FocusSetupScreen(
                                             .padding(horizontal = 14.dp, vertical = 10.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
-                                    }
                                     ) {
                                         Column {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -655,7 +653,6 @@ fun FocusSetupScreen(
                                                     modifier = Modifier
                                                         .size(8.dp)
                                                         .background(if (hasOverlay && hasUsage) FocusPrimary else FocusWarning, CircleShape)
-                                                }
                                                 )
                                                 Spacer(modifier = Modifier.width(6.dp))
                                                 Text(
@@ -663,25 +660,22 @@ fun FocusSetupScreen(
                                                     style = MaterialTheme.typography.labelSmall.copy(
                                                         fontWeight = FontWeight.Bold,
                                                         letterSpacing = 0.5.sp
-                                                    }
                                                     ),
                                                     color = FocusTextPrimary
-                                                }
                                                 )
                                             }
                                             Spacer(modifier = Modifier.height(4.dp))
                                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                                 Text(
+                                                    text = if (hasOverlay) "• Overlay Active" else "• Overlay Required",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = if (hasOverlay) FocusPrimary else FocusWarning
-                                                }
                                                 )
                                                 Text(
+                                                    text = if (hasUsage) "• Usage Access Active" else "• Usage Access Required",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = if (hasUsage) FocusPrimary else FocusWarning
-                                                }
                                                 )
-
                                             }
                                         }
                                         Icon(
@@ -689,7 +683,7 @@ fun FocusSetupScreen(
                                             contentDescription = null,
                                             tint = FocusPrimary,
                                             modifier = Modifier.size(18.dp)
-                                        }
+                                        
                                         )
 
                                     }
@@ -703,7 +697,7 @@ fun FocusSetupScreen(
                     Column(
                         modifier = Modifier.padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
-                    }
+                    
                     ) {
                         // Section 0: Allowed Apps for Quick Focus (Manual Whitelist)
                         Card(
@@ -715,8 +709,7 @@ fun FocusSetupScreen(
                                 .clickable {
                                     viewModel.setAppSelectorProfile("MANUAL")
                                     onNavigateToAppSelector()
-                            }
-                        }
+                                }
                         ) {
                             Row(
                                 modifier = Modifier
@@ -724,26 +717,26 @@ fun FocusSetupScreen(
                                     .padding(18.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
-                            }
+                            
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.weight(1f)
-                                }
+                                
                                 ) {
                                     Box(
                                         modifier = Modifier
                                             .size(42.dp)
                                             .background(FocusPrimary.copy(alpha = 0.15f), CircleShape),
                                         contentAlignment = Alignment.Center
-                                    }
+                                    
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Apps,
                                             contentDescription = null,
                                             tint = FocusPrimary,
                                             modifier = Modifier.size(22.dp)
-                                        }
+                                        
                                         )
                                     }
                                     Spacer(modifier = Modifier.width(14.dp))
@@ -752,14 +745,13 @@ fun FocusSetupScreen(
                                             text = "ALLOWED APPS (QUICK FOCUS)",
                                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                             color = FocusTextPrimary
-                                        }
+                                        
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = "$allowedManualCount apps whitelisted for Manual Session",
+                                            text = "${whitelistedApps.count { it.isAllowed }} apps whitelisted for Manual Session",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = FocusTextSecondary
-                                        }
                                         )
                                     }
                                 }
@@ -768,7 +760,7 @@ fun FocusSetupScreen(
                                     contentDescription = "Select Apps",
                                     tint = FocusPrimary,
                                     modifier = Modifier.size(22.dp)
-                                }
+                                
                                 )
 
                             }
@@ -780,14 +772,14 @@ fun FocusSetupScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
-                        }
+                        
                         ) {
                             Column(modifier = Modifier.padding(18.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
-                                }
+                                
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
@@ -795,27 +787,27 @@ fun FocusSetupScreen(
                                             contentDescription = null,
                                             tint = FocusPrimary,
                                             modifier = Modifier.size(20.dp)
-                                        }
+                                        
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = "SUBJECT & STUDY GOAL",
                                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                             color = FocusTextPrimary
-                                        }
+                                        
                                         )
                                     }
                                     Surface(
                                         shape = RoundedCornerShape(6.dp),
                                         color = FocusSurfaceVariant
-                                    }
+                                    
                                     ) {
                                         Text(
                                             text = "Custom",
                                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                             color = FocusPrimary,
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                        }
+                                        
                                         )
 
                                     }
@@ -828,10 +820,10 @@ fun FocusSetupScreen(
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.5.sp
-                                    }
+                                    
                                     ),
                                     color = FocusTextSecondary
-                                }
+                                
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Box(
@@ -839,14 +831,14 @@ fun FocusSetupScreen(
                                         .fillMaxWidth()
                                         .neumorphic(14.dp)
                                         .background(FocusBackground, RoundedCornerShape(14.dp))
-                                }
+                                
                                 ) {
                                     OutlinedTextField(
                                         value = customSubject,
                                         onValueChange = {
                                             customSubject = it
                                             viewModel.updateSetup(subjectName = it)
-                                        }
+                                        },
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .testTag("setup_subject_input"),
@@ -855,33 +847,31 @@ fun FocusSetupScreen(
                                                 "e.g. Mathematics, Physics, History, UPSC, Coding...",
                                                 color = FocusTextSecondary.copy(alpha = 0.45f),
                                                 fontSize = 14.sp
-                                            }
                                             )
-                                        }
+                                        },
                                         leadingIcon = {
                                             Icon(
                                                 Icons.Default.School,
                                                 contentDescription = null,
                                                 tint = FocusPrimary,
                                                 modifier = Modifier.size(20.dp)
-                                            }
                                             )
-                                        }
+                                        },
                                         trailingIcon = {
                                             if (customSubject.isNotBlank()) {
                                                 IconButton(onClick = {
                                                     customSubject = ""
                                                     viewModel.updateSetup(subjectName = "")
+                                                }) {
                                                     Icon(
                                                         Icons.Default.Clear,
                                                         contentDescription = "Clear",
                                                         tint = FocusTextSecondary,
                                                         modifier = Modifier.size(18.dp)
-                                                    }
                                                     )
                                                 }
                                             }
-                                        }
+                                        },
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor = Color.Transparent,
                                             unfocusedBorderColor = Color.Transparent,
@@ -889,13 +879,11 @@ fun FocusSetupScreen(
                                             unfocusedContainerColor = Color.Transparent,
                                             focusedTextColor = FocusTextPrimary,
                                             unfocusedTextColor = FocusTextPrimary
-                                        }
                                         ),
                                         shape = RoundedCornerShape(14.dp),
                                         singleLine = false,
                                         minLines = 1,
                                         maxLines = 5
-                                    }
                                     )
 
                                 }
@@ -908,39 +896,36 @@ fun FocusSetupScreen(
                                             .horizontalScroll(rememberScrollState()),
                                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                                         verticalAlignment = Alignment.CenterVertically
-                                    }
+                                    
                                     ) {
                                         Text(
                                             text = "Quick pick:",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = FocusTextSecondary.copy(alpha = 0.7f),
                                             fontSize = 11.sp
-                                        }
+                                        
                                         )
                                         subjects.forEach { sub ->
                                             val isSel = customSubject.equals(sub.name, ignoreCase = true)
                                             Surface(
-                                                shape = RoundedCornerShape(8.dp),
-                                                color = if (isSel) FocusPrimary.copy(alpha = 0.2f) else FocusBackground,
-                                                border = BorderStroke(1.dp, if (isSel) FocusPrimary else FocusSurfaceVariant),
-                                                modifier = Modifier.clickable {
+                                                onClick = {
                                                     customSubject = sub.name
                                                     viewModel.updateSetup(subjectName = sub.name)
-                                            }
+                                                },
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = if (isSel) FocusPrimary.copy(alpha = 0.2f) else FocusBackground,
+                                                border = BorderStroke(1.dp, if (isSel) FocusPrimary else FocusSurfaceVariant)
                                             ) {
                                                 Row(
                                                     verticalAlignment = Alignment.CenterVertically,
                                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                                }
                                                 ) {
                                                     Text(
                                                         text = sub.name,
                                                         style = MaterialTheme.typography.labelSmall.copy(
                                                             fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal
-                                                        }
                                                         ),
                                                         color = if (isSel) FocusPrimary else FocusTextSecondary
-                                                    }
                                                     )
                                                     Spacer(modifier = Modifier.width(4.dp))
                                                     Icon(
@@ -951,13 +936,10 @@ fun FocusSetupScreen(
                                                             .size(12.dp)
                                                             .clickable {
                                                                 viewModel.deleteCustomSubject(sub)
-                                                        }
-                                                    }
+                                                            }
                                                     )
-
                                                 }
                                             }
-                                        }
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
@@ -967,10 +949,10 @@ fun FocusSetupScreen(
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.5.sp
-                                    }
+                                    
                                     ),
                                     color = FocusTextSecondary
-                                }
+                                
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Box(
@@ -978,14 +960,14 @@ fun FocusSetupScreen(
                                         .fillMaxWidth()
                                         .neumorphic(14.dp)
                                         .background(FocusBackground, RoundedCornerShape(14.dp))
-                                }
+                                
                                 ) {
                                     OutlinedTextField(
                                         value = customGoal,
                                         onValueChange = {
                                             customGoal = it
                                             viewModel.updateSetup(sessionName = it)
-                                        }
+                                        },
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .testTag("setup_goal_input"),
@@ -994,33 +976,31 @@ fun FocusSetupScreen(
                                                 "e.g. Chapter 4 Numericals, Solve 30 MCQs, Revise notes...",
                                                 color = FocusTextSecondary.copy(alpha = 0.45f),
                                                 fontSize = 14.sp
-                                            }
                                             )
-                                        }
+                                        },
                                         leadingIcon = {
                                             Icon(
                                                 Icons.Default.TrackChanges,
                                                 contentDescription = null,
                                                 tint = FocusWarning,
                                                 modifier = Modifier.size(20.dp)
-                                            }
                                             )
-                                        }
+                                        },
                                         trailingIcon = {
                                             if (customGoal.isNotBlank()) {
                                                 IconButton(onClick = {
                                                     customGoal = ""
                                                     viewModel.updateSetup(sessionName = "")
+                                                }) {
                                                     Icon(
                                                         Icons.Default.Clear,
                                                         contentDescription = "Clear",
                                                         tint = FocusTextSecondary,
                                                         modifier = Modifier.size(18.dp)
-                                                    }
                                                     )
                                                 }
                                             }
-                                        }
+                                        },
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor = Color.Transparent,
                                             unfocusedBorderColor = Color.Transparent,
@@ -1028,13 +1008,11 @@ fun FocusSetupScreen(
                                             unfocusedContainerColor = Color.Transparent,
                                             focusedTextColor = FocusTextPrimary,
                                             unfocusedTextColor = FocusTextPrimary
-                                        }
                                         ),
                                         shape = RoundedCornerShape(14.dp),
                                         singleLine = false,
                                         minLines = 1,
                                         maxLines = 5
-                                    }
                                     )
 
                                 }
@@ -1047,39 +1025,36 @@ fun FocusSetupScreen(
                                             .horizontalScroll(rememberScrollState()),
                                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                                         verticalAlignment = Alignment.CenterVertically
-                                    }
+                                    
                                     ) {
                                         Text(
                                             text = "Quick pick:",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = FocusTextSecondary.copy(alpha = 0.7f),
                                             fontSize = 11.sp
-                                        }
+                                        
                                         )
                                         customGoalsList.forEach { goalOption ->
                                             val isSel = customGoal.equals(goalOption, ignoreCase = true)
                                             Surface(
-                                                shape = RoundedCornerShape(8.dp),
-                                                color = if (isSel) FocusWarning.copy(alpha = 0.2f) else FocusBackground,
-                                                border = BorderStroke(1.dp, if (isSel) FocusWarning else FocusSurfaceVariant),
-                                                modifier = Modifier.clickable {
+                                                onClick = {
                                                     customGoal = goalOption
                                                     viewModel.updateSetup(sessionName = goalOption)
-                                            }
+                                                },
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = if (isSel) FocusWarning.copy(alpha = 0.2f) else FocusBackground,
+                                                border = BorderStroke(1.dp, if (isSel) FocusWarning else FocusSurfaceVariant)
                                             ) {
                                                 Row(
                                                     verticalAlignment = Alignment.CenterVertically,
                                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                                }
                                                 ) {
                                                     Text(
                                                         text = goalOption,
                                                         style = MaterialTheme.typography.labelSmall.copy(
                                                             fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal
-                                                        }
                                                         ),
                                                         color = if (isSel) FocusWarning else FocusTextSecondary
-                                                    }
                                                     )
                                                     Spacer(modifier = Modifier.width(4.dp))
                                                     Icon(
@@ -1090,13 +1065,10 @@ fun FocusSetupScreen(
                                                             .size(12.dp)
                                                             .clickable {
                                                                 viewModel.deleteCustomGoal(goalOption)
-                                                        }
-                                                    }
+                                                            }
                                                     )
-
                                                 }
                                             }
-                                        }
                                     }
                                 }
                             }
@@ -1108,7 +1080,7 @@ fun FocusSetupScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(22.dp))
-                        }
+                        
                         ) {
                             Column(modifier = Modifier.padding(18.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1117,20 +1089,20 @@ fun FocusSetupScreen(
                                         contentDescription = null,
                                         tint = FocusPrimary,
                                         modifier = Modifier.size(22.dp)
-                                    }
+                                    
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = "Background Focus Sound",
                                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                         color = FocusTextPrimary
-                                    }
+                                    
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(14.dp))
                                 Column(
                                     verticalArrangement = Arrangement.spacedBy(10.dp)
-                                }
+                                
                                 ) {
                                     SoundType.entries.forEach { st ->
                                         val isSel = setup.selectedSound == st
@@ -1146,15 +1118,13 @@ fun FocusSetupScreen(
                                                 .clickable { 
                                                     if (st == com.example.services.SoundType.CUSTOM_AUDIO) {
                                                         audioPickerLauncher.launch(arrayOf("audio/*"))
-                                                        viewModel.updateSetup(soundType = st) 
+                                                    }
+                                                    viewModel.updateSetup(soundType = st) 
                                                 }
-                                            }
-                                        }
                                         ) {
                                             Row(
                                                 modifier = Modifier.padding(14.dp),
                                                 verticalAlignment = Alignment.CenterVertically
-                                            }
                                             ) {
                                                 Box(
                                                     modifier = Modifier
@@ -1163,16 +1133,14 @@ fun FocusSetupScreen(
                                                             if (isSel) FocusPrimary.copy(alpha = 0.2f) else FocusSurfaceVariant.copy(alpha = 0.4f),
                                                             androidx.compose.foundation.shape.CircleShape
                                                         ),
-                                                    }
                                                     contentAlignment = Alignment.Center
-                                                }
                                                 ) {
                                                     Icon(
                                                         imageVector = if (st.isBinaural) Icons.Default.Headphones else Icons.Default.MusicNote,
                                                         contentDescription = null,
                                                         tint = if (isSel) FocusPrimary else FocusTextSecondary,
                                                         modifier = Modifier.size(20.dp)
-                                                    }
+                                                    
                                                     )
 
                                                 }
@@ -1184,7 +1152,7 @@ fun FocusSetupScreen(
                                                             text = st.label,
                                                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                                             color = if (isSel) FocusPrimary else FocusTextPrimary
-                                                        }
+                                                        
                                                         )
 
                                                     }
@@ -1193,13 +1161,12 @@ fun FocusSetupScreen(
 
                                                 RadioButton(
                                                     selected = isSel,
+                                                    onClick = { viewModel.updateSetup(soundType = st) },
                                                     colors = RadioButtonDefaults.colors(
                                                         selectedColor = FocusPrimary,
                                                         unselectedColor = FocusTextSecondary
-                                                    }
                                                     ),
                                                     modifier = Modifier.size(24.dp)
-                                                }
                                                 )
 
                                             }
@@ -1213,35 +1180,42 @@ fun FocusSetupScreen(
                     }
                 }
             }
-        }
-    }
-    if (showValidationDialog) {
-        val userStart = System.currentTimeMillis()
-        val userEnd = userStart + (customDuration.toInt() * 60 * 1000L)
-        ScheduleValidationDialog(
-            saveText = "START SESSION",
-            changeText = "CHANGE DURATION",
-            conflicts = validationConflicts,
-            userStart = userStart,
-            userEnd = userEnd,
-            previousSessions = previousValidationSessions,
-            nextSessions = nextValidationSessions,
-            nextSession = nextValidationSession,
-            onSave = { 
-                showValidationDialog = false
-                val finalSubject = if (customSubject.isNotBlank()) customSubject else "Focus Session"
-                val finalGoal = if (customGoal.isNotBlank()) customGoal else "General Study"
-                    viewModel.addCustomSubject(customSubject.trim(), "#0284C7")
-                    viewModel.addCustomGoal(customGoal.trim())
-                viewModel.updateSetup(
-                    sessionName = finalGoal,
-                    subjectName = finalSubject,
-                    durationMinutes = customDuration.toInt()
-                }
+
+            if (showValidationDialog) {
+                val userStart = System.currentTimeMillis()
+                val userEnd = userStart + (customDuration.toInt() * 60 * 1000L)
+                ScheduleValidationDialog(
+                    saveText = "START SESSION",
+                    changeText = "CHANGE DURATION",
+                    conflicts = validationConflicts,
+                    userStart = userStart,
+                    userEnd = userEnd,
+                    previousSessions = previousValidationSessions,
+                    nextSessions = nextValidationSessions,
+                    nextSession = nextValidationSession,
+                    onSave = { 
+                        showValidationDialog = false
+                        val finalSubject = if (customSubject.isNotBlank()) customSubject else "Focus Session"
+                        val finalGoal = if (customGoal.isNotBlank()) customGoal else "General Study"
+                        if (customSubject.isNotBlank()) viewModel.addCustomSubject(customSubject.trim(), "#0284C7")
+                        if (customGoal.isNotBlank()) viewModel.addCustomGoal(customGoal.trim())
+                        viewModel.updateSetup(
+                            sessionName = finalGoal,
+                            subjectName = finalSubject,
+                            durationMinutes = customDuration.toInt()
+                        )
+                        onStartSession()
+                    },
+                    onChangeTime = {
+                        showValidationDialog = false
+                    },
+                    onCancel = {
+                        showValidationDialog = false
+                    }
                 )
-                onStartSession()
             }
         }
-        )
     }
+}
+}
 }

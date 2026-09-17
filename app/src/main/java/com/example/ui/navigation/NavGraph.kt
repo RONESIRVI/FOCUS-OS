@@ -58,8 +58,7 @@ fun FocusNavGraph(
             com.example.ui.screens.ScheduleMainScreen(
                 viewModel = viewModel,
                 onNavigateToCreate = { navController.navigate(FocusRoutes.SCHEDULE_CREATE) },
-                onStartScheduled = { _ -> },
-                onNavigateToSessionRouter = { sessionId -> navController.navigate("${FocusRoutes.SESSION_START_ROUTER}/$sessionId") }
+                onStartScheduled = { _ -> }
             )
         }
 

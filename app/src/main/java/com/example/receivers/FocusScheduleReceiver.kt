@@ -108,6 +108,19 @@ class FocusScheduleReceiver : BroadcastReceiver() {
                     notificationManager.notify((sessionId * 100).toInt() + minutesBefore, builder.build())
 
                 } else if (action == "ACTION_EXACT_SCHEDULE") {
+                    if (com.example.util.FocusLockManager.isFocusActive) {
+                        Log.d("FocusSchedule", "Focus is active; skipping scheduled auto-start for session $sessionId")
+                        val skipNotification = NotificationCompat.Builder(context, channelId)
+                            .setSmallIcon(R.mipmap.ic_launcher)
+                            .setContentTitle("⏰ $notifPrefix • Scheduled Session Deferred")
+                            .setContentText("Scheduled session '$sessionName' was deferred because a focus session is already active.")
+                            .setPriority(NotificationCompat.PRIORITY_HIGH)
+                            .setAutoCancel(true)
+                            .build()
+                        notificationManager.notify((sessionId * 10).toInt() + 9, skipNotification)
+                        return@launch
+                    }
+
                     com.example.util.FocusLockManager.setPendingSchedule(sessionId, sessionName, context)
                     
                     try {

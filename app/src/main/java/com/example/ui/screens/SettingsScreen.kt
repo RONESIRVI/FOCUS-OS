@@ -495,7 +495,7 @@ fun SettingsScreen(
 
         item {
             SettingsCard {
-                // 1. Usage Stats
+                // 1. Usage Access
                 PermissionRowItem(
                     number = "1",
                     title = "Usage Access (PACKAGE_USAGE_STATS)",

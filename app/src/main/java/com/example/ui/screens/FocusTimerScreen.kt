@@ -1738,6 +1738,9 @@ fun FocusTimerScreen(
                             Text("RESUME STUDYING", fontWeight = FontWeight.Bold)
                         }
                     }
+                }
+            }
+        }
 
         // In-Session Notification for overlapping scheduled sessions
         androidx.compose.animation.AnimatedVisibility(
@@ -1765,9 +1768,6 @@ fun FocusTimerScreen(
                             Icon(Icons.Default.Clear, contentDescription = "Dismiss", tint = FocusTextSecondary)
                         }
                     }
-                }
-            }
-        }
                 }
             }
         }

@@ -1,30 +1,18 @@
 package com.example.ui.screens
 
-
-import com.example.ui.theme.FocusOutline
-import com.example.ui.theme.FocusTextPrimary
-
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
-import com.example.ui.theme.neumorphic
-import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberTimePickerState
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,7 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -72,128 +59,48 @@ fun ScheduleCreateScreen(
     onScheduleCreated: () -> Unit
 ) {
     val setup by viewModel.setupState.collectAsState()
-    val timerState by viewModel.timerState.collectAsState()
-    val whitelistedAppsStrict by viewModel.whitelistedAppsStrict.collectAsState()
-    val whitelistedAppsSpecial by viewModel.whitelistedAppsSpecial.collectAsState()
-    val whitelistedAppsManual by viewModel.whitelistedAppsManual.collectAsState()
-    val scheduledSessions by viewModel.scheduledSessions.collectAsState(initial = emptyList())
-    var showValidationDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    var validationConflicts by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
-    var previousValidationSessions by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
-    var nextValidationSessions by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<com.example.data.model.FocusSession>>(emptyList()) }
-    var nextValidationSession by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<com.example.data.model.FocusSession?>(null) }
+    val whitelistedApps by viewModel.whitelistedAppsStrict.collectAsState()
     val userSubjects by viewModel.allSubjects.collectAsState()
-    val customGoalsList by viewModel.customGoals.collectAsState()
     val context = LocalContext.current
 
     // Current time calendar base
     val nowCalendar = remember { Calendar.getInstance() }
 
-    // Date & Time State persisted across recompositions & navigation
-    var selectedPresetName by rememberSaveable { mutableStateOf(DatePresetType.TODAY.name) }
-    var selectedDateMillis by rememberSaveable {
-        val initialCal = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        mutableLongStateOf(initialCal.timeInMillis)
+    // Date State
+    var selectedPreset by remember { mutableStateOf(DatePresetType.TODAY) }
+    var selectedCalendar by remember {
+        mutableStateOf(
+            Calendar.getInstance().apply {
+                add(Calendar.MINUTE, 5)
+            }
+        )
     }
 
-    val defaultStartCal = remember {
-        Calendar.getInstance().apply {
-            add(Calendar.MINUTE, 5)
-        }
-    }
-    var startHour by rememberSaveable { mutableIntStateOf(defaultStartCal.get(Calendar.HOUR_OF_DAY)) }
-    var startMinute by rememberSaveable { mutableIntStateOf(defaultStartCal.get(Calendar.MINUTE)) }
+    // Time State
+    var startHour by remember { mutableStateOf(selectedCalendar.get(Calendar.HOUR_OF_DAY)) }
+    var startMinute by remember { mutableStateOf(selectedCalendar.get(Calendar.MINUTE)) }
 
-    val defaultEndCal = remember(startHour, startMinute) {
-        Calendar.getInstance().apply {
+    var endHour by remember {
+        val nextHourCal = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, startHour)
             set(Calendar.MINUTE, startMinute)
             add(Calendar.MINUTE, 60)
         }
+        mutableStateOf(nextHourCal.get(Calendar.HOUR_OF_DAY))
     }
-    var endHour by rememberSaveable { mutableIntStateOf(defaultEndCal.get(Calendar.HOUR_OF_DAY)) }
-    var endMinute by rememberSaveable { mutableIntStateOf(startMinute) }
+    var endMinute by remember { mutableStateOf(startMinute) }
 
-    // Derive selectedCalendar dynamically from the persisted date millis and start time
-    val selectedCalendar by remember(selectedDateMillis, startHour, startMinute) {
-        derivedStateOf {
-            Calendar.getInstance().apply {
-                timeInMillis = selectedDateMillis
-                set(Calendar.HOUR_OF_DAY, startHour)
-                set(Calendar.MINUTE, startMinute)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-        }
-    }
-    val selectedPreset = remember(selectedPresetName) {
-        try {
-            DatePresetType.valueOf(selectedPresetName)
-        } catch (e: Exception) {
-            DatePresetType.TODAY
-        }
-    }
-
-    var showDatePicker by rememberSaveable { mutableStateOf(false) }
-    var showStartTimePicker by rememberSaveable { mutableStateOf(false) }
-    var showEndTimePicker by rememberSaveable { mutableStateOf(false) }
-    var showTwoStepTimeDialog by rememberSaveable { mutableStateOf(false) }
-    var showReminderDialog by rememberSaveable { mutableStateOf(false) }
-
-    @OptIn(ExperimentalMaterial3Api::class)
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDateMillis)
-    
-    @OptIn(ExperimentalMaterial3Api::class)
-    val startTimePickerState = rememberTimePickerState(initialHour = startHour, initialMinute = startMinute, is24Hour = false)
-    
-    @OptIn(ExperimentalMaterial3Api::class)
-    val endTimePickerState = rememberTimePickerState(initialHour = endHour, initialMinute = endMinute, is24Hour = false)
-
-    // Session & Subject details - clean, persisted so user inputs never reset
-    var subjectName by rememberSaveable {
+    // Session & Subject details - clean, user writes according to their preference
+    var subjectName by remember {
         mutableStateOf(setup.subjectName)
     }
-    var sessionName by rememberSaveable {
+    var sessionName by remember {
         mutableStateOf(setup.sessionName)
     }
-    var selectedLockMode by rememberSaveable { mutableStateOf(setup.lockMode) }
-    var selectedWhitelistProfile by rememberSaveable { mutableStateOf(setup.whitelistProfile) }
-    var selectedModeId by rememberSaveable { 
-        mutableStateOf(
-            when {
-                setup.lockMode == LockMode.SOFT_LOCK -> "MINDFUL"
-                setup.lockMode == LockMode.MAXIMUM_LOCK && setup.whitelistProfile == "STRICT" -> "DEEP_WORK"
-                else -> "SPECIAL"
-            }
-        )
-    }
-    var selectedSound by rememberSaveable { mutableStateOf(setup.selectedSound) }
-    
-    val audioPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
-        onResult = { uri: android.net.Uri? ->
-            if (uri != null) {
-                try {
-                    context.contentResolver.takePersistableUriPermission(
-                        uri,
-                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    )
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                val prefs = context.getSharedPreferences("FocusPrefs", android.content.Context.MODE_PRIVATE)
-                prefs.edit().putString("AMBIENT_CUSTOM_AUDIO_URI", uri.toString()).apply()
-                selectedSound = com.example.services.SoundType.CUSTOM_AUDIO
-            }
-        }
-    )
-    var requiresPhoto by rememberSaveable { mutableStateOf(setup.requiresPhoto) }
-    var requiresSelfie by rememberSaveable { mutableStateOf(setup.requiresSelfie) }
+    var selectedLockMode by remember { mutableStateOf(setup.lockMode) }
+    var selectedSound by remember { mutableStateOf(setup.selectedSound) }
+    var requiresPhoto by remember { mutableStateOf(setup.requiresPhoto) }
+    var requiresSelfie by remember { mutableStateOf(setup.requiresSelfie) }
 
     // Duration calculation
     val calculatedDurationMinutes = remember(startHour, startMinute, endHour, endMinute) {
@@ -211,7 +118,29 @@ fun ScheduleCreateScreen(
 
     // Date Picker Dialog function
     val openDatePicker = {
-        showDatePicker = true
+        val y = selectedCalendar.get(Calendar.YEAR)
+        val m = selectedCalendar.get(Calendar.MONTH)
+        val d = selectedCalendar.get(Calendar.DAY_OF_MONTH)
+
+        val dateDialog = DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val newCal = Calendar.getInstance().apply {
+                    set(Calendar.YEAR, year)
+                    set(Calendar.MONTH, month)
+                    set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                    set(Calendar.HOUR_OF_DAY, startHour)
+                    set(Calendar.MINUTE, startMinute)
+                }
+                selectedCalendar = newCal
+                selectedPreset = DatePresetType.CUSTOM
+            },
+            y,
+            m,
+            d
+        )
+        dateDialog.datePicker.minDate = System.currentTimeMillis() - 1000
+        dateDialog.show()
     }
 
     Scaffold(
@@ -225,12 +154,12 @@ fun ScheduleCreateScreen(
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 1.sp
                             ),
-                            color = FocusTextPrimary
+                            color = Color.White
                         )
                         Text(
                             text = "Set Custom Date & Strict Time Slots",
                             style = MaterialTheme.typography.labelSmall,
-                            color = FocusTextPrimary
+                            color = FocusTextSecondary
                         )
                     }
                 },
@@ -239,7 +168,7 @@ fun ScheduleCreateScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = FocusTextPrimary
+                            tint = Color.White
                         )
                     }
                 },
@@ -261,11 +190,7 @@ fun ScheduleCreateScreen(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = when (selectedModeId) {
-                                    "SPECIAL" -> "CUSTOM"
-                                    "MINDFUL" -> "MINDFUL"
-                                    else -> "DEEP WORK"
-                                },
+                                text = selectedLockMode.title.split(" ").first().uppercase(),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = FocusWarning
@@ -281,7 +206,7 @@ fun ScheduleCreateScreen(
         bottomBar = {
             Surface(
                 color = FocusSurface,
-                border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
+                border = BorderStroke(1.dp, FocusOutline),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -303,7 +228,7 @@ fun ScheduleCreateScreen(
                         Text(
                             text = "⏰ $formattedDate • $startH:$startM $startAmPm",
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = FocusTextPrimary
+                            color = FocusTextSecondary
                         )
                         Text(
                             text = "⚡ $calculatedDurationMinutes mins block",
@@ -316,51 +241,35 @@ fun ScheduleCreateScreen(
 
                     Button(
                         onClick = {
-                            val isCurrentlyFocusActive = com.example.util.FocusLockManager.isFocusActive ||
-                                    timerState.isRunning ||
-                                    com.example.util.FocusLockManager.hasPendingSchedule()
-                            if (isCurrentlyFocusActive) {
-                                android.widget.Toast.makeText(
-                                    context,
-                                    "⚠️ A Focus Session is already running or pending! Please complete or wait for the current session before creating new schedules.",
-                                    android.widget.Toast.LENGTH_LONG
-                                ).show()
-                            } else if (selectedCalendar.timeInMillis < System.currentTimeMillis()) {
-                                android.widget.Toast.makeText(
-                                    context,
-                                    "⚠️ Cannot schedule a session in the past! Please select a future time.",
-                                    android.widget.Toast.LENGTH_LONG
-                                ).show()
-                            } else if (selectedModeId == "SPECIAL" && selectedWhitelistProfile.isBlank()) {
-                                android.widget.Toast.makeText(context, "Please select an App Blocking System", android.widget.Toast.LENGTH_SHORT).show()
-                            } else {
-                                val userStart = selectedCalendar.timeInMillis
-                                val userEnd = userStart + (calculatedDurationMinutes * 60 * 1000L)
-                                val activeSchedules = scheduledSessions.filter { it.status == "SCHEDULED" }
-                                
-                                val conflicts = activeSchedules.filter { s ->
-                                    val sStart = s.scheduledStartTime ?: return@filter false
-                                    val sEnd = s.scheduledEndTime ?: return@filter false
-                                    userStart < sEnd && userEnd > sStart
-                                }
-                                
-                                val prevSessions = activeSchedules
-                                    .filter { (it.scheduledEndTime ?: 0) <= userStart }
-                                    .sortedByDescending { it.scheduledEndTime ?: 0 }
-                                    .take(3)
-                                    .reversed()
+                            val finalSubject = if (subjectName.isNotBlank()) subjectName.trim() else "Study Session"
+                            val finalSession = if (sessionName.isNotBlank()) sessionName.trim() else finalSubject
 
-                                val nextSessions = activeSchedules
-                                    .filter { (it.scheduledStartTime ?: 0) >= userEnd }
-                                    .sortedBy { it.scheduledStartTime ?: 0 }
-                                    .take(3)
-
-                                validationConflicts = conflicts
-                                previousValidationSessions = prevSessions
-                                nextValidationSessions = nextSessions
-                                nextValidationSession = nextSessions.firstOrNull()
-                                showValidationDialog = true
+                            // If user typed a custom subject not yet saved, save it to custom subjects database
+                            if (subjectName.isNotBlank() && userSubjects.none { it.name.equals(subjectName.trim(), ignoreCase = true) }) {
+                                viewModel.addCustomSubject(subjectName.trim(), "#0284C7")
                             }
+
+                            // Update setup state in VM
+                            viewModel.updateSetup(
+                                sessionName = finalSession,
+                                subjectName = finalSubject,
+                                durationMinutes = calculatedDurationMinutes,
+                                lockMode = selectedLockMode,
+                                soundType = selectedSound,
+                                requiresPhoto = requiresPhoto,
+                                requiresSelfie = requiresSelfie
+                            )
+
+                            // Schedule in AlarmManager & Room
+                            viewModel.scheduleFocusSession(
+                                hour = startHour,
+                                minute = startMinute,
+                                targetYear = selectedCalendar.get(Calendar.YEAR),
+                                targetMonth = selectedCalendar.get(Calendar.MONTH),
+                                targetDayOfMonth = selectedCalendar.get(Calendar.DAY_OF_MONTH)
+                            )
+
+                            onScheduleCreated()
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -368,7 +277,7 @@ fun ScheduleCreateScreen(
                             .testTag("confirm_schedule_button"),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = FocusWarning,
-                            contentColor = androidx.compose.ui.graphics.Color.White
+                            contentColor = Color.Black
                         ),
                         shape = RoundedCornerShape(14.dp)
                     ) {
@@ -380,7 +289,7 @@ fun ScheduleCreateScreen(
                                 imageVector = Icons.Default.AlarmOn,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
-                                tint = androidx.compose.ui.graphics.Color.White
+                                tint = Color.Black
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
@@ -389,7 +298,7 @@ fun ScheduleCreateScreen(
                                     fontWeight = FontWeight.Black,
                                     letterSpacing = 0.5.sp
                                 ),
-                                color = androidx.compose.ui.graphics.Color.White
+                                color = Color.Black
                             )
                         }
                     }
@@ -414,8 +323,8 @@ fun ScheduleCreateScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = FocusSurface),
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
-                    modifier = Modifier.fillMaxWidth().neumorphic(20.dp)
+                    border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(
@@ -437,7 +346,7 @@ fun ScheduleCreateScreen(
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.5.sp
                                     ),
-                                    color = FocusTextPrimary
+                                    color = Color.White
                                 )
                             }
 
@@ -471,15 +380,12 @@ fun ScheduleCreateScreen(
                                             if (preset == DatePresetType.CUSTOM) {
                                                 openDatePicker()
                                             } else {
-                                                selectedPresetName = preset.name
-                                                val cal = Calendar.getInstance().apply {
+                                                selectedPreset = preset
+                                                selectedCalendar = Calendar.getInstance().apply {
                                                     add(Calendar.DAY_OF_YEAR, preset.offsetDays)
-                                                    set(Calendar.HOUR_OF_DAY, 0)
-                                                    set(Calendar.MINUTE, 0)
-                                                    set(Calendar.SECOND, 0)
-                                                    set(Calendar.MILLISECOND, 0)
+                                                    set(Calendar.HOUR_OF_DAY, startHour)
+                                                    set(Calendar.MINUTE, startMinute)
                                                 }
-                                                selectedDateMillis = cal.timeInMillis
                                             }
                                         }
                                 ) {
@@ -514,7 +420,7 @@ fun ScheduleCreateScreen(
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = FocusBackground,
-                            border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
+                            border = BorderStroke(1.dp, FocusOutline),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { openDatePicker() }
@@ -526,11 +432,11 @@ fun ScheduleCreateScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                                Column {
                                     Text(
                                         text = "Active Target Date",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = FocusTextPrimary
+                                        color = FocusTextSecondary
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
@@ -538,9 +444,7 @@ fun ScheduleCreateScreen(
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontWeight = FontWeight.Bold
                                         ),
-                                        color = FocusSurface,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        color = Color.White
                                     )
                                 }
 
@@ -548,8 +452,7 @@ fun ScheduleCreateScreen(
                                     onClick = { openDatePicker() },
                                     shape = RoundedCornerShape(8.dp),
                                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                    border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.6f)),
-                                    modifier = Modifier.padding(start = 8.dp)
+                                    border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.6f))
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.EditCalendar,
@@ -562,9 +465,7 @@ fun ScheduleCreateScreen(
                                         text = "CHANGE",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = FocusPrimary,
-                                        maxLines = 1,
-                                        softWrap = false
+                                        color = FocusPrimary
                                     )
                                 }
                             }
@@ -580,8 +481,8 @@ fun ScheduleCreateScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = FocusSurface),
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
-                    modifier = Modifier.fillMaxWidth().neumorphic(20.dp)
+                    border = BorderStroke(1.dp, FocusOutline),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(
@@ -603,7 +504,7 @@ fun ScheduleCreateScreen(
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.5.sp
                                     ),
-                                    color = FocusTextPrimary
+                                    color = Color.White
                                 )
                             }
 
@@ -623,72 +524,37 @@ fun ScheduleCreateScreen(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // 🎬 VIDEO FLOW: Interactive 2-Step Time & Duration Picker Banner
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = FocusPrimary.copy(alpha = 0.15f),
-                            border = BorderStroke(1.5.dp, FocusPrimary),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showTwoStepTimeDialog = true }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = FocusPrimary,
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = Icons.Default.AccessTime,
-                                                contentDescription = null,
-                                                tint = androidx.compose.ui.graphics.Color.White,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(
-                                            text = "SELECT TIME & DURATION",
-                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.ExtraBold),
-                                            color = FocusTextPrimary
-                                        )
-                                        Text(
-                                            text = "Time Picker ➔ कितने वक़्त के लिए? ⏱️",
-                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                                            color = FocusPrimary
-                                        )
-                                    }
-                                }
-                                Icon(
-                                    imageVector = Icons.Default.ArrowForwardIos,
-                                    contentDescription = null,
-                                    tint = FocusPrimary,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            // START TIME CARD (Read-Only Display)
+                            // START TIME CARD
                             Surface(
                                 shape = RoundedCornerShape(14.dp),
                                 color = FocusBackground,
                                 border = BorderStroke(1.dp, FocusPrimary.copy(alpha = 0.3f)),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        TimePickerDialog(
+                                            context,
+                                            { _, h, m ->
+                                                startHour = h
+                                                startMinute = m
+                                                // Adjust end time to maintain at least 30 mins
+                                                val endCal = Calendar.getInstance().apply {
+                                                    set(Calendar.HOUR_OF_DAY, h)
+                                                    set(Calendar.MINUTE, m)
+                                                    add(Calendar.MINUTE, 60)
+                                                }
+                                                endHour = endCal.get(Calendar.HOUR_OF_DAY)
+                                                endMinute = endCal.get(Calendar.MINUTE)
+                                            },
+                                            startHour,
+                                            startMinute,
+                                            false
+                                        ).show()
+                                    }
                             ) {
                                 Column(modifier = Modifier.padding(14.dp)) {
                                     Text(
@@ -705,22 +571,35 @@ fun ScheduleCreateScreen(
                                         style = MaterialTheme.typography.titleLarge.copy(
                                             fontWeight = FontWeight.ExtraBold
                                         ),
-                                        color = FocusTextPrimary
+                                        color = Color.White
                                     )
                                     Text(
-                                        text = "SCHEDULED START ⏱️",
+                                        text = "Tap to edit ⏱️",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = FocusTextPrimary
+                                        color = FocusTextSecondary
                                     )
                                 }
                             }
 
-                            // END TIME CARD (Read-Only Display)
+                            // END TIME CARD
                             Surface(
                                 shape = RoundedCornerShape(14.dp),
                                 color = FocusBackground,
                                 border = BorderStroke(1.dp, FocusWarning.copy(alpha = 0.3f)),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        TimePickerDialog(
+                                            context,
+                                            { _, h, m ->
+                                                endHour = h
+                                                endMinute = m
+                                            },
+                                            endHour,
+                                            endMinute,
+                                            false
+                                        ).show()
+                                    }
                             ) {
                                 Column(modifier = Modifier.padding(14.dp)) {
                                     Text(
@@ -737,12 +616,59 @@ fun ScheduleCreateScreen(
                                         style = MaterialTheme.typography.titleLarge.copy(
                                             fontWeight = FontWeight.ExtraBold
                                         ),
-                                        color = FocusTextPrimary
+                                        color = Color.White
                                     )
                                     Text(
-                                        text = "SCHEDULED END 🔔",
+                                        text = "Tap to edit 🔔",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = FocusTextPrimary
+                                        color = FocusTextSecondary
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Quick Duration Presets (+30m, +45m, +1h, +2h, +3h)
+                        Text(
+                            text = "Quick Duration Adders",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = FocusTextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf(
+                                "30 Min" to 30,
+                                "45 Min" to 45,
+                                "1 Hour" to 60,
+                                "1.5 Hours" to 90,
+                                "2 Hours" to 120,
+                                "3 Hours" to 180
+                            ).forEach { (label, durationMins) ->
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = FocusSurfaceVariant,
+                                    border = BorderStroke(1.dp, FocusOutline),
+                                    modifier = Modifier.clickable {
+                                        val cal = Calendar.getInstance().apply {
+                                            set(Calendar.HOUR_OF_DAY, startHour)
+                                            set(Calendar.MINUTE, startMinute)
+                                            add(Calendar.MINUTE, durationMins)
+                                        }
+                                        endHour = cal.get(Calendar.HOUR_OF_DAY)
+                                        endMinute = cal.get(Calendar.MINUTE)
+                                    }
+                                ) {
+                                    Text(
+                                        text = "+$label",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = FocusPrimary,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                                     )
                                 }
                             }
@@ -758,8 +684,8 @@ fun ScheduleCreateScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = FocusSurface),
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
-                    modifier = Modifier.fillMaxWidth().neumorphic(20.dp)
+                    border = BorderStroke(1.dp, FocusOutline),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(
@@ -781,7 +707,7 @@ fun ScheduleCreateScreen(
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 0.5.sp
                                     ),
-                                    color = FocusTextPrimary
+                                    color = Color.White
                                 )
                             }
 
@@ -807,62 +733,53 @@ fun ScheduleCreateScreen(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.5.sp
                             ),
-                            color = FocusTextPrimary
+                            color = FocusTextSecondary
                         )
                         Spacer(modifier = Modifier.height(6.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .neumorphic(14.dp)
-                                        .background(FocusBackground, RoundedCornerShape(14.dp))
-                                ) {
-                            OutlinedTextField(
-                                value = subjectName,
-                                onValueChange = { subjectName = it },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("schedule_subject_input"),
-                                placeholder = {
-                                    Text(
-                                        "e.g. Mathematics, Physics, History, UPSC, Coding...",
-                                        color = FocusTextPrimary.copy(alpha = 0.45f),
-                                        fontSize = 14.sp
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.School,
-                                        contentDescription = null,
-                                        tint = FocusPrimary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                },
-                                trailingIcon = {
-                                    if (subjectName.isNotBlank()) {
-                                        IconButton(onClick = { subjectName = "" }) {
-                                            Icon(
-                                                Icons.Default.Clear,
-                                                contentDescription = "Clear Subject",
-                                                tint = FocusTextSecondary,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
+                        OutlinedTextField(
+                            value = subjectName,
+                            onValueChange = { subjectName = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("schedule_subject_input"),
+                            placeholder = {
+                                Text(
+                                    "e.g. Mathematics, Physics, History, UPSC, Coding...",
+                                    color = FocusTextSecondary.copy(alpha = 0.45f),
+                                    fontSize = 14.sp
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.School,
+                                    contentDescription = null,
+                                    tint = FocusPrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            trailingIcon = {
+                                if (subjectName.isNotBlank()) {
+                                    IconButton(onClick = { subjectName = "" }) {
+                                        Icon(
+                                            Icons.Default.Clear,
+                                            contentDescription = "Clear Subject",
+                                            tint = FocusTextSecondary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
                                     }
-                                },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Color.Transparent,
-                                    unfocusedBorderColor = Color.Transparent,
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedTextColor = FocusTextPrimary,
-                                    unfocusedTextColor = FocusTextPrimary
-                                ),
-                                shape = RoundedCornerShape(14.dp),
-                                singleLine = false,
-                                minLines = 1,
-                                maxLines = 5
-                            )
-                        }
+                                }
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = FocusPrimary,
+                                unfocusedBorderColor = FocusOutline,
+                                focusedContainerColor = FocusBackground,
+                                unfocusedContainerColor = FocusBackground,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
 
                         // Quick Pick from user's previously saved subjects (if any)
                         if (userSubjects.isNotEmpty()) {
@@ -877,7 +794,7 @@ fun ScheduleCreateScreen(
                                 Text(
                                     text = "Quick pick:",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = FocusTextPrimary.copy(alpha = 0.7f),
+                                    color = FocusTextSecondary.copy(alpha = 0.7f),
                                     fontSize = 11.sp
                                 )
                                 userSubjects.forEach { sub ->
@@ -912,116 +829,53 @@ fun ScheduleCreateScreen(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.5.sp
                             ),
-                            color = FocusTextPrimary
+                            color = FocusTextSecondary
                         )
                         Spacer(modifier = Modifier.height(6.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .neumorphic(14.dp)
-                                        .background(FocusBackground, RoundedCornerShape(14.dp))
-                                ) {
-                                OutlinedTextField(
-                                    value = sessionName,
-                                    onValueChange = { sessionName = it },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag("schedule_session_input"),
-                                    placeholder = {
-                                        Text(
-                                            "e.g. Chapter 4 Numericals, Solve 30 MCQs, Revise notes...",
-                                            color = FocusTextPrimary.copy(alpha = 0.45f),
-                                            fontSize = 14.sp
-                                        )
-                                    },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.TrackChanges,
-                                        contentDescription = null,
-                                        tint = FocusWarning,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                },
-                                trailingIcon = {
-                                    if (sessionName.isNotBlank()) {
-                                        IconButton(onClick = { sessionName = "" }) {
-                                            Icon(
-                                                Icons.Default.Clear,
-                                                contentDescription = "Clear Goal",
-                                                tint = FocusTextSecondary,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
-                                },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Color.Transparent,
-                                    unfocusedBorderColor = Color.Transparent,
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
-                                    focusedTextColor = FocusTextPrimary,
-                                    unfocusedTextColor = FocusTextPrimary
-                                ),
-                                shape = RoundedCornerShape(14.dp),
-                                singleLine = false,
-                                minLines = 1,
-                                maxLines = 5
-                            )
-                        }
-
-                        // Quick Pick from user's previously saved goals (if any)
-                        if (customGoalsList.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                        OutlinedTextField(
+                            value = sessionName,
+                            onValueChange = { sessionName = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("schedule_session_input"),
+                            placeholder = {
                                 Text(
-                                    text = "Quick pick:",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = FocusTextPrimary.copy(alpha = 0.7f),
-                                    fontSize = 11.sp
+                                    "e.g. Chapter 4 Numericals, Solve 30 MCQs, Revise notes...",
+                                    color = FocusTextSecondary.copy(alpha = 0.45f),
+                                    fontSize = 14.sp
                                 )
-                                customGoalsList.forEach { goalOption ->
-                                    val isSel = sessionName.equals(goalOption, ignoreCase = true)
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = if (isSel) FocusWarning.copy(alpha = 0.2f) else FocusBackground,
-                                        border = BorderStroke(1.dp, if (isSel) FocusWarning else FocusOutline.copy(alpha = 0.6f)),
-                                        modifier = Modifier.clickable {
-                                            sessionName = goalOption
-                                        }
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        ) {
-                                            Text(
-                                                text = goalOption,
-                                                style = MaterialTheme.typography.labelSmall.copy(
-                                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal
-                                                ),
-                                                color = if (isSel) FocusWarning else FocusTextSecondary
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = "Delete",
-                                                tint = if (isSel) FocusWarning else FocusTextSecondary.copy(alpha = 0.4f),
-                                                modifier = Modifier
-                                                    .size(12.dp)
-                                                    .clickable {
-                                                        viewModel.deleteCustomGoal(goalOption)
-                                                    }
-                                            )
-                                        }
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.TrackChanges,
+                                    contentDescription = null,
+                                    tint = FocusWarning,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            trailingIcon = {
+                                if (sessionName.isNotBlank()) {
+                                    IconButton(onClick = { sessionName = "" }) {
+                                        Icon(
+                                            Icons.Default.Clear,
+                                            contentDescription = "Clear Goal",
+                                            tint = FocusTextSecondary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
                                     }
                                 }
-                            }
-                        }
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = FocusWarning,
+                                unfocusedBorderColor = FocusOutline,
+                                focusedContainerColor = FocusBackground,
+                                unfocusedContainerColor = FocusBackground,
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            singleLine = true
+                        )
                     }
                 }
             }
@@ -1033,8 +887,8 @@ fun ScheduleCreateScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = FocusSurface),
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
-                    modifier = Modifier.fillMaxWidth().neumorphic(20.dp)
+                    border = BorderStroke(1.dp, FocusOutline),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1051,20 +905,18 @@ fun ScheduleCreateScreen(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.5.sp
                                 ),
-                                color = FocusTextPrimary
+                                color = Color.White
                             )
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
 
                         // Mode Selector Cards
-                        data class ModeOption(val id: String, val mode: LockMode, val title: String, val desc: String)
                         listOf(
-                            ModeOption("DEEP_WORK", LockMode.MAXIMUM_LOCK, "Deep Work Mode", "Kiosk lockdown using Strict Schedule apps."),
-                            ModeOption("SPECIAL", LockMode.MAXIMUM_LOCK, "Special Whitelist Mode", "Kiosk lockdown using custom selected apps."),
-                            ModeOption("MINDFUL", LockMode.SOFT_LOCK, "Mindful Mode", "Gentle alert banner when opening distracted apps.")
-                        ).forEach { option ->
-                            val isSelected = selectedModeId == option.id
+                            Pair(LockMode.MAXIMUM_LOCK, Pair("Maximum Lock", "Kiosk lockdown mode with penalty timer on emergency quit.")),
+                            Pair(LockMode.SOFT_LOCK, Pair("Soft Lock", "Gentle alert banner when opening distracted apps."))
+                        ).forEach { (mode, details) ->
+                            val isSelected = selectedLockMode == mode
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = if (isSelected) FocusWarning.copy(alpha = 0.12f) else FocusBackground,
@@ -1072,15 +924,7 @@ fun ScheduleCreateScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
-                                    .clickable { 
-                                        selectedModeId = option.id
-                                        selectedLockMode = option.mode
-                                        if (option.id == "DEEP_WORK" || option.id == "MINDFUL") {
-                                            selectedWhitelistProfile = "STRICT"
-                                        } else if (option.id == "SPECIAL") {
-                                            selectedWhitelistProfile = "SPECIAL"
-                                        }
-                                    }
+                                    .clickable { selectedLockMode = mode }
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -1090,15 +934,7 @@ fun ScheduleCreateScreen(
                                 ) {
                                     RadioButton(
                                         selected = isSelected,
-                                        onClick = { 
-                                            selectedModeId = option.id
-                                            selectedLockMode = option.mode
-                                            if (option.id == "DEEP_WORK" || option.id == "MINDFUL") {
-                                                selectedWhitelistProfile = "STRICT"
-                                            } else if (option.id == "SPECIAL") {
-                                                selectedWhitelistProfile = "SPECIAL"
-                                            }
-                                        },
+                                        onClick = { selectedLockMode = mode },
                                         colors = RadioButtonDefaults.colors(
                                             selectedColor = FocusWarning,
                                             unselectedColor = FocusTextSecondary
@@ -1107,77 +943,31 @@ fun ScheduleCreateScreen(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Column {
                                         Text(
-                                            text = option.title,
+                                            text = details.first,
                                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = if (isSelected) FocusTextPrimary else FocusTextSecondary
+                                            color = if (isSelected) Color.White else FocusTextSecondary
                                         )
                                         Text(
-                                            text = option.desc,
+                                            text = details.second,
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = FocusTextPrimary
+                                            color = FocusTextSecondary
                                         )
                                     }
                                 }
                             }
                         }
 
-                        if (selectedModeId == "SPECIAL") {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "APP BLOCKING SYSTEM",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp),
-                                color = FocusTextPrimary
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                val listOptions = listOf(
-                                    Pair("MANUAL", "Manual\nFocus"),
-                                    Pair("STRICT", "Strict\nSchedule"),
-                                    Pair("SPECIAL", "Special\nWhitelist")
-                                )
-                                listOptions.forEach { (profileId, label) ->
-                                    val isSelected = selectedWhitelistProfile == profileId
-                                    Surface(
-                                        shape = RoundedCornerShape(14.dp),
-                                        color = FocusBackground,
-                                        border = BorderStroke(1.dp, if (isSelected) FocusPrimary.copy(alpha = 0.5f) else FocusOutline.copy(alpha = 0.3f)),
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clickable { selectedWhitelistProfile = profileId }
-                                    ) {
-                                        Box(
-                                            modifier = Modifier.padding(vertical = 16.dp, horizontal = 4.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = label,
-                                                style = MaterialTheme.typography.titleSmall.copy(
-                                                    fontWeight = FontWeight.ExtraBold,
-                                                    fontSize = 12.sp,
-                                                    lineHeight = 16.sp,
-                                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                                ),
-                                                color = if (isSelected) FocusPrimary else FocusTextPrimary
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
                         Spacer(modifier = Modifier.height(12.dp))
 
                         // Allowed Apps Whitelist Button
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = FocusSurfaceVariant,
-                            border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
+                            border = BorderStroke(1.dp, FocusOutline),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    viewModel.setAppSelectorProfile(selectedWhitelistProfile)
+                                    viewModel.setAppSelectorProfile("STRICT")
                                     onNavigateToAppSelector()
                                 }
                         ) {
@@ -1197,35 +987,16 @@ fun ScheduleCreateScreen(
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Column {
-                                        val currentAppsTitle = when (selectedWhitelistProfile) {
-                                            "SPECIAL" -> "Special Whitelist Apps"
-                                            "MANUAL" -> "Quick Focus Apps"
-                                            "STRICT" -> "Strict Schedule Apps"
-                                            else -> "Select App Blocking System"
-                                        }
                                         Text(
-                                            text = currentAppsTitle,
+                                            text = "Allowed Whitelist Apps",
                                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = FocusTextPrimary
+                                            color = Color.White
                                         )
-                                        if (selectedWhitelistProfile.isNotBlank()) {
-                                            val currentAppsCount = when (selectedWhitelistProfile) {
-                                                "SPECIAL" -> whitelistedAppsSpecial.count { it.isAllowed }
-                                                "MANUAL" -> whitelistedAppsManual.count { it.isAllowed }
-                                                else -> whitelistedAppsStrict.count { it.isAllowed }
-                                            }
-                                            Text(
-                                                text = "${currentAppsCount} apps allowed during schedule",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = FocusTextPrimary
-                                            )
-                                        } else {
-                                            Text(
-                                                text = "Required for Special Whitelist Mode",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = FocusWarning
-                                            )
-                                        }
+                                        Text(
+                                            text = "${whitelistedApps.size} apps allowed during schedule",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = FocusTextSecondary
+                                        )
                                     }
                                 }
                                 Icon(
@@ -1246,8 +1017,8 @@ fun ScheduleCreateScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = FocusSurface),
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
-                    modifier = Modifier.fillMaxWidth().neumorphic(20.dp)
+                    border = BorderStroke(1.dp, FocusOutline),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1264,7 +1035,7 @@ fun ScheduleCreateScreen(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.5.sp
                                 ),
-                                color = FocusTextPrimary
+                                color = Color.White
                             )
                         }
 
@@ -1280,19 +1051,19 @@ fun ScheduleCreateScreen(
                                 Text(
                                     text = "📸 Study Desk Snapshot",
                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = FocusTextPrimary
+                                    color = Color.White
                                 )
                                 Text(
                                     text = "Requires photo of books/desk before timer unlocks",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = FocusTextPrimary
+                                    color = FocusTextSecondary
                                 )
                             }
                             Switch(
                                 checked = requiresPhoto,
                                 onCheckedChange = { requiresPhoto = it },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = FocusTextPrimary,
+                                    checkedThumbColor = Color.White,
                                     checkedTrackColor = FocusAccent,
                                     uncheckedTrackColor = FocusSurfaceVariant
                                 )
@@ -1311,19 +1082,19 @@ fun ScheduleCreateScreen(
                                 Text(
                                     text = "🤳 Completion Proof Selfie",
                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = FocusTextPrimary
+                                    color = Color.White
                                 )
                                 Text(
                                     text = "Take proof selfie after session finishes to log streak",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = FocusTextPrimary
+                                    color = FocusTextSecondary
                                 )
                             }
                             Switch(
                                 checked = requiresSelfie,
                                 onCheckedChange = { requiresSelfie = it },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = FocusTextPrimary,
+                                    checkedThumbColor = Color.White,
                                     checkedTrackColor = FocusAccent,
                                     uncheckedTrackColor = FocusSurfaceVariant
                                 )
@@ -1340,8 +1111,8 @@ fun ScheduleCreateScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = FocusSurface),
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, FocusOutline.copy(alpha=0.5f)),
-                    modifier = Modifier.fillMaxWidth().neumorphic(20.dp)
+                    border = BorderStroke(1.dp, FocusOutline),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1358,76 +1129,64 @@ fun ScheduleCreateScreen(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.5.sp
                                 ),
-                                color = FocusTextPrimary
+                                color = Color.White
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(14.dp))
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             SoundType.entries.forEach { sound ->
                                 val isSelected = selectedSound == sound
-                                Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = if (isSelected) FocusPrimary.copy(alpha = 0.1f) else FocusBackground,
-                                    border = BorderStroke(
-                                        width = if (isSelected) 1.5.dp else 1.dp,
-                                        color = if (isSelected) FocusPrimary else FocusSurfaceVariant
-                                    ),
+                                Card(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { 
-                                            if (sound == com.example.services.SoundType.CUSTOM_AUDIO) {
-                                                audioPickerLauncher.launch(arrayOf("audio/*"))
-                                            } else {
-                                                selectedSound = sound 
-                                            }
-                                        }
+                                        .width(220.dp)
+                                        .clickable { selectedSound = sound },
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isSelected) FocusPrimary.copy(alpha = 0.15f) else FocusBackground,
+                                    ),
+                                    border = BorderStroke(
+                                        width = if (isSelected) 2.dp else 1.dp,
+                                        color = if (isSelected) FocusPrimary else FocusSurfaceVariant
+                                    )
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(14.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(46.dp)
-                                                .background(
-                                                    if (isSelected) FocusPrimary.copy(alpha = 0.2f) else FocusSurfaceVariant.copy(alpha = 0.4f),
-                                                    androidx.compose.foundation.shape.CircleShape
-                                                ),
-                                            contentAlignment = Alignment.Center
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            modifier = Modifier.fillMaxWidth()
                                         ) {
-                                            Icon(
-                                                imageVector = if (sound.isBinaural) Icons.Default.Headphones else Icons.Default.MusicNote,
-                                                contentDescription = null,
-                                                tint = if (isSelected) FocusPrimary else FocusTextSecondary,
-                                                modifier = Modifier.size(20.dp)
+                                            Text(
+                                                text = if (sound.isBinaural) "BINAURAL" else "AUDIO",
+                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                                color = if (isSelected) FocusPrimary else FocusTextSecondary,
+                                                modifier = Modifier
+                                                    .background(
+                                                        if (isSelected) FocusPrimary.copy(alpha = 0.2f) else FocusSurfaceVariant,
+                                                        RoundedCornerShape(6.dp)
+                                                    )
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                                             )
-                                        }
-
-                                        Spacer(modifier = Modifier.width(14.dp))
-
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    text = sound.label,
-                                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                                    color = if (isSelected) FocusPrimary else FocusTextPrimary
+                                            if (sound.isBinaural) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Headphones,
+                                                    contentDescription = "Headphones Recommended",
+                                                    tint = if (isSelected) FocusPrimary else FocusTextSecondary,
+                                                    modifier = Modifier.size(14.dp)
                                                 )
                                             }
                                         }
-
-                                        Spacer(modifier = Modifier.width(10.dp))
-
-                                        RadioButton(
-                                            selected = isSelected,
-                                            onClick = { selectedSound = sound },
-                                            colors = RadioButtonDefaults.colors(
-                                                selectedColor = FocusPrimary,
-                                                unselectedColor = FocusTextSecondary
-                                            ),
-                                            modifier = Modifier.size(24.dp)
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = sound.label,
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = if (isSelected) FocusPrimary else Color.White
                                         )
                                     }
                                 }
@@ -1438,672 +1197,6 @@ fun ScheduleCreateScreen(
             }
 
             item { Spacer(modifier = Modifier.height(20.dp)) }
-        }
-
-        @OptIn(ExperimentalMaterial3Api::class)
-        if (showDatePicker) {
-            DatePickerDialog(
-                onDismissRequest = { showDatePicker = false },
-                confirmButton = {
-                    TextButton(onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            selectedDateMillis = millis
-                            selectedPresetName = DatePresetType.CUSTOM.name
-                        }
-                        showDatePicker = false
-                    }) {
-                        Text("OK", color = FocusPrimary)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDatePicker = false }) {
-                        Text("Cancel", color = FocusTextPrimary)
-                    }
-                }
-            ) {
-                DatePicker(state = datePickerState)
-            }
-        }
-
-        @OptIn(ExperimentalMaterial3Api::class)
-        if (showStartTimePicker) {
-            AlertDialog(
-                onDismissRequest = { showStartTimePicker = false },
-                title = { Text("Select Start Time") },
-                text = { TimePicker(state = startTimePickerState) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        startHour = startTimePickerState.hour
-                        startMinute = startTimePickerState.minute
-                        showStartTimePicker = false
-                    }) {
-                        Text("OK", color = FocusPrimary)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showStartTimePicker = false }) {
-                        Text("Cancel", color = FocusTextPrimary)
-                    }
-                }
-            )
-        }
-
-        @OptIn(ExperimentalMaterial3Api::class)
-        if (showEndTimePicker) {
-            AlertDialog(
-                onDismissRequest = { showEndTimePicker = false },
-                title = { Text("Select End Time") },
-                text = { TimePicker(state = endTimePickerState) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        endHour = endTimePickerState.hour
-                        endMinute = endTimePickerState.minute
-                        showEndTimePicker = false
-                    }) {
-                        Text("OK", color = FocusPrimary)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showEndTimePicker = false }) {
-                        Text("Cancel", color = FocusTextPrimary)
-                    }
-                }
-            )
-        }
-
-        @OptIn(ExperimentalMaterial3Api::class)
-        if (showTwoStepTimeDialog) {
-            TwoStepTimeAndDurationDialog(
-                initialHour = startHour,
-                initialMinute = startMinute,
-                onDismiss = { showTwoStepTimeDialog = false },
-                onTimeAndDurationSelected = { h, m, durationMins ->
-                    startHour = h
-                    startMinute = m
-
-                    val endCal = java.util.Calendar.getInstance().apply {
-                        set(java.util.Calendar.HOUR_OF_DAY, startHour)
-                        set(java.util.Calendar.MINUTE, startMinute)
-                        add(java.util.Calendar.MINUTE, durationMins)
-                    }
-                    endHour = endCal.get(java.util.Calendar.HOUR_OF_DAY)
-                    endMinute = endCal.get(java.util.Calendar.MINUTE)
-
-                    showTwoStepTimeDialog = false
-                }
-            )
-        }
-
-        if (showValidationDialog) {
-            val userStart = selectedCalendar.timeInMillis
-            val userEnd = userStart + (calculatedDurationMinutes * 60 * 1000L)
-            ScheduleValidationDialog(
-                conflicts = validationConflicts,
-                userStart = userStart,
-                userEnd = userEnd,
-                previousSessions = previousValidationSessions,
-                nextSessions = nextValidationSessions,
-                nextSession = nextValidationSession,
-                onChangeTime = { showValidationDialog = false },
-                onSave = { 
-                    showValidationDialog = false
-                    showReminderDialog = true
-                },
-                onCancel = { showValidationDialog = false }
-            )
-        }
-
-        if (showReminderDialog) {
-            SetReminderDialog(
-                onDismiss = { showReminderDialog = false },
-                onSaveReminders = { selectedReminderMinutes ->
-                    val finalSubject = if (subjectName.isNotBlank()) subjectName.trim() else "Study Session"
-                    val finalSession = if (sessionName.isNotBlank()) sessionName.trim() else finalSubject
-
-                    if (subjectName.isNotBlank() && userSubjects.none { it.name.equals(subjectName.trim(), ignoreCase = true) }) {
-                        viewModel.addCustomSubject(subjectName.trim(), "#0284C7")
-                    }
-
-                    if (sessionName.isNotBlank() && customGoalsList.none { it.equals(sessionName.trim(), ignoreCase = true) }) {
-                        viewModel.addCustomGoal(sessionName.trim())
-                    }
-
-                    viewModel.updateSetup(
-                        sessionName = finalSession,
-                        subjectName = finalSubject,
-                        durationMinutes = calculatedDurationMinutes,
-                        lockMode = selectedLockMode,
-                        soundType = selectedSound,
-                        requiresPhoto = requiresPhoto,
-                        requiresSelfie = requiresSelfie,
-                        whitelistProfile = selectedWhitelistProfile
-                    )
-
-                    viewModel.scheduleFocusSession(
-                        hour = startHour,
-                        minute = startMinute,
-                        targetYear = selectedCalendar.get(Calendar.YEAR),
-                        targetMonth = selectedCalendar.get(Calendar.MONTH),
-                        targetDayOfMonth = selectedCalendar.get(Calendar.DAY_OF_MONTH),
-                        reminderMinutesList = selectedReminderMinutes
-                    )
-
-                    showReminderDialog = false
-                    onScheduleCreated()
-                }
-            )
-        }
-    }
-}
-
-@Composable
-fun SetReminderDialog(
-    onDismiss: () -> Unit,
-    onSaveReminders: (List<Int>) -> Unit
-) {
-    val options = remember {
-        listOf(
-            1 to "1 minutes before",
-            15 to "15 minutes before",
-            30 to "30 minutes before",
-            90 to "1.5 hour before",
-            120 to "2 hour before"
-        )
-    }
-
-    var selectedOffsets by remember { mutableStateOf(setOf(15, 30)) }
-
-    androidx.compose.ui.window.Dialog(
-        onDismissRequest = onDismiss
-    ) {
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = FocusSurface,
-            shadowElevation = 16.dp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth()
-            ) {
-                Text(
-                    text = "Set Reminder",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp
-                    ),
-                    color = FocusTextPrimary
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "How long in advance do you want to be notified? (Select all that apply)",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                    color = FocusTextPrimary
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    options.forEach { (minutes, label) ->
-                        val isSelected = selectedOffsets.contains(minutes)
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = if (isSelected) FocusSurfaceVariant else FocusTextPrimary,
-                            border = BorderStroke(
-                                1.5.dp,
-                                if (isSelected) FocusPrimary else FocusSurfaceVariant
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    selectedOffsets = if (isSelected) {
-                                        selectedOffsets - minutes
-                                    } else {
-                                        selectedOffsets + minutes
-                                    }
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (isSelected) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFF22C55E)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Check,
-                                            contentDescription = null,
-                                            tint = androidx.compose.ui.graphics.Color.White,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                } else {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .clip(CircleShape)
-                                            .border(2.dp, FocusTextDisabled, CircleShape)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(14.dp))
-
-                                Text(
-                                    text = label,
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                        fontSize = 15.sp
-                                    ),
-                                    color = FocusTextPrimary
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Cancel button
-                    Button(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        shape = CircleShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = FocusSurfaceVariant,
-                            contentColor = FocusTextSecondary
-                        )
-                    ) {
-                        Text(
-                            text = "Cancel",
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
-                            )
-                        )
-                    }
-
-                    // Save button
-                    Button(
-                        onClick = {
-                            val selectedList = selectedOffsets.toList().sorted()
-                            onSaveReminders(if (selectedList.isEmpty()) listOf(15) else selectedList)
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        shape = CircleShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = FocusPrimary,
-                            contentColor = androidx.compose.ui.graphics.Color.White
-                        )
-                    ) {
-                        Text(
-                            text = "Save",
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
-                            )
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun VerticalListPicker(
-    items: List<String>,
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState(
-        initialFirstVisibleItemIndex = (selectedIndex - 1).coerceAtLeast(0)
-    )
-    Box(
-        modifier = modifier
-            .height(170.dp)
-            .background(FocusSurface, RoundedCornerShape(12.dp))
-            .border(1.dp, FocusSurfaceVariant, RoundedCornerShape(12.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        androidx.compose.foundation.lazy.LazyColumn(
-            state = listState,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            contentPadding = PaddingValues(vertical = 8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            items(items.size) { index ->
-                val item = items[index]
-                val isSelected = index == selectedIndex
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isSelected) FocusSurfaceVariant else Color.Transparent,
-                    modifier = Modifier
-                        .fillMaxWidth(0.85f)
-                        .padding(vertical = 4.dp)
-                        .clickable { onSelect(index) }
-                ) {
-                    Text(
-                        text = item,
-                        style = if (isSelected) {
-                            MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                color = FocusPrimaryDark
-                            )
-                        } else {
-                            MaterialTheme.typography.bodyLarge.copy(
-                                fontWeight = FontWeight.Medium,
-                                color = FocusTextPrimary
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TwoStepTimeAndDurationDialog(
-    initialHour: Int,
-    initialMinute: Int,
-    onDismiss: () -> Unit,
-    onTimeAndDurationSelected: (hour: Int, minute: Int, durationMins: Int) -> Unit
-) {
-    var step by remember { mutableStateOf(1) } // 1 = Select Time, 2 = Select Duration, 3 = Success Animation
-    
-    var hour12 by remember { mutableStateOf(if (initialHour % 12 == 0) 12 else initialHour % 12) }
-    var minuteVal by remember { mutableStateOf(initialMinute) }
-    var isAm by remember { mutableStateOf(initialHour < 12) }
-
-    var selectedDuration by remember { mutableStateOf(50) } // default 50 mins as in video
-
-    val durationOptions = remember {
-        listOf(
-            10 to "10 मिनट",
-            25 to "25 मिनट",
-            50 to "50 मिनट",
-            90 to "1.5 Hours",
-            150 to "2.5 Hours",
-            180 to "3 Hours",
-            240 to "4 Hours",
-            300 to "5 Hours"
-        )
-    }
-
-    val hoursList = remember { (1..12).map { String.format("%02d", it) } }
-    val minutesList = remember { (0..59).map { String.format("%02d", it) } }
-    val amPmList = remember { listOf("AM", "PM") }
-
-    LaunchedEffect(step) {
-        if (step == 3) {
-            kotlinx.coroutines.delay(700)
-            val h24 = if (isAm) {
-                if (hour12 == 12) 0 else hour12
-            } else {
-                if (hour12 == 12) 12 else hour12 + 12
-            }
-            onTimeAndDurationSelected(h24, minuteVal, selectedDuration)
-        }
-    }
-
-    androidx.compose.ui.window.Dialog(
-        onDismissRequest = onDismiss
-    ) {
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = FocusSurface,
-            shadowElevation = 16.dp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                when (step) {
-                    1 -> {
-                        // STEP 1: SELECT TIME (Video Style Header & Time Picker)
-                        Text(
-                            text = "Select Time",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 22.sp
-                            ),
-                            color = FocusTextPrimary
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Highlighted selected time display
-                        val formattedHour = String.format("%02d", hour12)
-                        val formattedMin = String.format("%02d", minuteVal)
-                        val amPmStr = if (isAm) "AM" else "PM"
-                        
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(FocusSurface, RoundedCornerShape(12.dp))
-                                .padding(vertical = 12.dp)
-                        ) {
-                            Text(
-                                text = "$formattedHour : $formattedMin $amPmStr",
-                                style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = FocusSurface,
-                                    letterSpacing = 2.sp
-                                )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            VerticalListPicker(
-                                items = hoursList,
-                                selectedIndex = hour12 - 1,
-                                onSelect = { hour12 = it + 1 },
-                                modifier = Modifier.weight(1f)
-                            )
-                            VerticalListPicker(
-                                items = minutesList,
-                                selectedIndex = minuteVal,
-                                onSelect = { minuteVal = it },
-                                modifier = Modifier.weight(1f)
-                            )
-                            VerticalListPicker(
-                                items = amPmList,
-                                selectedIndex = if (isAm) 0 else 1,
-                                onSelect = { isAm = (it == 0) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            TextButton(onClick = onDismiss) {
-                                Text(
-                                    text = "CANCEL",
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = FocusTextPrimary
-                                )
-                            }
-
-                            Button(
-                                onClick = { step = 2 },
-                                shape = CircleShape,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = FocusPrimary,
-                                    contentColor = androidx.compose.ui.graphics.Color.White
-                                ),
-                                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 10.dp)
-                            ) {
-                                Text(
-                                    text = "DONE",
-                                    style = MaterialTheme.typography.labelLarge.copy(
-                                        fontWeight = FontWeight.ExtraBold,
-                                        letterSpacing = 1.sp
-                                    )
-                                )
-                            }
-                        }
-                    }
-
-                    2 -> {
-                        // STEP 2: कितने वक़्त के लिए? (Select Duration - Grid Selection)
-                        Text(
-                            text = "Select Duration",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = FocusTextPrimary
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "कितने वक़्त के लिए?",
-                            style = MaterialTheme.typography.headlineSmall.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 22.sp
-                            ),
-                            color = FocusTextPrimary
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        // 3x2 Grid layout for duration options as seen in video
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            durationOptions.chunked(3).forEach { rowItems ->
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    rowItems.forEach { (mins, label) ->
-                                        val isSelected = selectedDuration == mins
-                                        Surface(
-                                            shape = RoundedCornerShape(16.dp),
-                                            color = if (isSelected) FocusPrimary else FocusSurface,
-                                            border = BorderStroke(
-                                                1.dp,
-                                                if (isSelected) FocusPrimaryDark else FocusTextDisabled
-                                            ),
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .height(48.dp)
-                                                .clickable { selectedDuration = mins }
-                                        ) {
-                                            Box(
-                                                contentAlignment = Alignment.Center,
-                                                modifier = Modifier.fillMaxSize()
-                                            ) {
-                                                Text(
-                                                    text = label,
-                                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                                        fontSize = 14.sp
-                                                    ),
-                                                    color = if (isSelected) FocusTextPrimary else FocusTextPrimary
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(28.dp))
-
-                        Button(
-                            onClick = { step = 3 },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(50.dp),
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = FocusPrimary,
-                                contentColor = androidx.compose.ui.graphics.Color.White
-                            )
-                        ) {
-                            Text(
-                                text = "Submit",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
-                                )
-                            )
-                        }
-                    }
-
-                    3 -> {
-                        // STEP 3: SUCCESS CHECKMARK ANIMATION (as in video frame 00:09)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF22C55E).copy(alpha = 0.1f))
-                                .border(2.dp, Color(0xFF22C55E), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Success",
-                                tint = Color(0xFF166534),
-                                modifier = Modifier.size(40.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Time & Duration Locked!",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = FocusTextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                }
-            }
         }
     }
 }

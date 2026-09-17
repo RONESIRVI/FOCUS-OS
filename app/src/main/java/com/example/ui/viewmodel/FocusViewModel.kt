@@ -384,6 +384,14 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         val context = getApplication<Application>()
         val scheduledId = _activeScheduledSessionId.value
         val isScheduledSession = scheduledId != null
+
+        // Check session conflicts: If a session is ALREADY running, do not start another session
+        if (com.example.util.FocusLockManager.isFocusActive || _serviceTimerState.value.isRunning) {
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(context, "⚠️ A session is already active! Finish current session first.", android.widget.Toast.LENGTH_LONG).show()
+            }
+            return
+        }
         
         val name = if (setup.sessionName.isNotBlank()) setup.sessionName else "Deep Focus"
         val subject = if (setup.subjectName.isNotBlank()) setup.subjectName else name
@@ -446,6 +454,29 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     fun startSpecialSession(durationMinutes: Int, whitelistType: String) {
         val context = getApplication<Application>()
+        
+        // Rule: If any session (Normal or Scheduled) is running or there is a time conflict, Special Whitelist Switch CANNOT start
+        if (com.example.util.FocusLockManager.isFocusActive || _serviceTimerState.value.isRunning) {
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(context, "⚠️ Active session running! Special Whitelist timer cannot start.", android.widget.Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        val end = now + (durationMinutes * 60 * 1000L)
+        val conflictingSchedule = scheduledSessions.value.find { session ->
+            val sStart = session.scheduledStartTime
+            val sEnd = session.scheduledEndTime
+            sStart != null && sEnd != null && (sStart < end && sEnd > now)
+        }
+
+        if (conflictingSchedule != null) {
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(context, "⚠️ Time conflict with scheduled session '${conflictingSchedule.sessionName}'! Special Whitelist timer cannot start.", android.widget.Toast.LENGTH_LONG).show()
+            }
+            return
+        }
         
         // Select allowed apps based on whitelist type
         val allowedList = when (whitelistType) {

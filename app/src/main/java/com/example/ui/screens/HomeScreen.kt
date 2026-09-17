@@ -143,6 +143,7 @@ fun HomeScreen(
             }
         )
     }
+
     if (showQuickDurationDialog) {
         QuickDurationDialog(
             onDismissRequest = { showQuickDurationDialog = false },
@@ -159,14 +160,14 @@ fun HomeScreen(
                 
                 if (conflicts.isNotEmpty()) {
                     val prevSessions = activeSchedules
-                        .filter { (it.scheduledEndTime ?: 0) <= userStart }
-                        .sortedByDescending { it.scheduledEndTime ?: 0 }
+                        .filter { (it.scheduledEndTime ?: 0L) <= userStart }
+                        .sortedByDescending { it.scheduledEndTime ?: 0L }
                         .take(3)
                         .reversed()
 
                     val nextSessions = activeSchedules
-                        .filter { (it.scheduledStartTime ?: 0) >= userEnd }
-                        .sortedBy { it.scheduledStartTime ?: 0 }
+                        .filter { (it.scheduledStartTime ?: 0L) >= userEnd }
+                        .sortedBy { it.scheduledStartTime ?: 0L }
                         .take(3)
 
                     validationConflicts = conflicts
@@ -181,6 +182,7 @@ fun HomeScreen(
                 }
             }
         )
+    }
         
     if (showValidationDialog) {
         val userStart = System.currentTimeMillis()
@@ -202,7 +204,6 @@ fun HomeScreen(
             },
             onCancel = { showValidationDialog = false }
         )
-    }
     }
 
     if (showPendingLockOverlay) {
