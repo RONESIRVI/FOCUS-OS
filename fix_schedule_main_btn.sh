@@ -1,0 +1,2 @@
+sed -i 's/tint = FocusTextPrimary, modifier = Modifier.size(16.dp)/tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(16.dp)/g' app/src/main/java/com/example/ui/screens/ScheduleMainScreen.kt
+sed -i 's/Text("NEW SCHEDULE", color = FocusTextPrimary/Text("NEW SCHEDULE", color = androidx.compose.ui.graphics.Color.White/g' app/src/main/java/com/example/ui/screens/ScheduleMainScreen.kt

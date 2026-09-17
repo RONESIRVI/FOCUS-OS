@@ -107,9 +107,9 @@ fun ScheduleMainScreen(
                         modifier = Modifier.padding(end = 8.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, tint = FocusTextPrimary, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Add, contentDescription = null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("NEW SCHEDULE", color = FocusTextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("NEW SCHEDULE", color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -256,7 +256,7 @@ fun ScheduleCard(
     val isPending = session.scheduledStartTime?.let { it < System.currentTimeMillis() } == true
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2633)),
+        colors = CardDefaults.cardColors(containerColor = FocusSurface),
         shape = RoundedCornerShape(16.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, FocusTextPrimary.copy(alpha = 0.1f)),
         modifier = Modifier.fillMaxWidth()

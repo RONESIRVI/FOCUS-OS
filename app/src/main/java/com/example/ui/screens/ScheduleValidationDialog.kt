@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import com.example.ui.theme.FocusTextPrimary
 import androidx.compose.foundation.border
@@ -10,6 +11,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
+import com.example.ui.theme.FocusSurface
+
 import com.example.ui.theme.FocusDanger
 import com.example.ui.theme.FocusDangerDark
 import com.example.ui.theme.FocusPrimary
@@ -64,7 +67,7 @@ fun ScheduleValidationDialog(
 
     Dialog(onDismissRequest = onCancel) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = FocusTextPrimary),
+            colors = CardDefaults.cardColors(containerColor = FocusSurface),
             shape = RoundedCornerShape(24.dp),
             modifier = Modifier
                 .fillMaxWidth()
@@ -373,13 +376,24 @@ fun ScheduleValidationDialog(
                 
                 // Action Buttons
                 if (isConflict) {
-                    Button(
-                        onClick = onChangeTime,
-                        colors = ButtonDefaults.buttonColors(containerColor = FocusDanger),
-                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(changeText, color = FocusTextPrimary, fontWeight = FontWeight.Bold)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = onChangeTime,
+                            colors = ButtonDefaults.buttonColors(containerColor = FocusDanger),
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(changeText, color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = onSave,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, FocusDanger)
+                        ) {
+                            Text(if (saveText.contains("START")) "FORCE START ANYWAY" else "IGNORE CONFLICT & SAVE", color = FocusDanger, fontWeight = FontWeight.Bold)
+                        }
                     }
                 } else {
                     Button(
@@ -388,9 +402,9 @@ fun ScheduleValidationDialog(
                         modifier = Modifier.fillMaxWidth().height(48.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Check, contentDescription = null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(saveText, color = FocusTextPrimary, fontWeight = FontWeight.Bold)
+                        Text(saveText, color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
                 

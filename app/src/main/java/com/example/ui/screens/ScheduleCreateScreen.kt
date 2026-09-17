@@ -230,7 +230,7 @@ fun ScheduleCreateScreen(
                         Text(
                             text = "Set Custom Date & Strict Time Slots",
                             style = MaterialTheme.typography.labelSmall,
-                            color = FocusTextSecondary
+                            color = FocusTextPrimary
                         )
                     }
                 },
@@ -303,7 +303,7 @@ fun ScheduleCreateScreen(
                         Text(
                             text = "⏰ $formattedDate • $startH:$startM $startAmPm",
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = FocusTextSecondary
+                            color = FocusTextPrimary
                         )
                         Text(
                             text = "⚡ $calculatedDurationMinutes mins block",
@@ -368,7 +368,7 @@ fun ScheduleCreateScreen(
                             .testTag("confirm_schedule_button"),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = FocusWarning,
-                            contentColor = FocusTextPrimary
+                            contentColor = androidx.compose.ui.graphics.Color.White
                         ),
                         shape = RoundedCornerShape(14.dp)
                     ) {
@@ -380,7 +380,7 @@ fun ScheduleCreateScreen(
                                 imageVector = Icons.Default.AlarmOn,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
-                                tint = FocusTextPrimary
+                                tint = androidx.compose.ui.graphics.Color.White
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
@@ -389,7 +389,7 @@ fun ScheduleCreateScreen(
                                     fontWeight = FontWeight.Black,
                                     letterSpacing = 0.5.sp
                                 ),
-                                color = FocusTextPrimary
+                                color = androidx.compose.ui.graphics.Color.White
                             )
                         }
                     }
@@ -530,7 +530,7 @@ fun ScheduleCreateScreen(
                                     Text(
                                         text = "Active Target Date",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = FocusTextSecondary
+                                        color = FocusTextPrimary
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
@@ -538,7 +538,7 @@ fun ScheduleCreateScreen(
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontWeight = FontWeight.Bold
                                         ),
-                                        color = FocusTextPrimary,
+                                        color = FocusSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -649,7 +649,7 @@ fun ScheduleCreateScreen(
                                             Icon(
                                                 imageVector = Icons.Default.AccessTime,
                                                 contentDescription = null,
-                                                tint = FocusTextPrimary,
+                                                tint = androidx.compose.ui.graphics.Color.White,
                                                 modifier = Modifier.size(18.dp)
                                             )
                                         }
@@ -710,7 +710,7 @@ fun ScheduleCreateScreen(
                                     Text(
                                         text = "SCHEDULED START ⏱️",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = FocusTextSecondary
+                                        color = FocusTextPrimary
                                     )
                                 }
                             }
@@ -742,7 +742,7 @@ fun ScheduleCreateScreen(
                                     Text(
                                         text = "SCHEDULED END 🔔",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = FocusTextSecondary
+                                        color = FocusTextPrimary
                                     )
                                 }
                             }
@@ -807,7 +807,7 @@ fun ScheduleCreateScreen(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.5.sp
                             ),
-                            color = FocusTextSecondary
+                            color = FocusTextPrimary
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                                 Box(
@@ -825,7 +825,7 @@ fun ScheduleCreateScreen(
                                 placeholder = {
                                     Text(
                                         "e.g. Mathematics, Physics, History, UPSC, Coding...",
-                                        color = FocusTextSecondary.copy(alpha = 0.45f),
+                                        color = FocusTextPrimary.copy(alpha = 0.45f),
                                         fontSize = 14.sp
                                     )
                                 },
@@ -877,7 +877,7 @@ fun ScheduleCreateScreen(
                                 Text(
                                     text = "Quick pick:",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = FocusTextSecondary.copy(alpha = 0.7f),
+                                    color = FocusTextPrimary.copy(alpha = 0.7f),
                                     fontSize = 11.sp
                                 )
                                 userSubjects.forEach { sub ->
@@ -912,7 +912,7 @@ fun ScheduleCreateScreen(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.5.sp
                             ),
-                            color = FocusTextSecondary
+                            color = FocusTextPrimary
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                                 Box(
@@ -930,7 +930,7 @@ fun ScheduleCreateScreen(
                                     placeholder = {
                                         Text(
                                             "e.g. Chapter 4 Numericals, Solve 30 MCQs, Revise notes...",
-                                            color = FocusTextSecondary.copy(alpha = 0.45f),
+                                            color = FocusTextPrimary.copy(alpha = 0.45f),
                                             fontSize = 14.sp
                                         )
                                     },
@@ -982,7 +982,7 @@ fun ScheduleCreateScreen(
                                 Text(
                                     text = "Quick pick:",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = FocusTextSecondary.copy(alpha = 0.7f),
+                                    color = FocusTextPrimary.copy(alpha = 0.7f),
                                     fontSize = 11.sp
                                 )
                                 customGoalsList.forEach { goalOption ->
@@ -1114,7 +1114,7 @@ fun ScheduleCreateScreen(
                                         Text(
                                             text = option.desc,
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = FocusTextSecondary
+                                            color = FocusTextPrimary
                                         )
                                     }
                                 }
@@ -1126,7 +1126,7 @@ fun ScheduleCreateScreen(
                             Text(
                                 text = "APP BLOCKING SYSTEM",
                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp),
-                                color = FocusTextSecondary
+                                color = FocusTextPrimary
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(
@@ -1217,7 +1217,7 @@ fun ScheduleCreateScreen(
                                             Text(
                                                 text = "${currentAppsCount} apps allowed during schedule",
                                                 style = MaterialTheme.typography.labelSmall,
-                                                color = FocusTextSecondary
+                                                color = FocusTextPrimary
                                             )
                                         } else {
                                             Text(
@@ -1285,7 +1285,7 @@ fun ScheduleCreateScreen(
                                 Text(
                                     text = "Requires photo of books/desk before timer unlocks",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = FocusTextSecondary
+                                    color = FocusTextPrimary
                                 )
                             }
                             Switch(
@@ -1316,7 +1316,7 @@ fun ScheduleCreateScreen(
                                 Text(
                                     text = "Take proof selfie after session finishes to log streak",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = FocusTextSecondary
+                                    color = FocusTextPrimary
                                 )
                             }
                             Switch(
@@ -1457,7 +1457,7 @@ fun ScheduleCreateScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showDatePicker = false }) {
-                        Text("Cancel", color = FocusTextSecondary)
+                        Text("Cancel", color = FocusTextPrimary)
                     }
                 }
             ) {
@@ -1482,7 +1482,7 @@ fun ScheduleCreateScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showStartTimePicker = false }) {
-                        Text("Cancel", color = FocusTextSecondary)
+                        Text("Cancel", color = FocusTextPrimary)
                     }
                 }
             )
@@ -1505,7 +1505,7 @@ fun ScheduleCreateScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showEndTimePicker = false }) {
-                        Text("Cancel", color = FocusTextSecondary)
+                        Text("Cancel", color = FocusTextPrimary)
                     }
                 }
             )
@@ -1618,7 +1618,7 @@ fun SetReminderDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(28.dp),
-            color = FocusTextPrimary,
+            color = FocusSurface,
             shadowElevation = 16.dp,
             modifier = Modifier
                 .fillMaxWidth()
@@ -1643,7 +1643,7 @@ fun SetReminderDialog(
                 Text(
                     text = "How long in advance do you want to be notified? (Select all that apply)",
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                    color = FocusTextSecondary
+                    color = FocusTextPrimary
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -1685,7 +1685,7 @@ fun SetReminderDialog(
                                         Icon(
                                             imageVector = Icons.Default.Check,
                                             contentDescription = null,
-                                            tint = FocusTextPrimary,
+                                            tint = androidx.compose.ui.graphics.Color.White,
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
@@ -1752,7 +1752,7 @@ fun SetReminderDialog(
                         shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = FocusPrimary,
-                            contentColor = FocusTextPrimary
+                            contentColor = androidx.compose.ui.graphics.Color.White
                         )
                     ) {
                         Text(
@@ -1813,7 +1813,7 @@ fun VerticalListPicker(
                         } else {
                             MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = FontWeight.Medium,
-                                color = FocusTextSecondary
+                                color = FocusTextPrimary
                             )
                         },
                         modifier = Modifier
@@ -1877,7 +1877,7 @@ fun TwoStepTimeAndDurationDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(28.dp),
-            color = FocusTextPrimary,
+            color = FocusSurface,
             shadowElevation = 16.dp,
             modifier = Modifier
                 .fillMaxWidth()
@@ -1920,7 +1920,7 @@ fun TwoStepTimeAndDurationDialog(
                                 text = "$formattedHour : $formattedMin $amPmStr",
                                 style = MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = FocusTextPrimary,
+                                    color = FocusSurface,
                                     letterSpacing = 2.sp
                                 )
                             )
@@ -1963,7 +1963,7 @@ fun TwoStepTimeAndDurationDialog(
                                 Text(
                                     text = "CANCEL",
                                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = FocusTextSecondary
+                                    color = FocusTextPrimary
                                 )
                             }
 
@@ -1972,7 +1972,7 @@ fun TwoStepTimeAndDurationDialog(
                                 shape = CircleShape,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = FocusPrimary,
-                                    contentColor = FocusTextPrimary
+                                    contentColor = androidx.compose.ui.graphics.Color.White
                                 ),
                                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 10.dp)
                             ) {
@@ -1993,7 +1993,7 @@ fun TwoStepTimeAndDurationDialog(
                             text = "Select Duration",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = FocusTextSecondary
+                                color = FocusTextPrimary
                             )
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -2061,7 +2061,7 @@ fun TwoStepTimeAndDurationDialog(
                             shape = CircleShape,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = FocusPrimary,
-                                contentColor = FocusTextPrimary
+                                contentColor = androidx.compose.ui.graphics.Color.White
                             )
                         ) {
                             Text(

@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.focusos.kxmpzq"
     minSdk = 24
     targetSdk = 36
-    versionCode = 249
-    versionName = "2.2.27"
+    versionCode = 6
+    versionName = "1.0.5"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -99,7 +99,6 @@ dependencies {
   implementation(libs.androidx.compose.ui)
   implementation(libs.androidx.compose.ui.graphics)
   implementation(libs.androidx.compose.ui.tooling.preview)
-  implementation("androidx.compose.ui:ui-text-google-fonts:1.6.0")
   implementation(libs.androidx.core.ktx)
   // implementation(libs.androidx.datastore.preferences)
   implementation(libs.androidx.lifecycle.runtime.compose)

@@ -1116,7 +1116,7 @@ fun CompareDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = StatBlue),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Apply", color = FocusTextPrimary, fontWeight = FontWeight.Bold)
+                        Text("Apply", color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -1261,7 +1261,7 @@ fun CustomDateRangePickerDialog(
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = targetColor)
             ) {
-                Text("Select Range", color = FocusTextPrimary, fontWeight = FontWeight.Bold)
+                Text("Select Range", color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {

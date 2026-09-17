@@ -344,7 +344,7 @@ fun SettingsScreen(
         item {
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = if (grantedCount >= 8) Color(0xFF0C244A) else Color(0xFF281E10)
+                    containerColor = if (grantedCount >= 8) NavySurface else Color(0xFFFFF8E1)
                 ),
                 shape = RoundedCornerShape(16.dp),
                 border = androidx.compose.foundation.BorderStroke(
@@ -1025,7 +1025,7 @@ fun SettingsScreen(
                         showUsageAccessDisclosure = false
                         LockPermissionHelper.openUsageStatsSettings(context)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = NavyPrimary, contentColor = Color(0xFF070E1F))
+                    colors = ButtonDefaults.buttonColors(containerColor = NavyPrimary, contentColor = androidx.compose.ui.graphics.Color.White)
                 ) {
                     Text("Agree & Open Settings", fontWeight = FontWeight.Bold)
                 }
@@ -1691,7 +1691,7 @@ fun PermissionRowItem(
                     onClick = onAction,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFFF5252),
-                        contentColor = FocusTextPrimary
+                        contentColor = androidx.compose.ui.graphics.Color.White
                     ),
                     shape = RoundedCornerShape(20.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
@@ -1845,7 +1845,7 @@ fun SettingsToggleItem(
                 onCheckedChange?.invoke(it)
             },
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Color(0xFF070E1F),
+                checkedThumbColor = androidx.compose.ui.graphics.Color.White,
                 checkedTrackColor = NavyPrimary,
                 uncheckedThumbColor = NavyTextSecondary,
                 uncheckedTrackColor = NavySurfaceVariant

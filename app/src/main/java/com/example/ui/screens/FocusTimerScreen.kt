@@ -691,7 +691,7 @@ fun FocusTimerScreen(
                             if (!isScheduled) {
                                 Button(
                                 onClick = { showManageWhitelistDialog = true }, enabled = !isScheduled,
-                                colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = FocusTextPrimary),
+                                colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = androidx.compose.ui.graphics.Color.White),
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.height(36.dp)
                             ) {
@@ -865,7 +865,7 @@ fun FocusTimerScreen(
                             .testTag("finish_session_btn"),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = FocusWarning,
-                            contentColor = FocusTextPrimary
+                            contentColor = androidx.compose.ui.graphics.Color.White
                         ),
                         shape = RoundedCornerShape(16.dp)
                     ) {
@@ -1034,7 +1034,7 @@ fun FocusTimerScreen(
                                             showExitAttemptDialog = false
                                             showManageWhitelistDialog = true
                                         }, enabled = !isScheduled,
-                                        colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = FocusTextPrimary),
+                                        colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = androidx.compose.ui.graphics.Color.White),
                                         shape = RoundedCornerShape(10.dp)
                                     ) {
                                         Text("+ Select Study Apps", fontWeight = FontWeight.Bold)
@@ -1052,7 +1052,7 @@ fun FocusTimerScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = FocusTextPrimary),
+                            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = androidx.compose.ui.graphics.Color.White),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text("Stay on Timer", fontWeight = FontWeight.Bold)
@@ -1213,7 +1213,7 @@ fun FocusTimerScreen(
                                 .fillMaxWidth()
                                 .height(48.dp),
                             shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = FocusTextPrimary)
+                            colors = ButtonDefaults.buttonColors(containerColor = FocusPrimary, contentColor = androidx.compose.ui.graphics.Color.White)
                         ) {
                             Text("SAVE & CONTINUE STUDY", fontWeight = FontWeight.Bold)
                         }
@@ -1275,17 +1275,17 @@ fun FocusTimerScreen(
                                 width = 2.5.dp,
                                 brush = Brush.verticalGradient(
                                     colors = listOf(
-                                        Color(0xFFEF4444),
+                                        FocusDanger,
                                         Color(0xFFB91C1C),
                                         Color(0xFF7F1D1D),
-                                        Color(0xFFEF4444)
+                                        FocusDanger
                                     )
                                 ),
                                 shape = RoundedCornerShape(32.dp)
                             ),
                         shape = RoundedCornerShape(32.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFF131722)
+                            containerColor = FocusBackground
                         ),
                         elevation = CardDefaults.cardElevation(defaultElevation = 20.dp)
                     ) {
@@ -1304,7 +1304,7 @@ fun FocusTimerScreen(
                                         brush = Brush.radialGradient(
                                             colors = listOf(
                                                 Color(0xFFF97316).copy(alpha = 0.4f),
-                                                Color(0xFFEF4444).copy(alpha = 0.15f),
+                                                FocusDanger.copy(alpha = 0.15f),
                                                 Color.Transparent
                                             )
                                         ),
@@ -1347,10 +1347,10 @@ fun FocusTimerScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .border(1.dp, Color(0xFF2E364A), RoundedCornerShape(16.dp)),
+                                    .border(1.dp, FocusPrimary.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
                                 shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFF1B2130)
+                                    containerColor = FocusSurface
                                 )
                             ) {
                                 Column(
@@ -1367,7 +1367,7 @@ fun FocusTimerScreen(
                                         Box(
                                             modifier = Modifier
                                                 .size(34.dp)
-                                                .background(Color(0xFF252D3F), RoundedCornerShape(8.dp)),
+                                                .background(FocusSurfaceVariant, RoundedCornerShape(8.dp)),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(text = "📖", fontSize = 16.sp)
@@ -1384,7 +1384,7 @@ fun FocusTimerScreen(
                                         )
                                     }
 
-                                    HorizontalDivider(color = Color(0xFF2E364A), thickness = 1.dp)
+                                    HorizontalDivider(color = FocusPrimary.copy(alpha = 0.2f), thickness = 1.dp)
 
                                     // Time Remaining Row
                                     Row(
@@ -1394,7 +1394,7 @@ fun FocusTimerScreen(
                                         Box(
                                             modifier = Modifier
                                                 .size(34.dp)
-                                                .background(Color(0xFF252D3F), RoundedCornerShape(8.dp)),
+                                                .background(FocusSurfaceVariant, RoundedCornerShape(8.dp)),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(text = "⏱️", fontSize = 16.sp)
@@ -1427,15 +1427,15 @@ fun FocusTimerScreen(
 
                             Box(
                                 modifier = Modifier
-                                    .border(1.5.dp, Color(0xFF991B1B), RoundedCornerShape(20.dp))
-                                    .background(Color(0xFF3B1212), RoundedCornerShape(20.dp))
+                                    .border(1.5.dp, FocusDanger, RoundedCornerShape(20.dp))
+                                    .background(FocusDanger.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
                                     .padding(horizontal = 16.dp, vertical = 6.dp)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Box(
                                         modifier = Modifier
                                             .size(8.dp)
-                                            .background(Color(0xFFEF4444), CircleShape)
+                                            .background(FocusDanger, CircleShape)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
@@ -1444,7 +1444,7 @@ fun FocusTimerScreen(
                                             fontWeight = FontWeight.ExtraBold,
                                             letterSpacing = 1.sp
                                         ),
-                                        color = Color(0xFFEF4444)
+                                        color = FocusDanger
                                     )
                                 }
                             }
@@ -1458,7 +1458,7 @@ fun FocusTimerScreen(
                                     fontWeight = FontWeight.ExtraBold,
                                     letterSpacing = 1.5.sp
                                 ),
-                                color = Color(0xFFEF4444)
+                                color = FocusDanger
                             )
 
                             Spacer(modifier = Modifier.height(8.dp))
@@ -1472,10 +1472,10 @@ fun FocusTimerScreen(
                                     Card(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .border(1.dp, Color(0xFF2E364A), RoundedCornerShape(14.dp)),
+                                            .border(1.dp, FocusPrimary.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
                                         shape = RoundedCornerShape(14.dp),
                                         colors = CardDefaults.cardColors(
-                                            containerColor = Color(0xFF1B2130)
+                                            containerColor = FocusSurface
                                         )
                                     ) {
                                         Row(
@@ -1527,7 +1527,7 @@ fun FocusTimerScreen(
                                                 style = MaterialTheme.typography.bodyMedium.copy(
                                                     fontWeight = FontWeight.Bold
                                                 ),
-                                                color = Color(0xFFEF4444)
+                                                color = FocusDanger
                                             )
                                         }
                                     }
@@ -1540,10 +1540,10 @@ fun FocusTimerScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .border(1.dp, Color(0xFF374151), RoundedCornerShape(14.dp)),
+                                    .border(1.dp, FocusPrimary.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
                                 shape = RoundedCornerShape(14.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFF1B2130).copy(alpha = 0.7f)
+                                    containerColor = FocusSurface.copy(alpha = 0.7f)
                                 )
                             ) {
                                 Row(
@@ -1553,7 +1553,7 @@ fun FocusTimerScreen(
                                     Icon(
                                         imageVector = Icons.Default.Lock,
                                         contentDescription = null,
-                                        tint = Color(0xFFEF4444),
+                                        tint = FocusDanger,
                                         modifier = Modifier.size(22.dp)
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
@@ -1588,7 +1588,7 @@ fun FocusTimerScreen(
                                     ),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color.Transparent,
-                                    contentColor = FocusTextPrimary
+                                    contentColor = androidx.compose.ui.graphics.Color.White
                                 ),
                                 shape = CircleShape
                             ) {
@@ -1623,9 +1623,9 @@ fun FocusTimerScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(46.dp)
-                                    .border(1.dp, Color(0xFF2E364A), CircleShape),
+                                    .border(1.dp, FocusPrimary.copy(alpha = 0.2f), CircleShape),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF1B2130),
+                                    containerColor = FocusSurface,
                                     contentColor = FocusTextPrimary
                                 ),
                                 shape = CircleShape

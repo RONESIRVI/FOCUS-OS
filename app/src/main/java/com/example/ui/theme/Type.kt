@@ -1,38 +1,17 @@
 package com.example.ui.theme
 
 import androidx.compose.material3.Typography
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.googlefonts.Font
-import androidx.compose.ui.text.googlefonts.GoogleFont
-import androidx.compose.ui.unit.sp
 import com.example.R
 
-val provider = GoogleFont.Provider(
-    providerAuthority = "com.google.android.gms.fonts",
-    providerPackage = "com.google.android.gms",
-    certificates = R.array.custom_com_google_android_gms_fonts_certs
-)
-
-val spaceGroteskName = GoogleFont("Space Grotesk")
-
 val SpaceGroteskFontFamily = FontFamily(
-    Font(googleFont = spaceGroteskName, fontProvider = provider, weight = FontWeight.Normal),
-    Font(googleFont = spaceGroteskName, fontProvider = provider, weight = FontWeight.Medium),
-    Font(googleFont = spaceGroteskName, fontProvider = provider, weight = FontWeight.SemiBold),
-    Font(googleFont = spaceGroteskName, fontProvider = provider, weight = FontWeight.Bold),
-    Font(googleFont = spaceGroteskName, fontProvider = provider, weight = FontWeight.ExtraBold)
+    Font(R.font.space_grotesk, weight = FontWeight.Normal)
 )
-
-val manropeName = GoogleFont("Manrope")
 
 val ManropeFontFamily = FontFamily(
-    Font(googleFont = manropeName, fontProvider = provider, weight = FontWeight.Normal),
-    Font(googleFont = manropeName, fontProvider = provider, weight = FontWeight.Medium),
-    Font(googleFont = manropeName, fontProvider = provider, weight = FontWeight.SemiBold),
-    Font(googleFont = manropeName, fontProvider = provider, weight = FontWeight.Bold),
-    Font(googleFont = manropeName, fontProvider = provider, weight = FontWeight.ExtraBold)
+    Font(R.font.manrope, weight = FontWeight.Normal)
 )
 
 private val defaultTypography = Typography()

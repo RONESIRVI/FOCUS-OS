@@ -1,0 +1,1 @@
+sed -i 's/text = "GO BACK",\n                            color = FocusTextPrimary/text = "GO BACK",\n                            color = androidx.compose.ui.graphics.Color.White/g' app/src/main/java/com/example/ui/screens/SessionStartRouterScreen.kt

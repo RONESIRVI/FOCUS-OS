@@ -10,6 +10,8 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import com.example.ui.theme.FocusSurface
+
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -53,7 +55,7 @@ fun SessionStartRouterScreen(
     if (showConflictDialog) {
         Dialog(onDismissRequest = onCancel) {
             Card(
-                colors = CardDefaults.cardColors(containerColor = FocusTextPrimary),
+                colors = CardDefaults.cardColors(containerColor = FocusSurface),
                 shape = RoundedCornerShape(24.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -113,7 +115,7 @@ fun SessionStartRouterScreen(
                     ) {
                         Text(
                             text = "GO BACK",
-                            color = FocusTextPrimary,
+                            color = androidx.compose.ui.graphics.Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )

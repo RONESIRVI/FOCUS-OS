@@ -272,10 +272,10 @@ fun HomeScreen(
                             width = 2.5.dp,
                             brush = Brush.verticalGradient(
                                 colors = listOf(
-                                    Color(0xFFEF4444),
+                                    FocusDanger,
                                     Color(0xFFB91C1C),
                                     Color(0xFF7F1D1D),
-                                    Color(0xFFEF4444)
+                                    FocusDanger
                                 )
                             ),
                             shape = RoundedCornerShape(32.dp)
@@ -301,7 +301,7 @@ fun HomeScreen(
                                     brush = Brush.radialGradient(
                                         colors = listOf(
                                             Color(0xFFF97316).copy(alpha = 0.4f),
-                                            Color(0xFFEF4444).copy(alpha = 0.15f),
+                                            FocusDanger.copy(alpha = 0.15f),
                                             Color.Transparent
                                         )
                                     ),
@@ -424,15 +424,15 @@ fun HomeScreen(
 
                         Box(
                             modifier = Modifier
-                                .border(1.5.dp, Color(0xFF991B1B), RoundedCornerShape(20.dp))
-                                .background(Color(0xFF3B1212), RoundedCornerShape(20.dp))
+                                .border(1.5.dp, FocusDanger, RoundedCornerShape(20.dp))
+                                .background(FocusDanger.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
                                 .padding(horizontal = 16.dp, vertical = 6.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
                                         .size(8.dp)
-                                        .background(Color(0xFFEF4444), CircleShape)
+                                        .background(FocusDanger, CircleShape)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
@@ -441,7 +441,7 @@ fun HomeScreen(
                                         fontWeight = FontWeight.ExtraBold,
                                         letterSpacing = 1.sp
                                     ),
-                                    color = Color(0xFFEF4444)
+                                    color = FocusDanger
                                 )
                             }
                         }
@@ -455,7 +455,7 @@ fun HomeScreen(
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 1.5.sp
                             ),
-                            color = Color(0xFFEF4444)
+                            color = FocusDanger
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -536,7 +536,7 @@ fun HomeScreen(
                                             style = MaterialTheme.typography.bodyMedium.copy(
                                                 fontWeight = FontWeight.Bold
                                             ),
-                                            color = Color(0xFFEF4444)
+                                            color = FocusDanger
                                         )
                                     }
                                 }
@@ -563,7 +563,7 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = Icons.Default.Lock,
                                     contentDescription = null,
-                                    tint = Color(0xFFEF4444),
+                                    tint = FocusDanger,
                                     modifier = Modifier.size(22.dp)
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
@@ -602,7 +602,7 @@ fun HomeScreen(
                                 ),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.Transparent,
-                                contentColor = FocusTextPrimary
+                                contentColor = androidx.compose.ui.graphics.Color.White
                             ),
                             shape = CircleShape
                         ) {
